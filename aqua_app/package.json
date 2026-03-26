@@ -9,6 +9,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/metro-runtime": "^55.0.6",
     "autoprefixer": "^10.4.27",
     "expo": "~55.0.8",
     "expo-constants": "^55.0.9",
@@ -19,14 +20,17 @@
     "nativewind": "^4.2.3",
     "postcss": "^8.5.8",
     "react": "19.2.0",
+    "react-dom": "^19.2.4",
     "react-native": "0.83.2",
     "react-native-reanimated": "^4.3.0",
     "react-native-safe-area-context": "^5.7.0",
     "react-native-screens": "^4.24.0",
+    "react-native-web": "^0.21.2",
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "babel-plugin-react-native-web": "^0.21.2",
     "typescript": "~5.9.2"
   },
   "private": true
