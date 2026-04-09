@@ -1,56 +1,36 @@
 # Fishlinic API Contracts
 
-This document defines the REST and Socket.IO interfaces for the Fishlinic ecosystem.
+This document defines the interface standards for communication between Backend, Dashboard, Mobile, and AI Predictor.
 
-## 1. Backend REST Endpoints (`services/backend`)
+## REST Endpoints (Backend - `:3000`)
 
-### 1.1 Sensors
-| Endpoint | Method | Description | Payload/Response |
-|---|---|---|---|
-| `/sensors` | GET | List all sensors | `Sensor[]` |
-| `/sensors/:id/readings` | GET | History | `?range=24h/1w/1m` |
-| `/sensors/latest` | GET | Latest readings | `SensorReading[]` |
+### Sensors
+- `GET /sensors/latest` -> Returns the most recent reading from each sensor.
+- `GET /sensors/:id/readings?range=24h` -> Returns history for a specific sensor.
+- `POST /serial/reading` -> (Internal) Used by serial bridge to push data.
 
-### 1.2 Actuators
-| Endpoint | Method | Description | Payload/Response |
-|---|---|---|---|
-| `/actuators/feed` | POST | Trigger feeder | `{ state: boolean }` |
-| `/actuators/pump` | POST | Toggle air pump | `{ state: boolean }` |
-| `/actuators/led` | POST | Toggle LED strip | `{ state: boolean }` |
-| `/actuators/state` | GET | Current relay states | `object` |
+### Actuators
+- `POST /actuators/feed` -> Triggers the automatic feeder.
+- `POST /actuators/pump` -> `{ state: boolean }` -> Toggles the air pump.
+- `POST /actuators/led` -> `{ state: boolean }` -> Toggles the tank lights.
 
-### 1.3 Vision
-| Endpoint | Method | Description | Payload/Response |
-|---|---|---|---|
-| `/vision/analyze` | POST | Trigger full analysis | `{ triggeredBy: string }` |
-| `/vision/latest-report`| GET | Last AI result | `HealthReport` |
-
-### 1.4 Voice
-| Endpoint | Method | Description | Payload/Response |
-|---|---|---|---|
-| `/voice/query` | POST | Process query | `{ text: string, snapshotId?: number }` |
-| `/voice/sessions` | GET | Session history | `VoiceSession[]` |
+### Vision
+- `POST /vision/analyze` -> Triggers YOLO/LSTM analysis of the current tank stream.
+- `GET /fish/health` -> Returns the latest health score and behavior status.
 
 ---
 
-## 2. Socket.IO Events (Server -> Client)
+## Socket.IO Events (Server -> Client)
 
-| Event Name | Payload | Description |
-|---|---|---|
-| `sensor:update` | `SensorReading` | Real-time telemetry update |
-| `alert:new` | `Alert` | New alert notification |
-| `fish:count` | `FishCount` | Result of vision analysis |
-| `actuator:state` | `{ type, state }` | Confirmation of relay change |
-| `health:report` | `FishHealthReport` | Full AI health analysis result |
+- `sensor:update`: Broadcasts new `SensorReading` every 5 seconds.
+- `alert:new`: Triggered when sensors hit critical thresholds.
+- `fish:count`: Updated whenever the count model runs.
+- `actuator:state`: Confirms change of state for pump/feed/light.
 
 ---
 
-## 3. AI Predictor Endpoints (`services/ai-predictor`)
-*Internal consumption by Backend*
+## internal AI Contracts (Backend -> AI Predictor `:8000`)
 
-| Endpoint | Method | Description | Payload |
-|---|---|---|---|
-| `/predict/disease` | POST | YOLOv8 diagnosis | `{ imagePath }` |
-| `/predict/behavior` | POST | Anomaly detection | `{ imagePath }` |
-| `/predict/count` | POST | Fish counting | `{ imagePath }` |
-| `/predict/quality` | POST | Quality scoring | `{ pH, temp_c, do_mg_l }` |
+- `POST /predict/disease`: `{ imagePath }` -> `{ disease, confidence, bbox }`
+- `POST /predict/quality`: `{ pH, temp, do2, co2 }` -> `{ score, status }`
+- `POST /predict/count`: `{ imagePath }` -> `{ count, confidence }`

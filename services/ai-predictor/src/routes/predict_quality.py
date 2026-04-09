@@ -5,8 +5,12 @@ import pickle, os, numpy as np
 
 router = APIRouter()
 model_path = os.getenv("MODEL_PATH", "../../resources/models") + "/rf_quality.pkl"
-with open(model_path, "rb") as f:
-    model = pickle.load(f)
+model = None
+try:
+    with open(model_path, "rb") as f:
+        model = pickle.load(f)
+except Exception as e:
+    print(f"Warning: Could not load quality model: {e}")
 
 class WaterReading(BaseModel):
     pH: float

@@ -14,7 +14,7 @@ export class UserCommandEntity {
   @Column()
   source: string; // APP, CRON, AI
 
-  @Column('jsonb', { nullable: true })
+  @Column('simple-json', { nullable: true })
   payload: any;
 
   @CreateDateColumn()

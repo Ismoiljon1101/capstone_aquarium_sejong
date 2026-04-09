@@ -2,9 +2,9 @@ import express from 'express';
 import { SerialPort } from 'serialport';
 import { ReadlineParser } from '@serialport/parser-readline';
 import dotenv from 'dotenv';
-import { SerialParser } from './parser';
-import { Emitter } from './emitter';
-import { MockHardware } from './mock';
+import { SerialParser } from './parser.ts';
+import { Emitter } from './emitter.ts';
+import { MockHardware } from './mock.ts';
 
 dotenv.config();
 

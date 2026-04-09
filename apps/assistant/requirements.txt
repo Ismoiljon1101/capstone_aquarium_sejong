@@ -7,8 +7,11 @@ ultralytics
 kokoro
 openWakeWord
 faster-whisper
-numpy<2.0.0
+numpy
 pyaudio
 wave
 PyQt6
 matplotlib
+SpeechRecognition
+playaudio
+decouple

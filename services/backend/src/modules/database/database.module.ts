@@ -15,8 +15,20 @@ import { DatabaseController } from './database.controller';
   imports: [
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const dbUrl = config.get<string>('DATABASE_URL');
+      useFactory: (configService: ConfigService) => {
+        const dbUrl = configService.get<string>('DATABASE_URL');
+        const isPlaceholder = dbUrl?.includes('user:pass@host');
+        
+        if (!dbUrl || isPlaceholder) {
+          return {
+            type: 'sqljs',
+            location: 'fishlinic.sqlite',
+            autoSave: true,
+            entities: [__dirname + '/../database/entities/*.entity{.ts,.js}'],
+            synchronize: true,
+          };
+        }
+
         const isPostgres = dbUrl?.startsWith('postgresql');
 
         return {

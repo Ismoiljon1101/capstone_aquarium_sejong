@@ -7,7 +7,13 @@ import time
 from wake_up_init import wakeup
 import speech_recognition as sr
 from datetime import datetime
-from playaudio import playaudio
+import winsound
+def playaudio(file_path):
+    try:
+        # Simple native windows audio playback
+        winsound.PlaySound(file_path, winsound.SND_FILENAME | winsound.SND_ASYNC)
+    except:
+        pass
 import behaviors
 import llm_manager
 from voice_inp import voice_speak

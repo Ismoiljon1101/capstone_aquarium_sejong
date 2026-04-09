@@ -287,7 +287,7 @@ export default function HomePage() {
                 GitHub
               </a>
               <a 
-                href="https://portfolio-next-silk-two.vercel.app/" 
+                href="https://portfolio.ismaildev.uz" 
                 target="_blank" 
                 rel="noreferrer"
                 className="text-blue-400 hover:text-blue-300 transition-colors"

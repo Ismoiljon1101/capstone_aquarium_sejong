@@ -1,9 +1,25 @@
 {
-    "name": "fishlinic",
-    "private": true,
-    "workspaces": [
-        "apps/*",
-        "services/*",
-        "shared"
+  "name": "fishlinic",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"*\" run dev",
+    "install:all": "pnpm install",
+    "start": "pnpm --parallel --filter \"*\" run dev"
+  },
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "shared"
+  ],
+  "dependencies": {
+    "sqlite3": "^6.0.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sqlite3",
+      "better-sqlite3",
+      "bcryp",
+      "@parcel/watcher"
     ]
+  }
 }

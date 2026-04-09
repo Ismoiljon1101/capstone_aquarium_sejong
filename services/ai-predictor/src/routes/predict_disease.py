@@ -6,7 +6,11 @@ import os
 
 router = APIRouter()
 model_path = os.getenv("MODEL_PATH", "../../resources/models") + "/yolo_disease.pt"
-model = YOLO(model_path)
+model = None
+try:
+    model = YOLO(model_path)
+except Exception as e:
+    print(f"Warning: Could not load disease model: {e}")
 
 class ImageRequest(BaseModel):
     imagePath: str
