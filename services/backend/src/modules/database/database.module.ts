@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { SensorReadingEntity } from './entities/sensor-reading.entity';
 import { AlertEntity } from './entities/alert.entity';
 import { CameraSnapshotEntity } from './entities/camera-snapshot.entity';
@@ -12,6 +13,29 @@ import { DatabaseController } from './database.controller';
 
 @Module({
   imports: [
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const dbUrl = config.get<string>('DATABASE_URL');
+        const isPostgres = dbUrl?.startsWith('postgresql');
+
+        return {
+          type: isPostgres ? 'postgres' : 'sqlite',
+          url: isPostgres ? dbUrl : undefined,
+          database: isPostgres ? undefined : 'fishlinic.sqlite',
+          entities: [
+            SensorReadingEntity,
+            AlertEntity,
+            CameraSnapshotEntity,
+            FishCount,
+            HealthReport,
+            UserCommandEntity,
+            VoiceSessionEntity,
+          ],
+          synchronize: true, // Auto-create tables for dev mode
+        };
+      },
+    }),
     TypeOrmModule.forFeature([
       SensorReadingEntity,
       AlertEntity,

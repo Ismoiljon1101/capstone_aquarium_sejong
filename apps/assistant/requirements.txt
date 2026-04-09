@@ -1,12 +1,14 @@
 requests
 python-decouple
-psycopg2
+psycopg2-binary
 ollama
 opencv-python
 ultralytics
 kokoro
 openWakeWord
 faster-whisper
-numpy
+numpy<2.0.0
 pyaudio
 wave
+PyQt6
+matplotlib
