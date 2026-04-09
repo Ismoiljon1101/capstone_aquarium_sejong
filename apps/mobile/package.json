@@ -9,10 +9,17 @@
     "ios": "expo run:ios"
   },
   "dependencies": {
-    "expo": "~50.0.0",
+    "axios": "^1.6.2",
+    "expo-status-bar": "~1.11.1",
     "react": "18.2.0",
-    "react-native": "0.73.2",
-    "socket.io-client": "^4.7.2",
-    "axios": "^1.6.2"
+    "react-native": "0.73.6",
+    "socket.io-client": "^4.7.2"
+  },
+  "devDependencies": {
+    "@expo/cli": "^55.0.22",
+    "@types/react": "~18.2.45",
+    "expo": "~55.0.12",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
   }
 }
