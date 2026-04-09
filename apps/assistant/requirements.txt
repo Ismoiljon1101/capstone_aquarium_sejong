@@ -1,0 +1,17 @@
+requests
+python-decouple
+psycopg2-binary
+ollama
+opencv-python
+ultralytics
+kokoro
+openWakeWord
+faster-whisper
+numpy
+pyaudio
+wave
+PyQt6
+matplotlib
+SpeechRecognition
+playaudio
+decouple
