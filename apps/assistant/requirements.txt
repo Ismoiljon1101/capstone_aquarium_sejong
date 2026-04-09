@@ -1,0 +1,12 @@
+requests
+python-decouple
+psycopg2
+ollama
+opencv-python
+ultralytics
+kokoro
+openWakeWord
+faster-whisper
+numpy
+pyaudio
+wave

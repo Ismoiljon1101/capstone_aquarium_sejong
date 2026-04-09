@@ -1,0 +1,1 @@
+{"name": "fishlinic", "private": true, "workspaces": ["apps/*", "services/*", "shared"]}
