@@ -11,15 +11,16 @@
     "services/*",
     "shared"
   ],
-  "dependencies": {
-    "sqlite3": "^6.0.1"
-  },
+  "dependencies": {},
   "pnpm": {
     "onlyBuiltDependencies": [
-      "sqlite3",
       "better-sqlite3",
-      "bcryp",
-      "@parcel/watcher"
+      "bcrypt",
+      "@parcel/watcher",
+      "@nestjs/core",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
     ],
     "overrides": {
       "@types/react": "18.2.79",

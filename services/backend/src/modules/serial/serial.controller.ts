@@ -1,15 +1,25 @@
 import { Controller, Post, Body, Logger } from '@nestjs/common';
 import { SerialService } from './serial.service';
-import type { ActuatorCommand } from '@fishlinic/types';
+import type { ActuatorCommand, SensorReading } from '@fishlinic/types';
 
-@Controller('actuators')
+@Controller('serial')
 export class SerialController {
   private readonly logger = new Logger(SerialController.name);
 
   constructor(private readonly serialService: SerialService) {}
 
   /**
-   * Endpoint for manual/legacy commands
+   * Receives sensor readings forwarded by the serial bridge
+   */
+  @Post('reading')
+  async handleReading(@Body() reading: SensorReading) {
+    this.logger.debug(`Received reading: ${reading.type}=${reading.value}`);
+    await this.serialService.processReading(reading);
+    return { success: true };
+  }
+
+  /**
+   * Endpoint for manual/legacy actuator commands
    */
   @Post('command')
   async handleCommand(@Body() command: ActuatorCommand) {

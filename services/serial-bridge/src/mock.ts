@@ -13,13 +13,13 @@ export class MockHardware {
     console.log('[Mock] Starting mock hardware simulation...');
     this.interval = setInterval(() => {
       const data = {
-        pH: (7.0 + (Math.random() * 0.4 - 0.2)).toFixed(2),
-        temp_c: (26.0 + (Math.random() * 2 - 1)).toFixed(1),
-        do_mg_l: (7.5 + (Math.random() * 1.5 - 0.75)).toFixed(2),
+        pH: parseFloat((7.0 + (Math.random() * 0.4 - 0.2)).toFixed(2)),
+        temp_c: parseFloat((26.0 + (Math.random() * 2 - 1)).toFixed(1)),
+        do_mg_l: parseFloat((7.5 + (Math.random() * 1.5 - 0.75)).toFixed(2)),
         timestamp: new Date().toISOString()
       };
       this.onData(JSON.stringify(data));
-    }, 2000); // Send data every 2 seconds
+    }, 3000); // Send data every 3 seconds
   }
 
   public stop() {

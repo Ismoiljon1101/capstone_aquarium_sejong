@@ -18,6 +18,7 @@ import { LegacyController } from './modules/database/legacy.controller';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    SerialModule,
     SensorsModule,
     ActuatorsModule,
     AlertsModule,

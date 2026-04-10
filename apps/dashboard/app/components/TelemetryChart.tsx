@@ -28,15 +28,15 @@ type ChartPoint = {
   };
 };
 
-export function TelemetryChart({ 
-  history, 
-  animated = true, 
-  chartType = "line", // TODO: Implement different chart types
+export function TelemetryChart({
+  history,
+  animated = true,
+  chartType = "line",
   showGridLines = true,
   showDataPoints = true,
   animationSpeed = "normal"
 }: TelemetryChartProps) {
-  // Suppress unused variable warning for future implementation
+  // chartType prop reserved for future bar/area chart support
   void chartType;
   const [visibleMetrics, setVisibleMetrics] = useState<Set<MetricType>>(new Set(['pH', 'temp', 'do']));
   const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);

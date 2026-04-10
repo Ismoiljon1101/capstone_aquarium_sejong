@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
 
 @Entity('sensor_readings')
 export class SensorReadingEntity {
@@ -6,10 +6,12 @@ export class SensorReadingEntity {
   readingId: number;
 
   @Column()
+  @Index()
   sensorId: number;
 
   @Column()
-  type: string; // pH, TEMP, DO2, CO2
+  @Index()
+  type: string; // pH, temp_c, do_mg_l, CO2
 
   @Column('float')
   value: number;
@@ -21,5 +23,6 @@ export class SensorReadingEntity {
   status: string; // ok, warn, critical
 
   @CreateDateColumn()
+  @Index()
   timestamp: Date;
 }

@@ -20,11 +20,19 @@ import { DatabaseController } from './database.controller';
         const isPlaceholder = dbUrl?.includes('user:pass@host');
         
         if (!dbUrl || isPlaceholder) {
+          // No DATABASE_URL set — use local better-sqlite3 for development
           return {
-            type: 'sqljs',
-            location: 'fishlinic.sqlite',
-            autoSave: true,
-            entities: [__dirname + '/../database/entities/*.entity{.ts,.js}'],
+            type: 'better-sqlite3',
+            database: 'fishlinic.sqlite',
+            entities: [
+              SensorReadingEntity,
+              AlertEntity,
+              CameraSnapshotEntity,
+              FishCount,
+              HealthReport,
+              UserCommandEntity,
+              VoiceSessionEntity,
+            ],
             synchronize: true,
           };
         }

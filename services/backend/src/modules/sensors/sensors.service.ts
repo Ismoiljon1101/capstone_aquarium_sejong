@@ -32,21 +32,18 @@ export class SensorsService {
     // Emit real-time update
     this.gateway.emitSensorUpdate({
       ...reading,
-      status: status as any,
+      status: status as SensorReading['status'],
     });
 
-    // Trigger alert if status is not 'ok'
+    // Trigger alert + appropriate actuator response
     if (status !== 'ok') {
-      await this.actuators.triggerActuator({
-        actuatorId: 1,
-        type: 'FEEDER',
-        relayChannel: 1,
-        state: true,
-        source: 'CRON',
-      } as ActuatorCommand);
+      const actuatorCommand = this.resolveActuatorForSensor(reading.type);
+      if (actuatorCommand) {
+        await this.actuators.triggerActuator(actuatorCommand);
+      }
       await this.alertsService.createAlert({
         sensorId: reading.sensorId,
-        tankId: 1, // Default tank
+        tankId: 1,
         type: reading.type,
         severity: (status === 'critical' ? 'CRITICAL' : 'WARNING') as AlertSeverity,
         message: `${reading.type} level is ${status}: ${reading.value}${reading.unit}`,
@@ -57,7 +54,8 @@ export class SensorsService {
   }
 
   async getLatest(): Promise<SensorReadingEntity[]> {
-    const types = ['pH', 'TEMP', 'DO2', 'CO2'];
+    // Must match the actual type strings stored by firmware: pH, temp_c, do_mg_l, CO2
+    const types = ['pH', 'temp_c', 'do_mg_l', 'CO2'];
     const results = await Promise.all(
       types.map(type =>
         this.sensorRepository.findOne({
@@ -69,7 +67,12 @@ export class SensorsService {
     return results.filter(r => r !== null) as SensorReadingEntity[];
   }
 
-  async getHistory(sensorId: number, range: string): Promise<SensorReadingEntity[]> {
+  async getHistory(
+    sensorId: number,
+    range: string,
+    page: number = 1,
+    limit: number = 200,
+  ): Promise<SensorReadingEntity[]> {
     const now = new Date();
     let from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
@@ -82,7 +85,8 @@ export class SensorsService {
         timestamp: Between(from, now),
       },
       order: { timestamp: 'ASC' },
-      take: 5000,
+      skip: (page - 1) * limit,
+      take: limit,
     });
   }
 
@@ -92,7 +96,19 @@ export class SensorsService {
    */
   async checkThresholds(): Promise<void> {
     const latest = await this.getLatest();
-    latest.forEach(r => this.evaluateReading(r as any));
+    latest.forEach(r => this.evaluateReading(r as unknown as SensorReading));
+  }
+
+  /**
+   * Maps sensor type to the appropriate actuator response.
+   * Returns null if no automated actuator action is needed.
+   */
+  private resolveActuatorForSensor(type: string): ActuatorCommand | null {
+    const map: Record<string, ActuatorCommand> = {
+      do_mg_l: { actuatorId: 2, type: 'AIR_PUMP', relayChannel: 2, state: true, source: 'CRON' },
+      CO2: { actuatorId: 2, type: 'AIR_PUMP', relayChannel: 2, state: true, source: 'CRON' },
+    };
+    return map[type] ?? null;
   }
 
   private evaluateReading(reading: SensorReading): string {

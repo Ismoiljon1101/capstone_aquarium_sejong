@@ -18,7 +18,10 @@ import { ActuatorsService } from '../actuators/actuators.service';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: process.env.CLIENT_URL
+      ? process.env.CLIENT_URL.split(',')
+      : ['http://localhost:3002', 'http://localhost:3000'],
+    credentials: true,
   },
 })
 export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect {

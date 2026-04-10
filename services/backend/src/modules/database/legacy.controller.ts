@@ -1,6 +1,21 @@
 import { Controller, Get, Post, Query, Body, Logger } from '@nestjs/common';
+import { IsOptional, IsBoolean } from 'class-validator';
 import { SensorsService } from '../sensors/sensors.service';
 import { ActuatorsService } from '../actuators/actuators.service';
+
+class FeedDto {
+  @IsOptional()
+  @IsBoolean()
+  state?: boolean;
+}
+
+class ScheduleDto {
+  @IsOptional()
+  cronExpression?: string;
+
+  @IsOptional()
+  label?: string;
+}
 
 /**
  * Controller to handle legacy dashboard routes directly.
@@ -17,7 +32,6 @@ export class LegacyController {
 
   @Get('history')
   async getHistory(@Query('range') range: string) {
-    // Legacy dashboard doesn't specify sensorId, assuming default tank sensor (ID 1)
     return await this.sensorsService.getHistory(1, range || '24h');
   }
 
@@ -32,7 +46,7 @@ export class LegacyController {
   }
 
   @Post('feed')
-  async triggerFeed(@Body() body: any) {
+  async triggerFeed(@Body() _body: FeedDto) {
     return await this.actuatorsService.triggerActuator({
       actuatorId: 1,
       type: 'FEEDER',
@@ -43,9 +57,8 @@ export class LegacyController {
   }
 
   @Post('schedule')
-  async setSchedule(@Body() body: any) {
+  async setSchedule(@Body() body: ScheduleDto) {
     this.logger.log('Legacy schedule request received');
-    // Forwarding to Cron service logic (Phase 3.9)
     return { status: 'scheduled', ...body };
   }
 }

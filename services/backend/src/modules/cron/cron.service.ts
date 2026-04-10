@@ -32,6 +32,13 @@ export class CronService {
       await this.vision.runFullAnalysis('CRON');
     } catch (error) {
       this.logger.error(`Automated vision analysis failed: ${error.message}`);
+      await this.alerts.createAlert({
+        sensorId: 0,
+        tankId: 1,
+        type: 'SYSTEM',
+        severity: 'WARNING',
+        message: `Automated vision analysis failed: ${error.message}`,
+      });
     }
   }
 

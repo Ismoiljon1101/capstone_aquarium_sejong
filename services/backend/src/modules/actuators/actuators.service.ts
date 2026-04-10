@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserCommandEntity } from '../database/entities/user-command.entity';
-import { ActuatorCommand } from '@fishlinic/types';
+import { ActuatorCommand, ActuatorType } from '@fishlinic/types';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
@@ -19,7 +19,7 @@ export class ActuatorsService {
     this.bridgeUrl = this.configService.get<string>('SERIAL_BRIDGE_URL') || 'http://localhost:3001';
   }
 
-  async triggerActuator(command: ActuatorCommand): Promise<any> {
+  async triggerActuator(command: ActuatorCommand): Promise<{ success: boolean; data?: unknown }> {
     this.logger.log(`Triggering actuator ${command.type} (ID: ${command.actuatorId}) to state: ${command.state}`);
 
     // Log the command to the database
@@ -35,19 +35,19 @@ export class ActuatorsService {
     try {
       // Forward command to the serial-bridge
       const response = await axios.post(`${this.bridgeUrl}/actuate`, command);
-      
+
       // Update execution timestamp
       savedCommand.executedAt = new Date();
       await this.commandRepository.save(savedCommand);
 
-      return response.data;
+      return { success: true, data: response.data };
     } catch (error) {
       this.logger.error(`Failed to forward command to serial-bridge: ${error.message}`);
-      throw error;
+      return { success: false };
     }
   }
 
-  async getState(): Promise<any> {
+  async getState(): Promise<{ status: string; message?: string }> {
     try {
       const response = await axios.get(`${this.bridgeUrl}/status`);
       return response.data;
@@ -59,7 +59,7 @@ export class ActuatorsService {
 
   async emergencyOff(): Promise<void> {
     this.logger.warn('EMERGENCY OFF TRIGGERED');
-    const actuators: any[] = [
+    const actuators: Array<{ id: number; type: ActuatorType; channel: number }> = [
       { id: 1, type: 'FEEDER', channel: 1 },
       { id: 2, type: 'AIR_PUMP', channel: 2 },
       { id: 3, type: 'LED_STRIP', channel: 3 },
