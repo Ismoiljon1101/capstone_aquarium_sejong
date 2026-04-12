@@ -61,6 +61,50 @@ export class CronService {
     await this.fish.generateDailyReport();
   }
 
+  @Cron('0 7 * * *')
+  async fishGrowthMonitor() {
+    this.logger.log('Running daily fish growth comparison...');
+    try {
+      const result = await this.vision.runFullAnalysis('CRON_GROWTH');
+      if (result.count?.count > 0) {
+        await this.fish.saveGrowthRecord(result.count.count * 2.1, result.count.count);
+      }
+    } catch (error) {
+      this.logger.error(`Fish growth monitor failed: ${error.message}`);
+    }
+  }
+
+  @Cron('0 0 * * 0')
+  async weeklyExport() {
+    this.logger.log('Generating weekly JSONL export...');
+    try {
+      const [sensorHistory, healthHistory, growthHistory] = await Promise.all([
+        this.sensors.getHistory(0, '1w'),
+        this.fish.getHealthHistory(),
+        this.fish.getGrowthHistory(),
+      ]);
+
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        sensors: sensorHistory,
+        health: healthHistory,
+        growth: growthHistory,
+      };
+
+      this.logger.log(`Weekly export generated: ${JSON.stringify(exportData).length} bytes`);
+      return exportData;
+    } catch (error) {
+      this.logger.error(`Weekly export failed: ${error.message}`);
+      await this.alerts.createAlert({
+        sensorId: 0,
+        tankId: 1,
+        type: 'SYSTEM',
+        severity: 'WARNING',
+        message: `Weekly export failed: ${error.message}`,
+      });
+    }
+  }
+
   @Cron('*/30 * * * *')
   async checkEmergencyConditions() {
     this.logger.log('Performing deep emergency conditions check...');

@@ -180,11 +180,11 @@
   - `acknowledgeAlert(id)`
 
 ### 3.6 Vision Module (talks to Firdavs's FastAPI)
-- [ ] Create `src/vision/vision.module.ts`
-- [ ] Create `src/vision/vision.controller.ts`:
+- [x] Create `src/vision/vision.module.ts`
+- [x] Create `src/vision/vision.controller.ts`:
   - POST `/vision/analyze` — trigger full vision analysis on demand
   - GET `/vision/latest-report` — last AI vision result
-- [ ] Create `src/vision/vision.service.ts`:
+- [x] Create `src/vision/vision.service.ts`:
   - `requestSnapshot()` — calls serial-bridge camera endpoint
   - `detectDisease(imagePath)` — POST to FastAPI `/predict/disease`
   - `detectBehavior(imagePath)` — POST to FastAPI `/predict/behavior`
@@ -193,31 +193,31 @@
   - `runFullAnalysis()` — chains all 4, builds health report, saves to DB
 
 ### 3.7 Voice Module (talks to Firdavs's Ollama/Veronica)
-- [ ] Create `src/voice/voice.module.ts`
-- [ ] Create `src/voice/voice.controller.ts`:
+- [x] Create `src/voice/voice.module.ts`
+- [x] Create `src/voice/voice.controller.ts`:
   - POST `/voice/query` — receives transcribed text + triggers AI response
   - GET `/voice/sessions` — voice session history
-- [ ] Create `src/voice/voice.service.ts`:
+- [x] Create `src/voice/voice.service.ts`:
   - `handleQuery(text, snapshotId)` — bundles text + snapshot + latest sensor readings → POST to Ollama
   - `buildPrompt(text, readings, snapshot)` — constructs context-aware prompt
   - `saveSession(session)` — persist voice session to DB
 
 ### 3.8 Fish Module
-- [ ] Create `src/fish/fish.module.ts`
-- [ ] Create `src/fish/fish.controller.ts`:
+- [x] Create `src/fish/fish.module.ts`
+- [x] Create `src/fish/fish.controller.ts`:
   - GET `/fish/count` — latest fish count
   - GET `/fish/growth` — growth history
   - GET `/fish/health` — latest health report
   - GET `/fish/health/history`
-- [ ] Create `src/fish/fish.service.ts`:
+- [x] Create `src/fish/fish.service.ts`:
   - `saveCount(count: FishCount)`
   - `saveGrowthRecord(growth: FishGrowth)`
   - `saveHealthReport(report: FishHealthReport)`
   - `compareGrowth(today, yesterday)` — growth delta calculation
 
 ### 3.9 Cron Module (24/7 scheduler)
-- [ ] Create `src/cron/cron.module.ts`
-- [ ] Create `src/cron/cron.service.ts` with these jobs:
+- [x] Create `src/cron/cron.module.ts`
+- [x] Create `src/cron/cron.service.ts` with these jobs:
   ```
   @Cron('*/1 * * * *')    → checkSensorThresholds() — read latest, fire alert if bad
   @Cron('*/5 * * * *')    → runVisionAnalysis() — snapshot → YOLO count + behavior
@@ -229,8 +229,8 @@
   ```
 
 ### 3.10 Gateway Module (Socket.IO)
-- [ ] Create `src/gateway/gateway.module.ts`
-- [ ] Create `src/gateway/gateway.gateway.ts`:
+- [x] Create `src/gateway/gateway.module.ts`
+- [x] Create `src/gateway/gateway.gateway.ts`:
   - Event `sensor:update` — emits on every new reading from serial
   - Event `alert:new` — emits when alert is created
   - Event `fish:count` — emits after each vision analysis
@@ -355,23 +355,23 @@
 
 ## PHASE 7 — NEXT.JS DASHBOARD (`apps/dashboard/`)
 
-> Hamidullo owns this
+> Hamidullo owns this → Ismail took over
 
-- [ ] Move existing dashboard into `apps/dashboard/`
-- [ ] Install: `socket.io-client`, `@fishlinic/types` (from shared)
-- [ ] Create Atomic Design folder structure:
+- [x] Move existing dashboard into `apps/dashboard/`
+- [x] Install: `socket.io-client`, `@fishlinic/types` (from shared)
+- [x] Create Atomic Design folder structure:
   ```
   src/components/
   ├── atoms/          (Button, Badge, Gauge, StatusDot, SensorValue)
   ├── molecules/      (SensorCard, AlertBanner, ActuatorButton, FishCountBadge)
   └── organisms/      (LiveDashboard, ControlPanel, AlertFeed, HistoryChart, FishHealthPanel)
   ```
-- [ ] Split `page.tsx` if over 300 lines into organisms
-- [ ] Create `src/hooks/useSocket.ts`:
+- [x] Split `page.tsx` if over 300 lines into organisms
+- [x] Create `src/hooks/useSocket.ts`:
   - Connects to NestJS Socket.IO
   - Listens: `sensor:update`, `alert:new`, `fish:count`, `actuator:state`, `health:report`
   - Returns typed state for each event
-- [ ] Create `src/hooks/useApi.ts`:
+- [x] Create `src/hooks/useApi.ts`:
   - `feedFish()` → POST `/actuators/feed`
   - `togglePump(state)` → POST `/actuators/pump`
   - `toggleLed(state)` → POST `/actuators/led`
@@ -379,15 +379,15 @@
   - `getAlerts()` → GET `/alerts/active`
   - `acknowledgeAlert(id)` → PATCH `/alerts/:id/acknowledge`
   - `getFishHealth()` → GET `/fish/health`
-- [ ] Create `src/api/endpoints.ts` — single source of truth for all API URLs
-- [ ] Create screens:
+- [x] Create `src/api/endpoints.ts` — single source of truth for all API URLs
+- [x] Create screens:
   - `app/dashboard/page.tsx` — live monitoring (pH, temp, DO2, CO2 gauges + fish count)
   - `app/dashboard/fish-health/page.tsx` — YOLO disease results, behavior anomaly, health score
   - `app/dashboard/controls/page.tsx` — feed, pump, LED manual controls
   - `app/dashboard/history/page.tsx` — 24h/1w/1m charts + CSV/JSON export
   - `app/dashboard/alerts/page.tsx` — alert feed + acknowledge
-- [ ] Keep existing: NextAuth (Google, Kakao, Email), Fish Game, JSONL export
-- [ ] Create `.env.example`:
+- [x] Keep existing: NextAuth (Google, Kakao, Email), Fish Game, JSONL export
+- [x] Create `.env.example`:
   ```
   NEXTAUTH_SECRET=
   NEXTAUTH_URL=http://localhost:3001
@@ -441,7 +441,7 @@
 
 > Ismail writes all of these — team reads them before writing code
 
-- [ ] Create `docs/api-contracts.md`:
+- [x] Create `docs/api-contracts.md`:
   ```
   ## REST Endpoints
   POST /serial/reading     → body: SensorReading
@@ -476,16 +476,16 @@
   POST /predict/count      → body: { imagePath } → { count, confidence }
   ```
 
-- [ ] Create `docs/serial-protocol.md`:
+- [x] Create `docs/serial-protocol.md`:
   - Arduino output format
   - Baud rate
   - How to test without hardware (mock mode)
   - Pin mappings reference
 
-- [ ] Create `docs/cron-schedule.md`:
+- [x] Create `docs/cron-schedule.md`:
   - All 7 cron jobs, their schedule, what they do, what services they call
 
-- [ ] Create `docs/team-ownership.md`:
+- [x] Create `docs/team-ownership.md`:
   ```
   Ismail   → services/backend (all modules), docs
   Maral    → services/backend/src/database (entities + migrations)
@@ -494,7 +494,7 @@
   Sarvar   → firmware, services/serial-bridge
   ```
 
-- [ ] Create `docs/supabase-setup.md`:
+- [x] Create `docs/supabase-setup.md`:
   - How to get the connection string
   - How to set up `.env` with Supabase URL
   - How to run migrations

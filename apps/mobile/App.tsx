@@ -1,27 +1,16 @@
 import { registerRootComponent } from 'expo';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, SafeAreaView } from 'react-native';
-import DashboardScreen from './src/screens/DashboardScreen';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AppNavigator from './src/navigation/AppNavigator';
 
-/**
- * Fishlinic Mobile - Main Application Entry Point
- * Architecture: Atomic Design
- */
 function App() {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaProvider style={{ backgroundColor: '#020617' }}>
       <StatusBar style="light" />
-      <DashboardScreen />
-    </SafeAreaView>
+      <AppNavigator />
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#020617', // Match Dashboard Background
-  },
-});
 
 registerRootComponent(App);
