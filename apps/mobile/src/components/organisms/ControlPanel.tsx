@@ -1,38 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useApi } from '../../hooks/useApi';
 import { useSocket } from '../../hooks/useSocket';
 
-interface ToggleCardProps {
-  icon: string;
-  label: string;
-  sub: string;
-  active: boolean;
-  loading: boolean;
-  color: string;
-  onPress: () => void;
-}
-
-function ToggleCard({ icon, label, sub, active, loading, color, onPress }: ToggleCardProps) {
+function DeviceCard({ icon, label, desc, active, loading, color, onPress }: {
+  icon: string; label: string; desc: string;
+  active: boolean; loading: boolean; color: string; onPress: () => void;
+}) {
   return (
     <TouchableOpacity
-      style={[styles.toggleCard, active && { borderColor: color + '60', backgroundColor: color + '12' }]}
-      onPress={onPress}
-      disabled={loading}
-      activeOpacity={0.7}
+      onPress={onPress} disabled={loading} activeOpacity={0.8}
+      style={{
+        flexDirection: 'row', alignItems: 'center',
+        backgroundColor: active ? color + '0A' : '#0f172a',
+        borderRadius: 16, borderCurve: 'continuous',
+        padding: 14, borderWidth: 1,
+        borderColor: active ? color + '40' : 'rgba(255,255,255,0.06)',
+        marginBottom: 10, gap: 12,
+        boxShadow: active ? `0 2px 12px ${color}15` : 'none',
+      }}
     >
-      <View style={[styles.toggleIconWrap, { backgroundColor: active ? color + '25' : 'rgba(255,255,255,0.05)' }]}>
-        {loading
-          ? <ActivityIndicator size="small" color={color} />
-          : <Text style={styles.toggleIcon}>{icon}</Text>
-        }
+      <View style={{
+        width: 44, height: 44, borderRadius: 14, borderCurve: 'continuous',
+        alignItems: 'center', justifyContent: 'center',
+        backgroundColor: active ? color + '20' : 'rgba(255,255,255,0.04)',
+      }}>
+        {loading ? <ActivityIndicator color={color} size="small" /> : <Text style={{ fontSize: 20 }}>{icon}</Text>}
       </View>
-      <Text style={styles.toggleLabel}>{label}</Text>
-      <Text style={styles.toggleSub}>{sub}</Text>
-      <View style={[styles.toggleBadge, { backgroundColor: active ? color + '22' : 'rgba(255,255,255,0.05)' }]}>
-        <Text style={[styles.toggleBadgeText, { color: active ? color : '#64748b' }]}>
-          {active ? 'ON' : 'OFF'}
-        </Text>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: '#e2e8f0', marginBottom: 2 }}>{label}</Text>
+        <Text style={{ fontSize: 11, color: '#64748b' }}>{desc}</Text>
+      </View>
+      {/* Toggle switch */}
+      <View style={{
+        width: 36, height: 20, borderRadius: 10,
+        justifyContent: 'center', backgroundColor: active ? color : '#1e293b',
+      }}>
+        <View style={{
+          width: 16, height: 16, borderRadius: 8,
+          backgroundColor: '#fff',
+          marginLeft: active ? 18 : 2,
+        }} />
       </View>
     </TouchableOpacity>
   );
@@ -44,13 +52,11 @@ export const ControlPanel: React.FC = () => {
   const [pump, setPump] = useState(false);
   const [led, setLed] = useState(false);
   const [feeding, setFeeding] = useState(false);
-  const [pumpLoading, setPumpLoading] = useState(false);
-  const [ledLoading, setLedLoading] = useState(false);
+  const [pumpL, setPumpL] = useState(false);
+  const [ledL, setLedL] = useState(false);
 
   useEffect(() => {
-    getActuatorState().then(r => {
-      if (r.data) { setPump(!!r.data.pump); setLed(!!r.data.led); }
-    }).catch(() => null);
+    getActuatorState().then(r => { if (r.data) { setPump(!!r.data.pump); setLed(!!r.data.led); } }).catch(() => null);
   }, []);
 
   useEffect(() => {
@@ -60,94 +66,41 @@ export const ControlPanel: React.FC = () => {
     });
   }, [on]);
 
-  const handleFeed = async () => {
-    setFeeding(true);
-    await triggerFeed().catch(() => null);
-    setTimeout(() => setFeeding(false), 3000);
-  };
-
-  const handlePump = async () => {
-    setPumpLoading(true);
-    await togglePump().catch(() => null);
-    setPump(p => !p);
-    setPumpLoading(false);
-  };
-
-  const handleLed = async () => {
-    setLedLoading(true);
-    await toggleLed().catch(() => null);
-    setLed(l => !l);
-    setLedLoading(false);
-  };
+  const feed = async () => { setFeeding(true); await triggerFeed().catch(() => null); setTimeout(() => setFeeding(false), 3000); };
+  const pumpToggle = async () => { setPumpL(true); await togglePump().catch(() => null); setPump(p => !p); setPumpL(false); };
+  const ledToggle = async () => { setLedL(true); await toggleLed().catch(() => null); setLed(l => !l); setLedL(false); };
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.title}>Quick Controls</Text>
+    <View style={{ marginBottom: 28 }}>
+      <Text style={{ fontSize: 20, fontWeight: '800', color: '#f1f5f9', letterSpacing: -0.5, marginBottom: 16 }}>
+        Device Controls
+      </Text>
 
-      {/* Feed — full-width CTA */}
+      {/* Feed CTA */}
       <TouchableOpacity
-        style={[styles.feedBtn, feeding && styles.feedActive]}
-        onPress={handleFeed}
-        disabled={feeding}
-        activeOpacity={0.75}
+        onPress={feed} disabled={feeding} activeOpacity={0.8}
+        style={{
+          flexDirection: 'row', alignItems: 'center',
+          backgroundColor: feeding ? 'rgba(56,189,248,0.08)' : '#0f172a',
+          borderRadius: 20, borderCurve: 'continuous',
+          padding: 18, borderWidth: 1,
+          borderColor: feeding ? '#38bdf8' : 'rgba(56,189,248,0.15)',
+          marginBottom: 12, gap: 14,
+          boxShadow: '0 2px 16px rgba(56,189,248,0.08)',
+        }}
       >
-        <View style={styles.feedLeft}>
-          <Text style={styles.feedIcon}>{feeding ? '\u23F3' : '\uD83D\uDC1F'}</Text>
-          <View>
-            <Text style={styles.feedLabel}>{feeding ? 'Dispensing...' : 'Feed Fish'}</Text>
-            <Text style={styles.feedSub}>Triggers feeder relay once</Text>
-          </View>
+        <Text style={{ fontSize: 28 }}>{feeding ? '\u23F3' : '\uD83C\uDF7D\uFE0F'}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 17, fontWeight: '800', color: '#38bdf8' }}>
+            {feeding ? 'Dispensing feed\u2026' : 'Feed Now'}
+          </Text>
+          <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Automatic feeder \u2022 one cycle</Text>
         </View>
-        {feeding
-          ? <ActivityIndicator color="#60a5fa" size="small" />
-          : <Text style={styles.feedArrow}>\u203A</Text>
-        }
+        {!feeding && <Text style={{ fontSize: 28, color: '#38bdf850', fontWeight: '300' }}>{'\u203A'}</Text>}
       </TouchableOpacity>
 
-      {/* Toggles */}
-      <View style={styles.toggleRow}>
-        <ToggleCard icon="\uD83D\uDCA8" label="Air Pump" sub="Oxygenation" active={pump} loading={pumpLoading} color="#06b6d4" onPress={handlePump} />
-        <ToggleCard icon="\uD83D\uDCA1" label="LED Strip" sub="12V lighting" active={led}  loading={ledLoading}  color="#f59e0b" onPress={handleLed} />
-      </View>
+      <DeviceCard icon="\uD83D\uDCA8" label="Air Pump" desc="Oxygenation system" active={pump} loading={pumpL} color="#06b6d4" onPress={pumpToggle} />
+      <DeviceCard icon="\uD83D\uDCA1" label="LED Light" desc="12V aquarium strip" active={led}  loading={ledL}  color="#f59e0b" onPress={ledToggle} />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: { marginBottom: 24 },
-  title: { fontSize: 18, fontWeight: '700', color: '#f1f5f9', marginBottom: 14, letterSpacing: -0.3 },
-  feedBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#0f172a',
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(59,130,246,0.25)',
-    marginBottom: 12,
-  },
-  feedActive: { borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)' },
-  feedLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  feedIcon: { fontSize: 30 },
-  feedLabel: { fontSize: 16, fontWeight: '700', color: '#60a5fa', marginBottom: 2 },
-  feedSub: { fontSize: 12, color: '#64748b' },
-  feedArrow: { fontSize: 24, color: '#60a5fa', fontWeight: '300' },
-  toggleRow: { flexDirection: 'row', gap: 12 },
-  toggleCard: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    borderRadius: 16,
-    padding: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    gap: 8,
-  },
-  toggleIconWrap: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  toggleIcon: { fontSize: 22 },
-  toggleLabel: { fontSize: 13, fontWeight: '700', color: '#e2e8f0' },
-  toggleSub: { fontSize: 10, color: '#64748b' },
-  toggleBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
-  toggleBadgeText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
-});

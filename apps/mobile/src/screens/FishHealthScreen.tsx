@@ -1,24 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, ScrollView, RefreshControl } from 'react-native';
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
-import FishHealthCard from '../components/molecules/FishHealthCard';
+import { FishHealthPanel } from '../components/organisms/FishHealthPanel';
 
-interface HealthReport {
-  reportId: number;
-  phStatus: string;
-  tempStatus: string;
-  doStatus: string;
-  visualStatus: string;
-  behaviorStatus: string;
-  createdAt: string;
-}
+interface HealthReport { phStatus: string; tempStatus: string; doStatus: string; visualStatus: string; behaviorStatus: string; createdAt: string; }
 
 export default function FishHealthScreen() {
   const { on } = useSocket();
@@ -35,48 +21,32 @@ export default function FishHealthScreen() {
   }, [on]);
 
   const loadData = async () => {
-    const [countRes, healthRes] = await Promise.allSettled([
-      api.getFishCount(),
-      api.getFishHealth(),
-    ]);
-    if (countRes.status === 'fulfilled' && countRes.value.data) setFishCount(countRes.value.data);
-    if (healthRes.status === 'fulfilled' && healthRes.value.data) setHealth(healthRes.value.data);
+    const [c, h] = await Promise.allSettled([api.getFishCount(), api.getFishHealth()]);
+    if (c.status === 'fulfilled' && c.value.data) setFishCount(c.value.data);
+    if (h.status === 'fulfilled' && h.value.data) setHealth(h.value.data);
   };
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, []);
+  const onRefresh = useCallback(async () => { setRefreshing(true); await loadData(); setRefreshing(false); }, []);
 
-  const statusColor = (s: string) => {
-    if (s === 'critical') return '#ef4444';
-    if (s === 'warn' || s === 'warning') return '#fbbf24';
-    return '#34d399';
-  };
+  const sc = (s: string) => s === 'critical' ? '#ef4444' : (s === 'warn' || s === 'warning') ? '#fbbf24' : '#34d399';
 
   return (
-    <View style={styles.root}>
+    <View style={{ flex: 1, backgroundColor: '#020617' }}>
       <ScrollView
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" colors={['#3b82f6']} />
-        }
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#38bdf8" colors={['#38bdf8']} />}
       >
-        <Text style={styles.title}>Fish Health</Text>
-        <Text style={styles.subtitle}>AI-powered monitoring via YOLO + ConvLSTM</Text>
+        <Text style={{ fontSize: 28, fontWeight: '900', color: '#f1f5f9', letterSpacing: -1, marginBottom: 4 }}>Fish Health</Text>
+        <Text style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>AI-powered monitoring via YOLO + ConvLSTM</Text>
 
-        <FishHealthCard
-          fishCount={fishCount.count}
-          confidence={fishCount.confidence}
-          healthStatus={health?.visualStatus ?? 'ok'}
-          behaviorSummary={health?.behaviorStatus ?? 'Normal schooling behavior detected.'}
-          lastUpdated={fishCount.timestamp}
-        />
+        <FishHealthPanel />
 
-        {/* Parameter Breakdown */}
-        <Text style={styles.sectionTitle}>Parameter Status</Text>
-        <View style={styles.paramGrid}>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: '#e2e8f0', marginBottom: 12 }}>Parameter Status</Text>
+        <View style={{
+          backgroundColor: '#0f172a', borderRadius: 16, borderCurve: 'continuous',
+          borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', overflow: 'hidden',
+        }}>
           {[
             { label: 'pH', status: health?.phStatus ?? 'ok', icon: '\uD83E\uddEA' },
             { label: 'Temperature', status: health?.tempStatus ?? 'ok', icon: '\uD83C\uDF21\uFE0F' },
@@ -84,11 +54,15 @@ export default function FishHealthScreen() {
             { label: 'Visual Check', status: health?.visualStatus ?? 'ok', icon: '\uD83D\uDC41\uFE0F' },
             { label: 'Behavior', status: health?.behaviorStatus ?? 'normal', icon: '\uD83E\uDDE0' },
           ].map(p => (
-            <View key={p.label} style={styles.paramRow}>
-              <Text style={styles.paramIcon}>{p.icon}</Text>
-              <Text style={styles.paramLabel}>{p.label}</Text>
-              <View style={[styles.paramBadge, { backgroundColor: statusColor(p.status) + '22' }]}>
-                <Text style={[styles.paramStatus, { color: statusColor(p.status) }]}>
+            <View key={p.label} style={{
+              flexDirection: 'row', alignItems: 'center',
+              paddingVertical: 14, paddingHorizontal: 16,
+              borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+            }}>
+              <Text style={{ fontSize: 18, marginRight: 12 }}>{p.icon}</Text>
+              <Text style={{ flex: 1, fontSize: 14, color: '#cbd5e1', fontWeight: '500' }}>{p.label}</Text>
+              <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, borderCurve: 'continuous', backgroundColor: sc(p.status) + '18' }}>
+                <Text selectable style={{ fontSize: 11, fontWeight: '700', letterSpacing: 0.3, color: sc(p.status) }}>
                   {p.status.toUpperCase()}
                 </Text>
               </View>
@@ -96,8 +70,8 @@ export default function FishHealthScreen() {
           ))}
         </View>
 
-        {health && (
-          <Text style={styles.reportTime}>
+        {health?.createdAt && (
+          <Text style={{ fontSize: 12, color: '#475569', textAlign: 'center', marginTop: 20 }}>
             Last report: {new Date(health.createdAt).toLocaleString()}
           </Text>
         )}
@@ -105,31 +79,3 @@ export default function FishHealthScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#020617' },
-  content: { padding: 16, paddingTop: 12, paddingBottom: 40 },
-  title: { fontSize: 24, fontWeight: '800', color: '#f1f5f9', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#64748b', marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#e2e8f0', marginTop: 24, marginBottom: 12 },
-  paramGrid: {
-    backgroundColor: '#0f172a',
-    borderRadius: 16,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  paramRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.04)',
-  },
-  paramIcon: { fontSize: 18, marginRight: 12 },
-  paramLabel: { flex: 1, fontSize: 14, color: '#cbd5e1', fontWeight: '500' },
-  paramBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
-  paramStatus: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
-  reportTime: { fontSize: 12, color: '#475569', textAlign: 'center', marginTop: 20 },
-});

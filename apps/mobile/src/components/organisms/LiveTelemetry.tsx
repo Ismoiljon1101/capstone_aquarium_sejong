@@ -1,127 +1,94 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, Animated, Easing } from 'react-native';
 import { useSocket } from '../../hooks/useSocket';
 
-interface Sensor {
-  value: number;
-  unit: string;
-  status: 'ok' | 'warn' | 'critical';
-}
-
+interface Sensor { value: number; unit: string; status: 'ok' | 'warn' | 'critical'; }
 type SensorMap = Record<string, Sensor>;
 
 const SENSORS = [
-  { key: 'pH',      label: 'pH Level',         unit: 'pH',   color: '#10b981', icon: '\uD83E\uddEA', min: 6.5, max: 8.5 },
-  { key: 'TEMP',    label: 'Temperature',       unit: '\u00B0C',  color: '#3b82f6', icon: '\uD83C\uDF21\uFE0F', min: 20, max: 32 },
-  { key: 'DO2',     label: 'Dissolved O\u2082', unit: 'mg/L', color: '#8b5cf6', icon: '\uD83D\uDCA8', min: 5,   max: 10 },
-  { key: 'CO2',     label: 'CO\u2082',          unit: 'ppm',  color: '#f59e0b', icon: '\u2601\uFE0F', min: 0,   max: 50 },
+  { key: 'pH',   label: 'pH Level',         unit: 'pH',   color: '#10b981', icon: '\uD83E\uddEA', safe: '6.8\u20137.5', def: 7.0 },
+  { key: 'TEMP', label: 'Temperature',       unit: '\u00B0C',  color: '#38bdf8', icon: '\uD83C\uDF21\uFE0F', safe: '24\u201328',  def: 25.0 },
+  { key: 'DO2',  label: 'Dissolved O\u2082', unit: 'mg/L', color: '#a78bfa', icon: '\uD83D\uDCA8', safe: '6\u20139',    def: 7.5 },
+  { key: 'CO2',  label: 'CO\u2082',          unit: 'ppm',  color: '#fb923c', icon: '\u2601\uFE0F', safe: '<40',     def: 18.0 },
 ];
 
-const STATUS_COLOR = { ok: '#34d399', warn: '#fbbf24', critical: '#ef4444' };
+const STATUS_DOT: Record<string, string> = { ok: '#34d399', warn: '#fbbf24', critical: '#ef4444' };
 
-const DEFAULT: Sensor = { value: 0, unit: '', status: 'ok' };
-
-function PulseDot({ active }: { active: boolean }) {
-  const scale = useRef(new Animated.Value(1)).current;
+function PulseRing({ color }: { color: string }) {
+  const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!active) return;
     Animated.loop(
-      Animated.sequence([
-        Animated.timing(scale, { toValue: 1.5, duration: 800, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1,   duration: 800, useNativeDriver: true }),
-      ])
+      Animated.timing(anim, { toValue: 1, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true })
     ).start();
-  }, [active]);
+  }, []);
   return (
-    <Animated.View style={[styles.pulse, { transform: [{ scale }], backgroundColor: active ? '#34d399' : '#475569' }]} />
+    <Animated.View style={{
+      position: 'absolute', width: 8, height: 8, borderRadius: 4,
+      borderWidth: 2, borderColor: color, top: 0, left: 0,
+      transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.8] }) }],
+      opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 0] }),
+    }} />
   );
 }
 
-function MetricCard({ cfg, sensor }: { cfg: typeof SENSORS[0]; sensor: Sensor }) {
-  const sc = STATUS_COLOR[sensor.status] ?? '#34d399';
-  const pct = Math.min(1, Math.max(0, (sensor.value - cfg.min) / (cfg.max - cfg.min)));
+function SensorCard({ cfg, sensor }: { cfg: typeof SENSORS[0]; sensor: Sensor | undefined }) {
+  const val = sensor?.value ?? cfg.def;
+  const st = sensor?.status ?? 'ok';
+  const dotColor = STATUS_DOT[st] ?? '#34d399';
+  const hasData = sensor !== undefined && sensor.value > 0;
+
   return (
-    <View style={[styles.card, { borderLeftColor: cfg.color }]}>
-      <View style={styles.cardTop}>
-        <Text style={styles.cardIcon}>{cfg.icon}</Text>
-        <View style={[styles.statusPill, { backgroundColor: sc + '22' }]}>
-          <Text style={[styles.statusText, { color: sc }]}>{sensor.status.toUpperCase()}</Text>
+    <View style={{
+      width: '47%',
+      backgroundColor: '#0f172a',
+      borderRadius: 20, borderCurve: 'continuous',
+      padding: 16, borderWidth: 1, borderColor: cfg.color + '20',
+      overflow: 'hidden', position: 'relative',
+      boxShadow: `0 2px 12px ${cfg.color}10`,
+    }}>
+      {/* Glow */}
+      <View style={{ position: 'absolute', bottom: -20, right: -20, width: 80, height: 80, borderRadius: 40, backgroundColor: cfg.color + '08' }} />
+
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <Text style={{ fontSize: 20 }}>{cfg.icon}</Text>
+        <View style={{ position: 'relative' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotColor }} />
+          {hasData && <PulseRing color={dotColor} />}
         </View>
       </View>
-      <Text style={[styles.value, { color: cfg.color }]}>
-        {sensor.value > 0 ? sensor.value.toFixed(1) : '--'}
+
+      <Text selectable style={{
+        fontSize: 36, fontWeight: '900', letterSpacing: -2, lineHeight: 40,
+        color: cfg.color, fontVariant: ['tabular-nums'],
+      }}>
+        {val.toFixed(1)}
       </Text>
-      <Text style={styles.unit}>{cfg.unit}</Text>
-      <Text style={styles.label}>{cfg.label}</Text>
-      {/* range bar */}
-      <View style={styles.bar}>
-        <View style={[styles.barFill, { width: `${pct * 100}%` as any, backgroundColor: cfg.color }]} />
-      </View>
-      <View style={styles.barLabels}>
-        <Text style={styles.barLabel}>{cfg.min}</Text>
-        <Text style={styles.barLabel}>{cfg.max}</Text>
-      </View>
+      <Text style={{ fontSize: 13, color: '#475569', fontWeight: '600', marginTop: 2, marginBottom: 12 }}>{cfg.unit}</Text>
+
+      <Text style={{ fontSize: 12, color: '#94a3b8', fontWeight: '600', marginBottom: 2 }}>{cfg.label}</Text>
+      <Text selectable style={{ fontSize: 10, fontWeight: '500', color: cfg.color + '80' }}>Safe: {cfg.safe}</Text>
     </View>
   );
 }
 
 export const LiveTelemetry: React.FC = () => {
-  const { connected, on } = useSocket();
+  const { on } = useSocket();
   const [sensors, setSensors] = useState<SensorMap>({});
 
   useEffect(() => {
-    const unsub = on('sensor:update', (d: any) => {
+    return on('sensor:update', (d: any) => {
       setSensors(prev => ({ ...prev, [d.type]: { value: d.value, unit: d.unit, status: d.status ?? 'ok' } }));
     });
-    return unsub;
   }, [on]);
 
   return (
-    <View style={styles.section}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Live Telemetry</Text>
-        <View style={styles.liveRow}>
-          <PulseDot active={connected} />
-          <Text style={[styles.liveText, { color: connected ? '#34d399' : '#64748b' }]}>
-            {connected ? 'Live' : 'Offline'}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.grid}>
-        {SENSORS.map(cfg => (
-          <MetricCard key={cfg.key} cfg={cfg} sensor={sensors[cfg.key] ?? DEFAULT} />
-        ))}
+    <View style={{ marginBottom: 28 }}>
+      <Text style={{ fontSize: 20, fontWeight: '800', color: '#f1f5f9', letterSpacing: -0.5, marginBottom: 16 }}>
+        Water Parameters
+      </Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+        {SENSORS.map(cfg => <SensorCard key={cfg.key} cfg={cfg} sensor={sensors[cfg.key]} />)}
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: { marginBottom: 24 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  title: { fontSize: 18, fontWeight: '700', color: '#f1f5f9', letterSpacing: -0.3 },
-  liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pulse: { width: 8, height: 8, borderRadius: 4 },
-  liveText: { fontSize: 12, fontWeight: '700' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  card: {
-    width: '47.5%',
-    backgroundColor: '#0f172a',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderLeftWidth: 3,
-  },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  cardIcon: { fontSize: 18 },
-  statusPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 },
-  statusText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
-  value: { fontSize: 32, fontWeight: '800', letterSpacing: -1, lineHeight: 36 },
-  unit: { fontSize: 12, color: '#64748b', fontWeight: '500', marginTop: 2, marginBottom: 4 },
-  label: { fontSize: 11, color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 10 },
-  bar: { height: 3, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' },
-  barFill: { height: 3, borderRadius: 2 },
-  barLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  barLabel: { fontSize: 9, color: '#475569' },
-});

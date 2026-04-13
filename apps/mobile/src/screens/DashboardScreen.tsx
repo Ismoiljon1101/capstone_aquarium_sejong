@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   RefreshControl,
   Animated,
@@ -13,7 +12,6 @@ import { LiveTelemetry } from '../components/organisms/LiveTelemetry';
 import { ControlPanel } from '../components/organisms/ControlPanel';
 import { AlertFeed } from '../components/organisms/AlertFeed';
 import { FishHealthPanel } from '../components/organisms/FishHealthPanel';
-import StatusDot from '../components/atoms/StatusDot';
 
 export default function DashboardScreen() {
   const { connected } = useSocket();
@@ -22,49 +20,68 @@ export default function DashboardScreen() {
   const [fadeAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim]);
+    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    try {
-      await Promise.allSettled([
-        api.getLatest(),
-        api.getActiveAlerts(),
-        api.getFishCount(),
-        api.getFishHealth(),
-      ]);
-    } catch {
-      // data comes via socket
-    }
+    await Promise.allSettled([api.getLatest(), api.getActiveAlerts(), api.getFishCount(), api.getFishHealth()]);
     setRefreshing(false);
   }, []);
 
   return (
-    <Animated.View style={[styles.root, { opacity: fadeAnim }]}>
+    <Animated.View style={{ flex: 1, backgroundColor: '#020617', opacity: fadeAnim }}>
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: 30, gap: 0 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" colors={['#3b82f6']} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#38bdf8" colors={['#38bdf8']} />}
       >
-        {/* Header */}
-        <View style={styles.header}>
+        {/* Brand Header */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
           <View>
-            <Text style={styles.brandText}>Fishlinic</Text>
-            <Text style={styles.subtitle}>Smart Aquaculture Monitor</Text>
+            <Text style={{ fontSize: 14, color: '#64748b', fontWeight: '500', marginBottom: 2 }}>Good {getTimeOfDay()}</Text>
+            <Text selectable style={{ fontSize: 30, fontWeight: '900', color: '#f8fafc', letterSpacing: -1 }}>Fishlinic</Text>
           </View>
-          <View style={styles.connectionBadge}>
-            <StatusDot status={connected ? 'ok' : 'critical'} size={6} />
-            <Text style={[styles.connText, { color: connected ? '#34d399' : '#f87171' }]}>
-              {connected ? 'Live' : 'Offline'}
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 6,
+            backgroundColor: 'rgba(255,255,255,0.04)',
+            paddingHorizontal: 12, paddingVertical: 8,
+            borderRadius: 20, borderCurve: 'continuous',
+            borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+            marginTop: 6,
+          }}>
+            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: connected ? '#34d399' : '#64748b' }} />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: connected ? '#34d399' : '#64748b' }}>
+              {connected ? 'System Online' : 'Connecting\u2026'}
             </Text>
+          </View>
+        </View>
+
+        {/* Hero Health Card */}
+        <View style={{
+          borderRadius: 24, borderCurve: 'continuous',
+          overflow: 'hidden', marginBottom: 28,
+          borderWidth: 1, borderColor: 'rgba(56,189,248,0.15)',
+          backgroundColor: '#0c1a2e',
+          boxShadow: '0 4px 24px rgba(56,189,248,0.08)',
+        }}>
+          {/* Subtle glow */}
+          <View style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(56,189,248,0.06)' }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 24, gap: 20 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              <Text selectable style={{ fontSize: 56, fontWeight: '900', color: '#38bdf8', letterSpacing: -3, lineHeight: 58, fontVariant: ['tabular-nums'] }}>98</Text>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: '#38bdf880', marginLeft: 2 }}>/100</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: '#e2e8f0', marginBottom: 4 }}>Aquarium Health</Text>
+              <Text style={{ fontSize: 13, color: '#64748b', marginBottom: 10, lineHeight: 18 }}>All parameters within safe range</Text>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <Tag label="Water \u2713" color="#34d399" />
+                <Tag label="Fish \u2713" color="#60a5fa" />
+                <Tag label="Feed \u2713" color="#fbbf24" />
+              </View>
+            </View>
           </View>
         </View>
 
@@ -72,36 +89,26 @@ export default function DashboardScreen() {
         <LiveTelemetry />
         <ControlPanel />
         <FishHealthPanel />
-
-        <View style={{ height: 40 }} />
       </ScrollView>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  scroll: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 30 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
-  brandText: { fontSize: 26, fontWeight: '800', color: '#f1f5f9', letterSpacing: -0.5 },
-  subtitle: { fontSize: 12, color: '#64748b', marginTop: 2 },
-  connectionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 8,
-  },
-  connText: { fontSize: 12, fontWeight: '600' },
-});
+function Tag({ label, color }: { label: string; color: string }) {
+  return (
+    <View style={{
+      paddingHorizontal: 8, paddingVertical: 3,
+      borderRadius: 8, borderCurve: 'continuous',
+      borderWidth: 1, backgroundColor: color + '15', borderColor: color + '30',
+    }}>
+      <Text style={{ fontSize: 10, fontWeight: '700', color }}>{label}</Text>
+    </View>
+  );
+}
+
+function getTimeOfDay() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Morning';
+  if (h < 17) return 'Afternoon';
+  return 'Evening';
+}

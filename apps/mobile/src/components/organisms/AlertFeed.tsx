@@ -1,69 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useSocket } from '../../hooks/useSocket';
 import { useApi } from '../../hooks/useApi';
 
-interface Alert {
-  alertId: string;
-  message: string;
-  severity: string;
-  createdAt?: string;
-}
+interface Alert { alertId: string; message: string; severity: string; createdAt?: string; }
 
-const SEV_COLOR: Record<string, string> = {
-  CRITICAL: '#ef4444', EMERGENCY: '#dc2626',
-  WARNING: '#fbbf24', INFO: '#60a5fa',
-};
-const SEV_BG: Record<string, string> = {
-  CRITICAL: 'rgba(239,68,68,0.1)', EMERGENCY: 'rgba(220,38,38,0.1)',
-  WARNING: 'rgba(251,191,36,0.1)', INFO: 'rgba(96,165,250,0.1)',
+const SEV: Record<string, { color: string; icon: string }> = {
+  CRITICAL:  { color: '#ef4444', icon: '\uD83D\uDED1' },
+  EMERGENCY: { color: '#dc2626', icon: '\u26A0\uFE0F' },
+  WARNING:   { color: '#fbbf24', icon: '\u26A0\uFE0F' },
+  INFO:      { color: '#60a5fa', icon: '\u2139\uFE0F' },
 };
 
 function AlertRow({ alert, onAck }: { alert: Alert; onAck: () => void }) {
   const sev = alert.severity?.toUpperCase() ?? 'INFO';
-  const color = SEV_COLOR[sev] ?? '#60a5fa';
-  const bg = SEV_BG[sev] ?? 'rgba(96,165,250,0.1)';
+  const { color, icon } = SEV[sev] ?? SEV.INFO;
   return (
-    <View style={[rowStyles.wrap, { borderLeftColor: color }]}>
+    <View style={{
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: '#0f172a',
+      borderRadius: 14, borderCurve: 'continuous',
+      padding: 14, marginBottom: 8,
+      borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+      borderLeftWidth: 3, borderLeftColor: color,
+      gap: 12,
+      boxShadow: `0 1px 4px ${color}10`,
+    }}>
+      <Text style={{ fontSize: 18 }}>{icon}</Text>
       <View style={{ flex: 1 }}>
-        <View style={rowStyles.top}>
-          <View style={[rowStyles.sevBadge, { backgroundColor: bg }]}>
-            <Text style={[rowStyles.sevText, { color }]}>{sev}</Text>
-          </View>
-          {alert.createdAt && (
-            <Text style={rowStyles.time}>{new Date(alert.createdAt).toLocaleTimeString()}</Text>
-          )}
-        </View>
-        <Text style={rowStyles.msg}>{alert.message}</Text>
+        <Text selectable style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 18 }} numberOfLines={2}>
+          {alert.message}
+        </Text>
+        {alert.createdAt && (
+          <Text style={{ fontSize: 10, color: '#475569', marginTop: 3 }}>
+            {new Date(alert.createdAt).toLocaleTimeString()}
+          </Text>
+        )}
       </View>
-      <TouchableOpacity onPress={onAck} style={rowStyles.ackBtn}>
-        <Text style={rowStyles.ackText}>\u2713</Text>
+      <TouchableOpacity onPress={onAck} style={{
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        paddingHorizontal: 10, paddingVertical: 6,
+        borderRadius: 8, borderCurve: 'continuous',
+      }}>
+        <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: '700' }}>Dismiss</Text>
       </TouchableOpacity>
     </View>
   );
 }
-
-const rowStyles = StyleSheet.create({
-  wrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderLeftWidth: 3,
-    gap: 10,
-  },
-  top: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  sevBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  sevText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-  time: { fontSize: 10, color: '#475569' },
-  msg: { fontSize: 13, color: '#cbd5e1', lineHeight: 18 },
-  ackBtn: { backgroundColor: 'rgba(52,211,153,0.12)', borderRadius: 8, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  ackText: { color: '#34d399', fontSize: 16, fontWeight: '700' },
-});
 
 export const AlertFeed: React.FC = () => {
   const { on } = useSocket();
@@ -82,22 +65,19 @@ export const AlertFeed: React.FC = () => {
   if (alerts.length === 0) return null;
 
   return (
-    <View style={styles.section}>
-      <View style={styles.header}>
-        <Text style={styles.title}>\uD83D\uDD14  Alerts</Text>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{alerts.length}</Text>
+    <View style={{ marginBottom: 28 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <Text style={{ fontSize: 20, fontWeight: '800', color: '#f1f5f9', letterSpacing: -0.5 }}>Alerts</Text>
+        <View style={{
+          backgroundColor: '#ef4444', width: 22, height: 22, borderRadius: 11,
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] }}>
+            {alerts.length}
+          </Text>
         </View>
       </View>
       {alerts.map(a => <AlertRow key={a.alertId} alert={a} onAck={() => handleAck(a.alertId)} />)}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: { marginBottom: 24 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  title: { fontSize: 18, fontWeight: '700', color: '#f1f5f9' },
-  badge: { backgroundColor: '#ef4444', borderRadius: 10, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
-});
