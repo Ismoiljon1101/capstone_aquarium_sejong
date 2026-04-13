@@ -40,7 +40,9 @@ BE -->|Relay Commands| SB
 BE -->|TypeORM| DB
 BE -->|HTTP /predict| FP
 BE -->|HTTP /api/chat| OL
-VA -->|POST /voice/query| BE
+%% ⚠️ Veronica calls Ollama DIRECTLY via llm_manager.py — bypasses NestJS
+%% voice.service.ts in NestJS is never called by the assistant
+VA -->|"ollama.chat() DIRECT\n⚠️ no sensor context"| OL
 
 BE -->|WebSocket| WEB
 BE -->|WebSocket| MOB

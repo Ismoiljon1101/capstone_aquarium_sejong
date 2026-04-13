@@ -3,58 +3,46 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
-// Backend emits: sensor:update, alert:new, fish:count, health:report, actuator:state
-const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3000";
+const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001";
 
+/**
+ * Custom hook for real-time Socket.IO communication.
+ * Listens to telemetry, alerts, fish counting, and actuator events.
+ */
 export function useSocket() {
   const [connected, setConnected] = useState(false);
-  const [telemetry, setTelemetry] = useState<any>(null);
-  const [alerts, setAlerts] = useState<any[]>([]);
-  const [fishData, setFishData] = useState<any>(null);
+  const [sensorData, setSensorData] = useState<any>(null);
+  const [latestAlert, setLatestAlert] = useState<any>(null);
+  const [fishCount, setFishCount] = useState<any>(null);
+  const [healthReport, setHealthReport] = useState<any>(null);
   const [actuatorState, setActuatorState] = useState<any>(null);
+  
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const socket = io(SOCKET_URL, { transports: ["websocket", "polling"] });
+    const socket = io(SOCKET_URL);
     socketRef.current = socket;
 
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
 
-    socket.on("sensor:update", (d) => setTelemetry(d));
-    socket.on("telemetry", (d) => setTelemetry(d));
-    socket.on("telemetry:update", (d) => setTelemetry(d));
+    socket.on('sensor:update',  (data) => setSensorData(data));
+    socket.on('alert:new',      (data) => setLatestAlert(data));
+    socket.on('fish:count',     (data) => setFishCount(data));
+    socket.on('health:report',  (data) => setHealthReport(data));
+    socket.on('actuator:state', (data) => setActuatorState(data));
 
-    socket.on("alert:new", (d) => setAlerts((p) => [d, ...p].slice(0, 20)));
-
-    socket.on("fish:count", (d) =>
-      setFishData((p: any) => ({ ...p, count: d }))
-    );
-    socket.on("health:report", (d) =>
-      setFishData((p: any) => ({ ...p, health: d }))
-    );
-
-    socket.on("actuator:state", (d) => setActuatorState(d));
-
-    return () => { socket.disconnect(); };
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
-  const dismissAlert = (alertId: string) =>
-    setAlerts((p) => p.filter((a) => a.alertId !== alertId));
-
-  const clearAlerts = () => setAlerts([]);
-
-  // Legacy single-alert compat
-  const alert = alerts[0] ?? null;
-
-  return {
+  return { 
     connected,
-    telemetry,
-    alert,
-    alerts,
-    fishData,
-    actuatorState,
-    dismissAlert,
-    clearAlerts,
+    sensorData, 
+    latestAlert, 
+    fishCount, 
+    healthReport, 
+    actuatorState 
   };
 }

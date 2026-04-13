@@ -1,36 +1,75 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-const api = axios.create({
-  baseURL: API_BASE,
-  timeout: 10000,
-});
-
+/**
+ * useApi — all REST calls to NestJS backend.
+ * Covers sensors, actuators, alerts, fish endpoints.
+ */
 export function useApi() {
-  const triggerFeed = () => api.post('/actuators/feed');
-  const togglePump = () => api.post('/actuators/pump');
-  const toggleLed = () => api.post('/actuators/led');
-  const getActuatorState = () => api.get('/actuators/state');
-  const getLatest = () => api.get('/sensors/latest');
-  const getActiveAlerts = () => api.get('/alerts/active');
-  const acknowledgeAlert = (id: string) => api.patch(`/alerts/${id}/acknowledge`);
-  const getFishCount = () => api.get('/fish/count');
-  const getFishHealth = () => api.get('/fish/health');
-  const voiceQuery = (text: string) => api.post('/voice/query', { text });
-  const getVoiceSessions = () => api.get('/voice/sessions');
+  /** GET /sensors/latest */
+  const getLatestReadings = async () => {
+    const res = await axios.get(`${API_BASE}/sensors/latest`);
+    return res.data;
+  };
+
+  /** GET /sensors/:id/readings?range=24h|1w|1m */
+  const getSensorHistory = async (id: number, range: '24h' | '1w' | '1m') => {
+    const res = await axios.get(`${API_BASE}/sensors/${id}/readings?range=${range}`);
+    return res.data;
+  };
+
+  /** POST /actuators/feed */
+  const triggerFeed = async () => {
+    const res = await axios.post(`${API_BASE}/actuators/feed`);
+    return res.data;
+  };
+
+  /** POST /actuators/pump */
+  const triggerPump = async (state: boolean) => {
+    const res = await axios.post(`${API_BASE}/actuators/pump`, { state });
+    return res.data;
+  };
+
+  /** POST /actuators/led */
+  const toggleLed = async (state: boolean) => {
+    const res = await axios.post(`${API_BASE}/actuators/led`, { state });
+    return res.data;
+  };
+
+  /** GET /alerts/active */
+  const getAlerts = async () => {
+    const res = await axios.get(`${API_BASE}/alerts/active`);
+    return res.data;
+  };
+
+  /** PATCH /alerts/:id/acknowledge */
+  const acknowledgeAlert = async (id: number) => {
+    const res = await axios.patch(`${API_BASE}/alerts/${id}/acknowledge`);
+    return res.data;
+  };
+
+  /** GET /fish/health */
+  const getFishHealth = async () => {
+    const res = await axios.get(`${API_BASE}/fish/health`);
+    return res.data;
+  };
+
+  /** GET /fish/count */
+  const getFishCount = async () => {
+    const res = await axios.get(`${API_BASE}/fish/count`);
+    return res.data;
+  };
 
   return {
+    getLatestReadings,
+    getSensorHistory,
     triggerFeed,
-    togglePump,
+    triggerPump,
     toggleLed,
-    getActuatorState,
-    getLatest,
-    getActiveAlerts,
+    getAlerts,
     acknowledgeAlert,
-    getFishCount,
     getFishHealth,
-    voiceQuery,
-    getVoiceSessions,
+    getFishCount,
   };
 }

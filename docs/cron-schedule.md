@@ -11,6 +11,8 @@ This document outlines the automated background tasks running in the `services/b
 | Setiap 8 Jam (`0 */8 * * *`) | `triggerAutoFeed` | Actuators | Automated fish feeding sequence. |
 | Setiap Jam 06:00 (`0 6 * * *`) | `dailyHealthReport` | Fish | Aggregates data into a daily health summary. |
 | Setiap 30 Menit (`*/30 * * * *`) | `emergencyCheck` | Alerts | Deep check for critical safety conditions. |
+| Setiap Jam 07:00 (`0 7 * * *`) | `monitorFishGrowth` | Fish | Weekly fish growth tracking — compares count vs baseline. |
+| Setiap Minggu (`0 0 * * 0`) | `weeklyExport` | Sensors | Exports all sensor readings as JSONL file to disk. |
 
 ---
 

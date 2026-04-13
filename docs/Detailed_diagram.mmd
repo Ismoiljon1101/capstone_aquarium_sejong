@@ -7,7 +7,7 @@ graph TB
 subgraph HW["🔌 HARDWARE LAYER — Sarvar"]
     direction TB
 
-    subgraph TANK["Fish Tank"]
+    subgraph TANK["Fish Tank Sensors"]
         PH["🧪 pH Sensor\nAnalog → A0"]
         DO2["💧 DO2 Sensor\nAnalog → A1"]
         CO2["🌫️ CO2 Sensor\nAnalog → A2"]
@@ -49,7 +49,7 @@ end
 %%  SERIAL BRIDGE
 %% ══════════════════════════════════════════
 
-subgraph SB["⚙️ SERIAL BRIDGE — Sarvar\nNode.js · services/serial-bridge"]
+subgraph SB["⚙️ SERIAL BRIDGE — Sarvar\nNode.js · services/serial-bridge · Port 3001"]
     PARSER["parser.ts\nRaw string → SensorReading"]
     MOCK["mock.ts\nFake data when no hardware"]
     EMITTER["emitter.ts\nPOST → NestJS /serial/reading"]
@@ -123,51 +123,98 @@ subgraph AI["🧠 AI PREDICTOR — Firdavs\nFastAPI Python · Port 8000"]
     YOLO["YOLOv8/v11\nFish Disease Detection\nFish Counting"]
     CLSTM["ConvLSTM-VAE\nBehavior Anomaly Detection"]
     RF["Random Forest\nWater Quality Score"]
-    OLLAMA["Ollama · LLM\nGemma / Veronica Brain"]
 end
 
+OLLAMA["🤖 Ollama LLM\nPort 11434\nQwen2.5:3b · Gemma 4"]
+
 %% ══════════════════════════════════════════
-%%  VOICE ASSISTANT
+%%  VOICE ASSISTANT — VERONICA
 %% ══════════════════════════════════════════
 
 subgraph VA["🎙️ VERONICA ASSISTANT — Firdavs\nPython · apps/assistant"]
     WW["openWakeWord\nListens for trigger phrase"]
     STT["Whisper.cpp\nSpeech → Text"]
+    APICLI["api_client.py\n✅ POST /voice/query\nbackend bundles sensor context"]
     TTS["Kokoro-82M\nText → Speech output"]
     WW -->|activated| STT
-    STT -->|transcribed text| VOICE_MOD
-    VOICE_MOD -->|AI response text| TTS
+    STT --> APICLI
+end
+
+APICLI -->|"POST /voice/query\n{ text, snapshotId }"| VOICE_MOD
+VOICE_MOD -->|"POST /api/chat\ntext + live sensors + image"| OLLAMA
+OLLAMA -->|"{ response } string"| VOICE_MOD
+VOICE_MOD -->|"{ response }"| APICLI
+APICLI --> TTS
+
+%% ══════════════════════════════════════════
+%%  WEB DASHBOARD
+%% ══════════════════════════════════════════
+
+subgraph DASH["🌐 WEB DASHBOARD — Hamidullo\nNext.js 15 · React 19 · apps/dashboard · Port 3002"]
+    direction TB
+
+    subgraph DSCREENS["Screens"]
+        DS1["Dashboard\npH · Temp · DO2 live"]
+        DS2["Fish Health\nDisease · Behavior · Score"]
+        DS3["Controls\nFeed · Pump · LED"]
+        DS4["History\n24h · 1w · 1m charts"]
+        DS5["Alerts\nFeed + Acknowledge"]
+        DS6["Virtual Assistant\nVeronica chat UI"]
+    end
+
+    subgraph DHOOKS["Hooks"]
+        DWSOCK["useSocket.ts\nSocket.IO · port 3000\n5 events"]
+        DUAPI["useApi.ts\nREST · port 3000"]
+    end
+
+    DAUTH["NextAuth\nGoogle · Kakao · Email"]
+
+    DWSOCK --> DS1
+    DWSOCK --> DS2
+    DWSOCK --> DS5
+    DUAPI --> DS3
+    DUAPI --> DS4
+    DUAPI --> DS6
 end
 
 %% ══════════════════════════════════════════
-%%  DASHBOARD
+%%  MOBILE APP  ◀ MAIN FOCUS
 %% ══════════════════════════════════════════
 
-subgraph DASH["📱 NEXT.JS DASHBOARD — Hamidullo\nNext.js 15 · React 19 · apps/dashboard · Port 3001"]
+subgraph MOB["📱 MOBILE APP — Hamidullo  ◀ MAIN FOCUS\nReact Native · Expo · apps/mobile"]
     direction TB
 
-    subgraph SCREENS["Screens"]
-        S1["Dashboard\npH · Temp · DO2 · CO2 live"]
-        S2["Fish Health\nDisease · Behavior · Score"]
-        S3["Controls\nFeed · Pump · LED"]
-        S4["History\n24h · 1w · 1m charts"]
-        S5["Alerts\nFeed + Acknowledge"]
+    subgraph MSCREENS["Screens"]
+        MS1["HomeScreen\nLive sensor cards\npH · Temp · DO2"]
+        MS2["FishHealthScreen\nAI score · Disease badge\nBehavior status"]
+        MS3["ControlsScreen\nFeed button\nPump · LED toggles"]
+        MS4["HistoryScreen\nTime-range chart\n24h · 1w · 1m"]
+        MS5["AlertsScreen\nActive alerts list\nAcknowledge action"]
+        MS6["ProfileScreen\nUser info · Settings"]
     end
 
-    subgraph HOOKS["Hooks"]
-        WSOCK["useSocket.ts\nSocket.IO client\nLive data"]
-        UAPI["useApi.ts\nREST calls\nCommands"]
+    subgraph MHOOKS["Hooks"]
+        MWSOCK["useSocket.ts\n✅ Port 3000\nevent: sensor:update\nshape: SensorReading"]
+        MAPI["useApi.ts\n✅ Port 3000\ngetLatestReadings()\ntriggerFeed()\ntogglePump()\ntoggleLed()\ngetAlerts()\nacknowledgeAlert()\ngetFishHealth()"]
     end
 
-    AUTH["NextAuth\nGoogle · Kakao · Email"]
-    GAME["Fish Game 🎮\nCanvas arcade"]
-    EXPORT["Export Utility\nCSV · JSON"]
+    subgraph MCOMP["Components — Atomic Design"]
+        MAC["atoms/\nSensorCard · StatusBadge\nMetricValue · AlertItem"]
+        MMC["molecules/\nSensorGrid · HealthPanel\nActuatorRow · AlertList"]
+        MOC["organisms/\nLiveDashboard · ControlPanel\nHistoryChart · AlertsFeed"]
+    end
 
-    WSOCK --> S1
-    WSOCK --> S2
-    WSOCK --> S5
-    UAPI --> S3
-    UAPI --> S4
+    MWSOCK --> MS1
+    MWSOCK --> MS2
+    MWSOCK --> MS5
+    MAPI --> MS3
+    MAPI --> MS4
+    MAPI --> MS6
+    MAC --> MMC
+    MMC --> MOC
+    MOC --> MS1
+    MOC --> MS2
+    MOC --> MS3
 end
 
 %% ══════════════════════════════════════════
@@ -196,8 +243,8 @@ CAM -->|HTTP snapshot| SB
 %% Serial Bridge → Backend
 EMITTER -->|"POST /serial/reading\nSensorReading JSON"| SERIAL_MOD
 
-%% Backend → Serial Bridge (commands back)
-ACT_MOD -->|"POST /actuator/trigger\nrelay + state"| EMITTER
+%% Backend → Serial Bridge (relay commands)
+ACT_MOD -->|"POST /actuators/state\n{ actuatorId, state }"| EMITTER
 
 %% Backend → Database
 SENSOR_MOD -->|TypeORM| T1
@@ -214,32 +261,38 @@ VISION_MOD -->|"POST /predict/disease\nimage"| YOLO
 VISION_MOD -->|"POST /predict/count\nimage"| YOLO
 VISION_MOD -->|"POST /predict/behavior\nimage"| CLSTM
 VISION_MOD -->|"POST /predict/quality\npH,temp,DO2,CO2"| RF
-VOICE_MOD -->|"POST /api/chat\ntext+image+sensors"| OLLAMA
 
-%% Backend → Dashboard (WebSocket)
-GW -->|"sensor:update"| WSOCK
-GW -->|"alert:new"| WSOCK
-GW -->|"fish:count"| WSOCK
-GW -->|"actuator:state"| WSOCK
-GW -->|"health:report"| WSOCK
+%% Backend → Dashboard WebSocket
+GW -->|"sensor:update"| DWSOCK
+GW -->|"alert:new"| DWSOCK
+GW -->|"fish:count"| DWSOCK
+GW -->|"actuator:state"| DWSOCK
+GW -->|"health:report"| DWSOCK
 
-%% Dashboard → Backend (REST)
-UAPI -->|"POST /actuators/feed"| ACT_MOD
-UAPI -->|"POST /actuators/pump"| ACT_MOD
-UAPI -->|"POST /actuators/led"| ACT_MOD
-UAPI -->|"GET /sensors/:id/readings"| SENSOR_MOD
-UAPI -->|"GET /alerts/active"| ALERT_MOD
-UAPI -->|"GET /fish/health"| FISH_MOD
+%% Backend → Mobile WebSocket
+GW -->|"sensor:update\nSensorReading"| MWSOCK
+GW -->|"alert:new\nAlert"| MWSOCK
+GW -->|"fish:count\nFishCount"| MWSOCK
+GW -->|"health:report\nHealthReport"| MWSOCK
+
+%% Dashboard → Backend REST
+DUAPI -->|"POST /actuators/feed"| ACT_MOD
+DUAPI -->|"POST /actuators/pump"| ACT_MOD
+DUAPI -->|"POST /actuators/led"| ACT_MOD
+DUAPI -->|"GET /sensors/:id/readings"| SENSOR_MOD
+DUAPI -->|"GET /alerts/active"| ALERT_MOD
+DUAPI -->|"GET /fish/health"| FISH_MOD
+
+%% Mobile → Backend REST
+MAPI -->|"GET /sensors/latest"| SENSOR_MOD
+MAPI -->|"POST /actuators/feed"| ACT_MOD
+MAPI -->|"POST /actuators/pump"| ACT_MOD
+MAPI -->|"POST /actuators/led"| ACT_MOD
+MAPI -->|"GET /alerts/active"| ALERT_MOD
+MAPI -->|"PATCH /alerts/:id/acknowledge"| ALERT_MOD
+MAPI -->|"GET /fish/health"| FISH_MOD
 
 %% Cron → Backend Modules
-C1 --> SENSOR_MOD
-C2 --> VISION_MOD
-C3 --> ACT_MOD
-C4 --> FISH_MOD
-C5 --> FISH_MOD
-C6 --> ALERT_MOD
-C7 --> EXPORT
-
 CRON_MOD --> C1
 CRON_MOD --> C2
 CRON_MOD --> C3
@@ -247,6 +300,13 @@ CRON_MOD --> C4
 CRON_MOD --> C5
 CRON_MOD --> C6
 CRON_MOD --> C7
+C1 --> SENSOR_MOD
+C2 --> VISION_MOD
+C3 --> ACT_MOD
+C4 --> FISH_MOD
+C5 --> FISH_MOD
+C6 --> ALERT_MOD
+C7 --> SENSOR_MOD
 
 %% ══════════════════════════════════════════
 %%  STYLES
@@ -259,13 +319,16 @@ classDef database fill:#1a1030,stroke:#7c4dff,color:#c3b1e1
 classDef ai fill:#1a0d28,stroke:#d500f9,color:#d500f9
 classDef voice fill:#1a0d20,stroke:#e040fb,color:#e040fb
 classDef dashboard fill:#201800,stroke:#ffab00,color:#ffab00
+classDef mobile fill:#001a20,stroke:#00bcd4,color:#00e5ff
 classDef cron fill:#1a0a0a,stroke:#ff4081,color:#ff4081
 
 class PH,DO2,CO2,TEMP,CAM,BAT,BUCK,ARD1,ARD2,R1,R2,R3,R4 hardware
 class PARSER,MOCK,EMITTER bridge
 class SERIAL_MOD,SENSOR_MOD,ACT_MOD,ALERT_MOD,VISION_MOD,VOICE_MOD,FISH_MOD,CRON_MOD,GW,APP_MOD backend
 class T1,T2,T3,T4,T5,T6,T7,T8 database
-class YOLO,CLSTM,RF,OLLAMA ai
-class WW,STT,TTS voice
-class S1,S2,S3,S4,S5,WSOCK,UAPI,AUTH,GAME,EXPORT dashboard
+class YOLO,CLSTM,RF ai
+class OLLAMA ai
+class WW,STT,APICLI,TTS voice
+class DS1,DS2,DS3,DS4,DS5,DS6,DWSOCK,DUAPI,DAUTH dashboard
+class MS1,MS2,MS3,MS4,MS5,MS6,MWSOCK,MAPI,MAC,MMC,MOC mobile
 class C1,C2,C3,C4,C5,C6,C7 cron

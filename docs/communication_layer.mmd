@@ -1,0 +1,296 @@
+graph TB
+
+%% ══════════════════════════════════════════
+%%  NODES — based on actual source code audit
+%% ══════════════════════════════════════════
+
+    HW["🔌 Hardware
+    Dual Arduino · ESP32-CAM
+    pH · DO2 · CO2 · Temp · Relays
+    9600 baud serial"]
+
+    SB["⚙️ Serial Bridge
+    Node.js · Port 3001
+    parser.ts · emitter.ts · mock.ts"]
+
+    BE["🖥️ NestJS Backend
+    TypeScript · Port 3000
+    10 modules · REST · WebSocket · Cron"]
+
+    DB[("🗄️ Database
+    PostgreSQL · Supabase Cloud
+    TypeORM · 8 entities")]
+
+    FP["🧪 FastAPI AI Predictor
+    Python · Port 8000
+    YOLO · ConvLSTM-VAE · Random Forest"]
+
+    OL["🤖 Ollama LLM
+    Port 11434
+    Qwen2.5:3b / Gemma 4"]
+
+    VA["🎙️ Voice Assistant
+    Python · apps/assistant/src/assistant.py
+    openWakeWord → Whisper → Kokoro-82M
+    ⚠️ calls Ollama DIRECTLY — bypasses NestJS"]
+
+    WEB["🌐 Web Dashboard
+    Next.js 15 · Port 3002
+    useSocket.ts · useApi.ts"]
+
+    MOB["📲 Mobile App
+    React Native · Expo
+    useSocket.ts · useApi.ts
+    ✅ fixed: now connects to port 3000"]
+
+%% ══════════════════════════════════════════
+%%  ① HARDWARE → SERIAL BRIDGE
+%%  Source: services/serial-bridge/src/index.ts
+%% ══════════════════════════════════════════
+
+    HW -->|"① USB Serial JSON
+    {pH, temp_c, do_mg_l}
+    continuous stream · 9600 baud"| SB
+
+%% ══════════════════════════════════════════
+%%  ② SERIAL BRIDGE → ARDUINO (relay back)
+%%  Source: emitter.ts — forwardActuatorState()
+%% ══════════════════════════════════════════
+
+    SB -->|"② Serial write
+    relay channel + state
+    on actuator trigger"| HW
+
+%% ══════════════════════════════════════════
+%%  ③ SERIAL BRIDGE → NESTJS
+%%  Source: emitter.ts — forwardReading()
+%%  POST ${BACKEND_URL}/serial/reading
+%% ══════════════════════════════════════════
+
+    SB -->|"③ POST /serial/reading
+    Partial SensorReading JSON
+    emitter.forwardReading()"| BE
+
+%% ══════════════════════════════════════════
+%%  ④ SERIAL BRIDGE → NESTJS (actuator confirm)
+%%  Source: emitter.ts — forwardActuatorState()
+%%  POST ${BACKEND_URL}/actuators/state
+%% ══════════════════════════════════════════
+
+    SB -->|"④ POST /actuators/state
+    { actuatorId, state, timestamp }
+    emitter.forwardActuatorState()"| BE
+
+%% ══════════════════════════════════════════
+%%  ⑤ NESTJS → SERIAL BRIDGE (relay command)
+%%  Source: serial.controller.ts @Post('command')
+%% ══════════════════════════════════════════
+
+    BE -->|"⑤ POST /serial/command
+    serial.controller.ts
+    relay command to Arduino"| SB
+
+%% ══════════════════════════════════════════
+%%  ⑥⑦ NESTJS ↔ SERIAL BRIDGE (camera)
+%%  Source: vision.service.ts — requestSnapshot()
+%%  POST ${BRIDGE_URL}/camera/snapshot
+%% ══════════════════════════════════════════
+
+    BE -->|"⑥ POST /camera/snapshot
+    vision.service.ts
+    request frame from ESP32-CAM"| SB
+
+    SB -->|"⑦ HTTP response
+    { imagePath: string }
+    image saved on local disk"| BE
+
+%% ══════════════════════════════════════════
+%%  ⑧ NESTJS → DATABASE (TypeORM writes)
+%%  Source: all services use @InjectRepository
+%% ══════════════════════════════════════════
+
+    BE -->|"⑧ WRITE via TypeORM
+    sensor_reading · alert
+    voice_session · health_report
+    fish_count · fish_growth
+    camera_snapshot · user_command"| DB
+
+%% ══════════════════════════════════════════
+%%  ⑨ DATABASE → NESTJS (TypeORM reads)
+%%  Source: sensors.service · fish.service etc.
+%% ══════════════════════════════════════════
+
+    DB -->|"⑨ READ via TypeORM
+    GET /sensors/latest
+    GET /sensors/:id/readings
+    GET /fish/health · GET /fish/count
+    GET /alerts/active"| BE
+
+%% ══════════════════════════════════════════
+%%  ⑩⑪ NESTJS ↔ FASTAPI — Disease Detection
+%%  Source: vision.service.ts — detectDisease()
+%%  POST ${AI_URL}/predict/disease
+%% ══════════════════════════════════════════
+
+    BE -->|"⑩ POST /predict/disease
+    { imagePath: string }
+    YOLOv8 disease detection"| FP
+
+    FP -->|"⑪ disease result
+    { disease, confidence, bbox }
+    YOLOv8 output"| BE
+
+%% ══════════════════════════════════════════
+%%  ⑫⑬ NESTJS ↔ FASTAPI — Fish Count
+%%  Source: vision.service.ts — countFish()
+%%  POST ${AI_URL}/predict/count
+%% ══════════════════════════════════════════
+
+    BE -->|"⑫ POST /predict/count
+    { imagePath: string }
+    YOLO fish count"| FP
+
+    FP -->|"⑬ count result
+    { count: int, confidence: float }
+    YOLO detection count"| BE
+
+%% ══════════════════════════════════════════
+%%  ⑭⑮ NESTJS ↔ FASTAPI — Water Quality
+%%  Source: vision.service.ts — getWaterQualityScore()
+%%  POST ${AI_URL}/predict/quality
+%% ══════════════════════════════════════════
+
+    BE -->|"⑭ POST /predict/quality
+    { pH, temp_c, do_mg_l }
+    3-feature Random Forest input"| FP
+
+    FP -->|"⑮ quality result
+    { score: float, status: ok|warn|critical }
+    Random Forest output"| BE
+
+%% ══════════════════════════════════════════
+%%  ⑯⑰ NESTJS ↔ OLLAMA — LLM (via NestJS)
+%%  Source: voice.service.ts — handleQuery()
+%%  POST ${OLLAMA_URL}/api/chat
+%%  Bundles sensor context into system prompt
+%% ══════════════════════════════════════════
+
+    BE -->|"⑯ POST /api/chat
+    { model, messages: [system+user] }
+    sensor context bundled in prompt"| OL
+
+    OL -->|"⑰ LLM response
+    { message: { content: string } }
+    data.message.content extracted"| BE
+
+%% ══════════════════════════════════════════
+%%  ⑱⑲ VOICE ASSISTANT ↔ OLLAMA (DIRECT)
+%%  Source: apps/assistant/src/llm_manager.py
+%%  from ollama import chat, ChatResponse
+%%  ⚠️ BYPASSES NestJS — no sensor context!
+%% ══════════════════════════════════════════
+
+    VA -->|"⑱ ollama.chat()
+    Python ollama library — DIRECT
+    ⚠️ no sensor context bundled"| OL
+
+    OL -->|"⑲ ChatResponse
+    natural language answer
+    passed to Kokoro-82M TTS"| VA
+
+%% ══════════════════════════════════════════
+%%  ⑳㉑ NESTJS ↔ DASHBOARD — WebSocket
+%%  Source: gateway.gateway.ts + useSocket.ts
+%% ══════════════════════════════════════════
+
+    BE -->|"⑳ WebSocket PUSH
+    sensor:update → SensorReading
+    alert:new · fish:count
+    health:report · actuator:state"| WEB
+
+    WEB -->|"㉑ WebSocket EMIT
+    command:feed
+    command:pump
+    command:led"| BE
+
+%% ══════════════════════════════════════════
+%%  ㉒㉓ DASHBOARD ↔ NESTJS — REST GET
+%%  Source: apps/dashboard/hooks/useApi.ts
+%% ══════════════════════════════════════════
+
+    WEB -->|"㉒ REST GET
+    GET /sensors/latest
+    GET /sensors/:id/readings
+    GET /alerts/active
+    GET /fish/health · GET /fish/count"| BE
+
+    BE -->|"㉓ REST JSON response
+    sensor readings · alerts
+    health reports · fish data"| WEB
+
+%% ══════════════════════════════════════════
+%%  ㉔㉕ DASHBOARD ↔ NESTJS — REST POST
+%%  Source: apps/dashboard/hooks/useApi.ts
+%% ══════════════════════════════════════════
+
+    WEB -->|"㉔ REST POST
+    POST /actuators/feed
+    POST /actuators/pump
+    POST /actuators/led
+    POST /actuators/emergency-off"| BE
+
+    BE -->|"㉕ actuator response
+    { success: bool }
+    + WebSocket actuator:state push"| WEB
+
+%% ══════════════════════════════════════════
+%%  ㉖㉗ MOBILE ↔ NESTJS — WebSocket + REST
+%%  Source: apps/mobile/src/hooks/useSocket.ts
+%%  ✅ FIXED: WS_URL now http://localhost:3000
+%%  ✅ FIXED: listens to sensor:update
+%% ══════════════════════════════════════════
+
+    BE -->|"㉖ WebSocket PUSH
+    sensor:update · alert:new
+    fish:count · health:report
+    ✅ fixed: now correct port 3000"| MOB
+
+    MOB -->|"㉗ REST POST + GET
+    POST /actuators/feed|pump|led
+    GET /sensors/latest
+    GET /fish/health · GET /alerts/active
+    GET /fish/count"| BE
+
+%% ══════════════════════════════════════════
+%%  ㉘ LEGACY ROUTES (legacy.controller.ts)
+%%  Kept for backward compatibility
+%%  GET /history · GET /latest · GET /status
+%%  POST /feed · POST /schedule
+%% ══════════════════════════════════════════
+
+    WEB -->|"㉘ LEGACY routes
+    GET /history · GET /latest
+    GET /status · POST /feed
+    legacy.controller.ts"| BE
+
+%% ══════════════════════════════════════════
+%%  STYLES
+%% ══════════════════════════════════════════
+
+    classDef hw fill:#0d4f3c,stroke:#00e676,color:#a7f3d0
+    classDef bridge fill:#1a3d1a,stroke:#4ade80,color:#86efac
+    classDef backend fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    classDef database fill:#2e1a5e,stroke:#818cf8,color:#c4b5fd
+    classDef ai fill:#4c1a1a,stroke:#f87171,color:#fca5a5
+    classDef voice fill:#4a1040,stroke:#e879f9,color:#f5d0fe
+    classDef client fill:#4a2e00,stroke:#f59e0b,color:#fcd34d
+    classDef fixed fill:#1a3d1a,stroke:#22c55e,color:#86efac
+
+    class HW hw
+    class SB bridge
+    class BE backend
+    class DB database
+    class FP,OL ai
+    class VA voice
+    class WEB client
+    class MOB fixed

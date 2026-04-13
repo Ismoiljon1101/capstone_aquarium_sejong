@@ -16,6 +16,7 @@ def playaudio(file_path):
         pass
 import behaviors
 import llm_manager
+from api_client import send_voice_query
 from voice_inp import voice_speak
 from authentication_manager import Authenticator
 from gui_manager import start_gui_background, stop_gui, update_gui_response, set_gui_listening_status
@@ -172,7 +173,11 @@ if __name__ == "__main__":
                 update_gui_response("Fish Feeder has been triggered")
                 vs_speak("Fish feeder has been triggered")
             elif q != "":
-                response = llm_manager.ollama_chat(q)
+                # Route through NestJS /voice/query — bundles live sensor context
+                response = send_voice_query(q)
+                # Fallback to direct Ollama if NestJS unavailable
+                if not response or "unavailable" in response.lower() or "timed out" in response.lower():
+                    response = llm_manager.ollama_chat(q)
                 update_gui_response(response)
                 vs_speak(response)
     except KeyboardInterrupt:

@@ -10,13 +10,12 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
-const mockMode = process.env.MOCK_MODE === 'true';
 
 app.use(express.json());
 
 const parser = new SerialParser();
 const emitter = new Emitter(backendUrl);
-let latestData: Record<string, unknown> = {};
+let latestData: any = {};
 let isConnected = false;
 
 const handleData = (line: string) => {
@@ -27,43 +26,52 @@ const handleData = (line: string) => {
   });
 };
 
-const mock = new MockHardware(handleData);
+// --- Serial Connection Logic ---
+const mainPortPath = process.env.SERIAL_PORT_MAIN || '/dev/ttyUSB0';
 
-if (mockMode) {
-  console.log('[Bridge] MOCK_MODE=true — using simulated hardware data');
-  mock.start();
-  isConnected = false;
-} else {
-  // Only import native serial port when not in mock mode
-  import('serialport').then(({ SerialPort }) => {
-    import('@serialport/parser-readline').then(({ ReadlineParser }) => {
-      const mainPortPath = process.env.SERIAL_PORT_MAIN || '/dev/ttyUSB0';
-      try {
-        const serialMain = new SerialPort({ path: mainPortPath, baudRate: 9600 });
-        const lineParser = serialMain.pipe(new ReadlineParser({ delimiter: '\r\n' }));
-        lineParser.on('data', handleData);
-        serialMain.on('open', () => {
-          isConnected = true;
-          console.log(`[Bridge] Connected to Main Serial at ${mainPortPath}`);
-        });
-        serialMain.on('error', (err: Error) => {
-          console.error('[Bridge] Serial Error:', err.message);
-          mock.start();
-        });
-      } catch (err) {
-        console.warn('[Bridge] Main Serial Port not found. Switching to Mock mode.');
-        mock.start();
-      }
-    });
-  }).catch(() => {
-    console.warn('[Bridge] SerialPort native module unavailable. Switching to Mock mode.');
+async function startSerial() {
+  const isMockAlways = process.env.MOCK_MODE === 'true';
+  const mock = new MockHardware(handleData);
+
+  if (isMockAlways) {
+    console.log('[Bridge] Forced Mock Mode enabled via .env');
     mock.start();
-  });
+    return;
+  }
+
+  try {
+    const { SerialPort } = await import('serialport');
+    const { ReadlineParser } = await import('@serialport/parser-readline');
+
+    const serialMain = new SerialPort({ path: mainPortPath, baudRate: 9600 });
+    const lineParser = serialMain.pipe(new ReadlineParser({ delimiter: '\r\n' }));
+    
+    lineParser.on('data', handleData);
+    serialMain.on('open', () => {
+      isConnected = true;
+      console.log(`[Bridge] Connected to Main Serial at ${mainPortPath}`);
+    });
+
+    serialMain.on('error', (err) => {
+      console.error('[Bridge] Serial Error:', err.message);
+      console.warn('[Bridge] Falling back to Mock mode...');
+      mock.start();
+    });
+  } catch (err) {
+    console.warn('[Bridge] Serial bindings not found or port unavailable. Switching to Mock mode.');
+    mock.start();
+  }
 }
 
-// --- REST Routes ---
+startSerial();
 
-app.get('/status', (_req, res) => {
+// --- REST Routes (Legacy Dashboard Compatibility) ---
+
+app.get('/', (req, res) => {
+  res.send('<h1>Fishlinic Serial Bridge</h1><p>Status: Running</p><p>Use <a href="/status">/status</a> for health check.</p>');
+});
+
+app.get('/status', (req, res) => {
   res.json({
     status: 'online',
     hardware: isConnected ? 'connected' : 'mock',
@@ -71,15 +79,16 @@ app.get('/status', (_req, res) => {
   });
 });
 
-app.get('/latest', (_req, res) => {
+app.get('/latest', (req, res) => {
   res.json(latestData);
 });
 
+// Forwarding routes to NestJS
 app.get('/history', async (req, res) => {
   try {
     const response = await axios.get(`${backendUrl}/sensors/history`, { params: req.query });
     res.json(response.data);
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: 'Backend unreachable' });
   }
 });
@@ -88,36 +97,29 @@ app.post('/feed', async (req, res) => {
   try {
     const response = await axios.post(`${backendUrl}/actuators/feed`, req.body);
     res.json(response.data);
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: 'Backend unreachable' });
   }
-});
-
-app.post('/actuate', async (req, res) => {
-  console.log(`[Bridge] Actuate command: ${req.body?.type} → ${req.body?.state}`);
-  res.json({ success: true, command: req.body });
 });
 
 app.post('/schedule', async (req, res) => {
   try {
     const response = await axios.post(`${backendUrl}/cron/schedule`, req.body);
     res.json(response.data);
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: 'Backend unreachable' });
   }
 });
 
-app.get('/ports', async (_req, res) => {
-  if (mockMode) return res.json([]);
-  try {
-    const { SerialPort } = await import('serialport');
-    const ports = await SerialPort.list();
-    res.json(ports);
-  } catch {
-    res.json([]);
-  }
+// Additional internal routes
+app.get('/ports', async (req, res) => {
+  const ports = await SerialPort.list();
+  res.json(ports);
 });
 
+// Import axios for forwarding
+
+
 app.listen(port, () => {
-  console.log(`[Bridge] Serial Bridge running on port ${port} (mode: ${mockMode ? 'MOCK' : 'HARDWARE'})`);
+  console.log(`[Bridge] Serial Bridge running on port ${port}`);
 });
