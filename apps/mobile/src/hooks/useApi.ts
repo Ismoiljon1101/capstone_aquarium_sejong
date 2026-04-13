@@ -17,6 +17,8 @@ export function useApi() {
   const acknowledgeAlert = (id: string) => api.patch(`/alerts/${id}/acknowledge`);
   const getFishCount = () => api.get('/fish/count');
   const getFishHealth = () => api.get('/fish/health');
+  const voiceQuery = (text: string) => api.post('/voice/query', { text });
+  const getVoiceSessions = () => api.get('/voice/sessions');
 
   return {
     triggerFeed,
@@ -28,5 +30,7 @@ export function useApi() {
     acknowledgeAlert,
     getFishCount,
     getFishHealth,
+    voiceQuery,
+    getVoiceSessions,
   };
 }

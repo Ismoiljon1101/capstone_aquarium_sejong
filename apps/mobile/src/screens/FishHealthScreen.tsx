@@ -3,6 +3,7 @@ import { View, Text, ScrollView, RefreshControl } from 'react-native';
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
 import { FishHealthPanel } from '../components/organisms/FishHealthPanel';
+import { VeronicaChat } from '../components/organisms/VeronicaChat';
 
 interface HealthReport { phStatus: string; tempStatus: string; doStatus: string; visualStatus: string; behaviorStatus: string; createdAt: string; }
 
@@ -34,7 +35,7 @@ export default function FishHealthScreen() {
     <View style={{ flex: 1, backgroundColor: '#020617' }}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: 60 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#38bdf8" colors={['#38bdf8']} />}
       >
         <Text style={{ fontSize: 28, fontWeight: '900', color: '#f1f5f9', letterSpacing: -1, marginBottom: 4 }}>Fish Health</Text>
@@ -42,17 +43,18 @@ export default function FishHealthScreen() {
 
         <FishHealthPanel />
 
-        <Text style={{ fontSize: 18, fontWeight: '800', color: '#e2e8f0', marginBottom: 12 }}>Parameter Status</Text>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: '#e2e8f0', marginBottom: 12, marginTop: 28 }}>Parameter Status</Text>
         <View style={{
           backgroundColor: '#0f172a', borderRadius: 16, borderCurve: 'continuous',
           borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', overflow: 'hidden',
+          marginBottom: 4,
         }}>
           {[
-            { label: 'pH', status: health?.phStatus ?? 'ok', icon: '\uD83E\uddEA' },
-            { label: 'Temperature', status: health?.tempStatus ?? 'ok', icon: '\uD83C\uDF21\uFE0F' },
-            { label: 'Dissolved O\u2082', status: health?.doStatus ?? 'ok', icon: '\uD83D\uDCA8' },
-            { label: 'Visual Check', status: health?.visualStatus ?? 'ok', icon: '\uD83D\uDC41\uFE0F' },
-            { label: 'Behavior', status: health?.behaviorStatus ?? 'normal', icon: '\uD83E\uDDE0' },
+            { label: 'pH',           status: health?.phStatus       ?? 'ok', icon: '🧪' },
+            { label: 'Temperature',  status: health?.tempStatus      ?? 'ok', icon: '🌡️' },
+            { label: 'Dissolved O₂', status: health?.doStatus        ?? 'ok', icon: '💨' },
+            { label: 'Visual Check', status: health?.visualStatus    ?? 'ok', icon: '👁️' },
+            { label: 'Behavior',     status: health?.behaviorStatus  ?? 'normal', icon: '🧠' },
           ].map(p => (
             <View key={p.label} style={{
               flexDirection: 'row', alignItems: 'center',
@@ -71,10 +73,13 @@ export default function FishHealthScreen() {
         </View>
 
         {health?.createdAt && (
-          <Text style={{ fontSize: 12, color: '#475569', textAlign: 'center', marginTop: 20 }}>
+          <Text style={{ fontSize: 12, color: '#475569', textAlign: 'center', marginTop: 12 }}>
             Last report: {new Date(health.createdAt).toLocaleString()}
           </Text>
         )}
+
+        {/* Veronica AI Chat */}
+        <VeronicaChat />
       </ScrollView>
     </View>
   );

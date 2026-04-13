@@ -27,3 +27,25 @@ body {
 .glass-card:hover {
   @apply border-primary/30 bg-card/80 shadow-lg shadow-primary/5;
 }
+
+/* aliases used by organisms */
+.card-glass {
+  @apply bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl transition-all duration-300;
+}
+
+.bg-gradient-main {
+  background: linear-gradient(135deg, #020617 0%, #0f172a 60%, #0c1a3a 100%);
+  min-height: 100vh;
+}
+
+.text-gradient {
+  @apply bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent;
+}
+
+.status-ok   { @apply text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-full px-2 py-0.5 text-xs font-bold; }
+.status-warn { @apply text-amber-400   bg-amber-400/10   border border-amber-400/20   rounded-full px-2 py-0.5 text-xs font-bold; }
+.status-crit { @apply text-red-400     bg-red-400/10     border border-red-400/20     rounded-full px-2 py-0.5 text-xs font-bold; }
+
+.glow-blue  { box-shadow: 0 0 32px rgba(56,189,248,0.12); }
+.glow-green { box-shadow: 0 0 32px rgba(52,211,153,0.12); }
+.glow-red   { box-shadow: 0 0 32px rgba(239,68,68,0.12);  }

@@ -42,6 +42,7 @@ export function useApi() {
   // Voice
   const sendVoiceQuery = (text: string, snapshotId?: number) =>
     api.post('/voice/query', { text, snapshotId });
+  const getSessions = () => api.get('/voice/sessions');
 
   // Legacy compat
   const getHistory = async (range: string = "24h") => {
@@ -67,6 +68,7 @@ export function useApi() {
     triggerVisionAnalysis,
     getLatestVisionReport,
     sendVoiceQuery,
+    getSessions,
     getHistory,
     getStatus,
   };
