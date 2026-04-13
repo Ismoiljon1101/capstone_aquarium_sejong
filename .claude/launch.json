@@ -28,7 +28,10 @@
     {
       "name": "AI Predictor (FastAPI)",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
+      "runtimeArgs": ["-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--app-dir", "services/ai-predictor"],
+      "env": {
+        "MODEL_PATH": "resources/models"
+      },
       "port": 8000
     }
   ]
