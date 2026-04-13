@@ -6,7 +6,10 @@ try:
     import pyaudio
 except ImportError:
     pyaudio = None
-import pvcobra
+try:
+    import pvcobra as _pvcobra_mod
+except ImportError:
+    _pvcobra_mod = None
 from decouple import config
 import threading
 import queue
@@ -49,12 +52,16 @@ def voice_speak():
     INITIAL_SILENCE_ALLOWANCE = 1.5  # Allow silence at start (user needs time to start speaking)
     
     # Initialize Cobra for voice activity detection
+    cobra = None
     try:
-        ACCESS_KEY = config('PVPORCUPINE_KEY')
-        cobra = pvcobra.create(access_key=ACCESS_KEY)
-    except:
+        if _pvcobra_mod:
+            ACCESS_KEY = config('PVPORCUPINE_KEY', default='').strip().strip('"')
+            if ACCESS_KEY:
+                cobra = _pvcobra_mod.create(access_key=ACCESS_KEY)
+    except Exception:
         cobra = None
-        print("Warning: Could not initialize Cobra VAD, using fallback method")
+    if not cobra:
+        print("[VAD] Using energy-based fallback (no Cobra)")
     
     # Initialize audio
     pa = pyaudio.PyAudio()
