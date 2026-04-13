@@ -174,3 +174,4 @@ def update_gui_response(text): gui_bridge.update_gui_response_logic(text)
 def set_gui_listening_status(status): gui_bridge.set_gui_listening_status_logic(status)
 def update_gui_camera_frame(frame): gui_bridge.update_gui_camera_frame_logic(frame)
 def stop_gui(): pass # Implementation simplified for brevity
+def set_gui_camera_status(active): gui_bridge.set_gui_listening_status_logic(active)  # alias

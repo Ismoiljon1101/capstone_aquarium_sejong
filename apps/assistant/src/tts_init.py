@@ -23,7 +23,7 @@ try:
     if MODEL_PATH and VOICES_PATH:
         print(f"[TTS] Loading {os.path.basename(MODEL_PATH)} + {os.path.basename(VOICES_PATH)}")
         kokoro = Kokoro(MODEL_PATH, VOICES_PATH)
-        print("[TTS] Kokoro ready ✓")
+        print("[TTS] Kokoro ready OK")
     else:
         print(f"[TTS] Model files not found in {_BASE}")
         print(f"      Expected: kokoro-v1.0.int8.onnx + voices-v1.0.bin")
