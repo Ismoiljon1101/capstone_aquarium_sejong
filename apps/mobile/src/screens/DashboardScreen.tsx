@@ -77,9 +77,9 @@ export default function DashboardScreen() {
               <Text style={{ fontSize: 16, fontWeight: '800', color: '#e2e8f0', marginBottom: 4 }}>Aquarium Health</Text>
               <Text style={{ fontSize: 13, color: '#64748b', marginBottom: 10, lineHeight: 18 }}>All parameters within safe range</Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
-                <Tag label="Water \u2713" color="#34d399" />
-                <Tag label="Fish \u2713" color="#60a5fa" />
-                <Tag label="Feed \u2713" color="#fbbf24" />
+                <Tag label="💧 Water" color="#34d399" />
+                <Tag label="🐟 Fish" color="#60a5fa" />
+                <Tag label="🍽️ Feed" color="#fbbf24" />
               </View>
             </View>
           </View>
