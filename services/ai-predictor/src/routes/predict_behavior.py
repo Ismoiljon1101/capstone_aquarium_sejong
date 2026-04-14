@@ -5,7 +5,8 @@ import torch, os
 import numpy as np
 
 router = APIRouter()
-model_path = os.getenv("MODEL_PATH", "../../resources/models") + "/convlstm_vae.pt"
+_repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+model_path = os.path.join(os.getenv("MODEL_PATH", os.path.join(_repo_root, "resources", "models")), "convlstm_vae.pth")
 # Model loading with fail-safe for local testing
 try:
     model = torch.load(model_path, map_location="cpu")

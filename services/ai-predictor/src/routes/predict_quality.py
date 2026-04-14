@@ -4,7 +4,8 @@ from pydantic import BaseModel
 import pickle, os, numpy as np
 
 router = APIRouter()
-model_path = os.getenv("MODEL_PATH", "../../resources/models") + "/rf_quality.pkl"
+_repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+model_path = os.path.join(os.getenv("MODEL_PATH", os.path.join(_repo_root, "resources", "models")), "rf_quality.pkl")
 model = None
 try:
     with open(model_path, "rb") as f:

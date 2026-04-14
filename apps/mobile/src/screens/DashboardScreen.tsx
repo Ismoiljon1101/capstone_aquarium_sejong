@@ -1,114 +1,294 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  RefreshControl,
-  Animated,
-} from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Animated } from 'react-native';
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
-import { LiveTelemetry } from '../components/organisms/LiveTelemetry';
-import { ControlPanel } from '../components/organisms/ControlPanel';
-import { AlertFeed } from '../components/organisms/AlertFeed';
-import { FishHealthPanel } from '../components/organisms/FishHealthPanel';
+import { useSensors } from '../hooks/useSensors';
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+interface Alert { alertId: number; type: string; message: string; severity: string; createdAt: string; }
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getGreeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+}
+
+function statusColor(s: string) {
+  return s === 'critical' ? '#ef4444' : s === 'warn' || s === 'warning' ? '#fbbf24' : '#34d399';
+}
+
+// ─── Sensor pill (inline, horizontal) ────────────────────────────────────────
+function SensorPill({ icon, label, value, unit, color, status }: {
+  icon: string; label: string; value: string; unit: string; color: string; status: string;
+}) {
+  const dot = statusColor(status);
+  return (
+    <View style={{
+      flex: 1, minWidth: '46%',
+      backgroundColor: '#0f172a',
+      borderRadius: 16, padding: 14,
+      borderWidth: 1, borderColor: color + '25',
+    }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <Text style={{ fontSize: 18 }}>{icon}</Text>
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />
+      </View>
+      <Text style={{ fontSize: 24, fontWeight: '900', color, letterSpacing: -1, fontVariant: ['tabular-nums'] }}>
+        {value}
+        <Text style={{ fontSize: 12, fontWeight: '600', color: color + '80' }}> {unit}</Text>
+      </Text>
+      <Text style={{ fontSize: 11, color: '#64748b', marginTop: 3, fontWeight: '500' }}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── Alert chip ──────────────────────────────────────────────────────────────
+function AlertChip({ alert, onAck }: { alert: Alert; onAck: (id: number) => void }) {
+  const sev = alert.severity ?? 'info';
+  const c = sev === 'critical' ? '#ef4444' : sev === 'warning' ? '#f59e0b' : '#38bdf8';
+  return (
+    <View style={{
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      backgroundColor: c + '0D', borderRadius: 12,
+      borderWidth: 1, borderColor: c + '30',
+      padding: 12, marginBottom: 8,
+    }}>
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c, flexShrink: 0 }} />
+      <Text style={{ flex: 1, fontSize: 12, color: '#cbd5e1', lineHeight: 17 }}>{alert.message}</Text>
+      <TouchableOpacity onPress={() => onAck(alert.alertId)} activeOpacity={0.7}
+        style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: c + '20', borderRadius: 8 }}>
+        <Text style={{ fontSize: 10, color: c, fontWeight: '700' }}>ACK</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
-  const { connected } = useSocket();
+  const { connected, on } = useSocket();
   const api = useApi();
+  const sensors = useSensors();
+
   const [refreshing, setRefreshing] = useState(false);
-  const [fadeAnim] = useState(new Animated.Value(0));
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [fishCount, setFishCount] = useState<number>(0);
+  const [fishStatus, setFishStatus] = useState('ok');
+  const [healthScore, setHealthScore] = useState(98);
+  const [fade] = useState(new Animated.Value(0));
 
   useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    Animated.timing(fade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    loadData();
+    const u1 = on('alert:new', (a: Alert) => setAlerts(p => [a, ...p].slice(0, 5)));
+    return () => { u1(); };
   }, []);
+
+  const loadData = async () => {
+    const [alertsR, fishR, healthR] = await Promise.allSettled([
+      api.getActiveAlerts(),
+      api.getFishCount(),
+      api.getFishHealth(),
+    ]);
+    if (alertsR.status === 'fulfilled') setAlerts(alertsR.value.data?.slice(0, 5) ?? []);
+    if (fishR.status === 'fulfilled')   setFishCount(fishR.value.data?.count ?? 0);
+    if (healthR.status === 'fulfilled') {
+      const h = healthR.value.data;
+      if (h) {
+        const statuses = [h.phStatus, h.tempStatus, h.doStatus, h.visualStatus, h.behaviorStatus];
+        const hasCrit  = statuses.some((s: string) => s === 'critical');
+        const hasWarn  = statuses.some((s: string) => s === 'warn' || s === 'warning');
+        setFishStatus(hasCrit ? 'critical' : hasWarn ? 'warn' : 'ok');
+        setHealthScore(hasCrit ? 60 : hasWarn ? 78 : 98);
+      }
+    }
+  };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.allSettled([api.getLatest(), api.getActiveAlerts(), api.getFishCount(), api.getFishHealth()]);
+    await loadData();
     setRefreshing(false);
   }, []);
 
+  const ackAlert = async (id: number) => {
+    setAlerts(p => p.filter(a => a.alertId !== id));
+    await api.acknowledgeAlert(id).catch(() => null);
+  };
+
+  const s = (k: string) => sensors[k];
+  const fmtVal = (k: string, def: number) => (s(k)?.value ?? def).toFixed(1);
+  const fmtSt  = (k: string) => s(k)?.status ?? 'ok';
+
+  const scoreColor = healthScore >= 90 ? '#34d399' : healthScore >= 70 ? '#fbbf24' : '#ef4444';
+  const scoreLabel = healthScore >= 90 ? 'Excellent' : healthScore >= 70 ? 'Needs Attention' : 'Critical';
+
   return (
-    <Animated.View style={{ flex: 1, backgroundColor: '#020617', opacity: fadeAnim }}>
+    <Animated.View style={{ flex: 1, backgroundColor: '#020617', opacity: fade }}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: 30, gap: 0 }}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 18, paddingTop: 14, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#38bdf8" colors={['#38bdf8']} />}
       >
-        {/* Brand Header */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        {/* ── Header ── */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <View>
-            <Text style={{ fontSize: 14, color: '#64748b', fontWeight: '500', marginBottom: 2 }}>Good {getTimeOfDay()}</Text>
-            <Text selectable style={{ fontSize: 30, fontWeight: '900', color: '#f8fafc', letterSpacing: -1 }}>Fishlinic</Text>
+            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500' }}>{getGreeting()}</Text>
+            <Text style={{ fontSize: 26, fontWeight: '900', color: '#f8fafc', letterSpacing: -0.8, marginTop: 1 }}>Fishlinic</Text>
           </View>
           <View style={{
-            flexDirection: 'row', alignItems: 'center', gap: 6,
-            backgroundColor: 'rgba(255,255,255,0.04)',
-            paddingHorizontal: 12, paddingVertical: 8,
-            borderRadius: 20, borderCurve: 'continuous',
-            borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-            marginTop: 6,
+            flexDirection: 'row', alignItems: 'center', gap: 5,
+            backgroundColor: connected ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.04)',
+            paddingHorizontal: 11, paddingVertical: 6,
+            borderRadius: 20, borderWidth: 1,
+            borderColor: connected ? 'rgba(52,211,153,0.25)' : 'rgba(255,255,255,0.06)',
+            marginTop: 4,
           }}>
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: connected ? '#34d399' : '#64748b' }} />
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: connected ? '#34d399' : '#64748b' }} />
             <Text style={{ fontSize: 11, fontWeight: '700', color: connected ? '#34d399' : '#64748b' }}>
-              {connected ? 'System Online' : 'Connecting\u2026'}
+              {connected ? 'Live' : 'Offline'}
             </Text>
           </View>
         </View>
 
-        {/* Hero Health Card */}
+        {/* ── Health Score + Fish ── */}
         <View style={{
-          borderRadius: 24, borderCurve: 'continuous',
-          overflow: 'hidden', marginBottom: 28,
-          borderWidth: 1, borderColor: 'rgba(56,189,248,0.15)',
+          borderRadius: 22, overflow: 'hidden', marginBottom: 16,
+          borderWidth: 1, borderColor: scoreColor + '25',
           backgroundColor: '#0c1a2e',
-          boxShadow: '0 4px 24px rgba(56,189,248,0.08)',
         }}>
-          {/* Subtle glow */}
-          <View style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(56,189,248,0.06)' }} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 24, gap: 20 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-              <Text selectable style={{ fontSize: 56, fontWeight: '900', color: '#38bdf8', letterSpacing: -3, lineHeight: 58, fontVariant: ['tabular-nums'] }}>98</Text>
-              <Text style={{ fontSize: 18, fontWeight: '600', color: '#38bdf880', marginLeft: 2 }}>/100</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, gap: 16 }}>
+            {/* Score */}
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 50, fontWeight: '900', color: scoreColor, letterSpacing: -3, lineHeight: 52, fontVariant: ['tabular-nums'] }}>
+                {healthScore}
+              </Text>
+              <Text style={{ fontSize: 10, color: scoreColor + '80', fontWeight: '700', letterSpacing: 0.5 }}>/100</Text>
             </View>
+
+            <View style={{ width: 1, height: 56, backgroundColor: 'rgba(255,255,255,0.06)' }} />
+
+            {/* Info */}
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '800', color: '#e2e8f0', marginBottom: 4 }}>Aquarium Health</Text>
-              <Text style={{ fontSize: 13, color: '#64748b', marginBottom: 10, lineHeight: 18 }}>All parameters within safe range</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: scoreColor }} />
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#e2e8f0' }}>{scoreLabel}</Text>
+              </View>
+              <Text style={{ fontSize: 12, color: '#64748b', lineHeight: 17, marginBottom: 10 }}>
+                {fishStatus === 'ok' ? 'All parameters within safe range' : 'Check alerts below'}
+              </Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
+                <Tag label={`🐟 ${fishCount} fish`} color="#60a5fa" />
                 <Tag label="💧 Water" color="#34d399" />
-                <Tag label="🐟 Fish" color="#60a5fa" />
-                <Tag label="🍽️ Feed" color="#fbbf24" />
+                <Tag label="🍽️ Fed" color="#fbbf24" />
               </View>
             </View>
           </View>
         </View>
 
-        <AlertFeed />
-        <LiveTelemetry />
-        <ControlPanel />
-        <FishHealthPanel />
+        {/* ── Water Parameters 2×2 ── */}
+        <SectionTitle>Water Parameters</SectionTitle>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+          <SensorPill icon="🧪" label="pH Level"       value={fmtVal('pH', 7.0)}   unit="pH"   color="#10b981" status={fmtSt('pH')} />
+          <SensorPill icon="🌡️" label="Temperature"   value={fmtVal('TEMP', 25)}  unit="°C"   color="#38bdf8" status={fmtSt('TEMP')} />
+          <SensorPill icon="💨" label="Dissolved O₂"  value={fmtVal('DO2', 7.5)}  unit="mg/L" color="#a78bfa" status={fmtSt('DO2')} />
+          <SensorPill icon="☁️" label="CO₂"           value={fmtVal('CO2', 18)}   unit="ppm"  color="#fb923c" status={fmtSt('CO2')} />
+        </View>
+
+        {/* ── Fish Intelligence ── */}
+        <SectionTitle>Fish Intelligence</SectionTitle>
+        <View style={{
+          backgroundColor: '#0f172a', borderRadius: 18,
+          borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+          padding: 16, marginBottom: 16,
+        }}>
+          <View style={{ flexDirection: 'row', gap: 0 }}>
+            {[
+              { label: 'COUNT', value: String(fishCount), color: '#60a5fa' },
+              { label: 'HEALTH', value: fishStatus === 'ok' ? 'Good' : fishStatus === 'warn' ? 'Warn' : 'Critical', color: statusColor(fishStatus) },
+              { label: 'VISION', value: 'YOLO v11', color: '#a78bfa' },
+            ].map((item, i) => (
+              <View key={item.label} style={{ flex: 1, alignItems: 'center', borderRightWidth: i < 2 ? 1 : 0, borderRightColor: 'rgba(255,255,255,0.06)' }}>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: item.color }}>{item.value}</Text>
+                <Text style={{ fontSize: 9, color: '#475569', fontWeight: '700', letterSpacing: 0.5, marginTop: 3 }}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
+            {[
+              { icon: '🧪', label: 'pH',           st: fmtSt('pH') },
+              { icon: '🌡️', label: 'Temperature',  st: fmtSt('TEMP') },
+              { icon: '💨', label: 'Dissolved O₂', st: fmtSt('DO2') },
+              { icon: '👁️', label: 'Visual Check', st: 'ok' },
+              { icon: '🧠', label: 'Behavior',      st: 'ok' },
+            ].map(p => (
+              <View key={p.label} style={{
+                flexDirection: 'row', alignItems: 'center',
+                paddingVertical: 8,
+                borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+              }}>
+                <Text style={{ fontSize: 14, marginRight: 10 }}>{p.icon}</Text>
+                <Text style={{ flex: 1, fontSize: 13, color: '#94a3b8' }}>{p.label}</Text>
+                <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: statusColor(p.st) + '18' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: statusColor(p.st) }}>{p.st.toUpperCase()}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* ── Alerts ── */}
+        {alerts.length > 0 && (
+          <>
+            <SectionTitle>Recent Alerts</SectionTitle>
+            {alerts.slice(0, 3).map(a => (
+              <AlertChip key={a.alertId} alert={a} onAck={ackAlert} />
+            ))}
+          </>
+        )}
+
+        {/* ── Device quick-status ── */}
+        <SectionTitle>Device Status</SectionTitle>
+        <View style={{
+          backgroundColor: '#0f172a', borderRadius: 16,
+          borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+          padding: 14, marginBottom: 4,
+        }}>
+          <Text style={{ fontSize: 11, color: '#475569', marginBottom: 10 }}>Go to Controls to manage devices</Text>
+          {[
+            { icon: '💨', label: 'Air Pump', color: '#06b6d4' },
+            { icon: '💡', label: 'LED Strip', color: '#f59e0b' },
+            { icon: '🐠', label: 'Auto Feeder', color: '#38bdf8' },
+          ].map(d => (
+            <View key={d.label} style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+            }}>
+              <Text style={{ fontSize: 16 }}>{d.icon}</Text>
+              <Text style={{ flex: 1, fontSize: 13, color: '#cbd5e1' }}>{d.label}</Text>
+              <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: 'rgba(100,116,139,0.15)' }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748b' }}>AUTO</Text>
+              </View>
+            </View>
+          ))}
+        </View>
       </ScrollView>
     </Animated.View>
   );
 }
 
-function Tag({ label, color }: { label: string; color: string }) {
+function SectionTitle({ children }: { children: string }) {
   return (
-    <View style={{
-      paddingHorizontal: 8, paddingVertical: 3,
-      borderRadius: 8, borderCurve: 'continuous',
-      borderWidth: 1, backgroundColor: color + '15', borderColor: color + '30',
-    }}>
-      <Text style={{ fontSize: 10, fontWeight: '700', color }}>{label}</Text>
-    </View>
+    <Text style={{ fontSize: 14, fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>
+      {children}
+    </Text>
   );
 }
 
-function getTimeOfDay() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Morning';
-  if (h < 17) return 'Afternoon';
-  return 'Evening';
+function Tag({ label, color }: { label: string; color: string }) {
+  return (
+    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, backgroundColor: color + '15', borderColor: color + '30' }}>
+      <Text style={{ fontSize: 10, fontWeight: '700', color }}>{label}</Text>
+    </View>
+  );
 }

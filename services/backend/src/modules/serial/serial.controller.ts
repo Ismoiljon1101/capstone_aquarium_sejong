@@ -8,11 +8,6 @@ export class SerialController {
 
   constructor(private readonly serialService: SerialService) {}
 
-  @Post('reading')
-  async handleReading(@Body() reading: any) {
-    return await this.serialService.processReading(reading);
-  }
-
   /**
    * Receives sensor readings forwarded by the serial bridge
    */

@@ -5,7 +5,8 @@ from ultralytics import YOLO
 import os
 
 router = APIRouter()
-model_path = os.getenv("MODEL_PATH", "../../resources/models") + "/yolo_disease.pt"
+_repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+model_path = os.path.join(os.getenv("MODEL_PATH", os.path.join(_repo_root, "resources", "models")), "yolo_disease.pt")
 model = None
 try:
     model = YOLO(model_path)
