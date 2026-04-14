@@ -34,44 +34,97 @@ export class VoiceService {
     // 2. Build prompt
     const prompt = this.buildPrompt(text, sensorContext);
 
+    // Strip client-side context prefix (mobile injects it, backend re-fetches live)
+    const cleanText = text.replace(/^\[Live tank data[^\]]*\]\s*User:\s*/i, '').trim();
+
     // 3. Call Ollama
     try {
-      const { data } = await firstValueFrom(
-        this.http.post(`${this.ollamaUrl}/api/chat`, {
+      const t0 = Date.now();
+      const res = await firstValueFrom(
+        this.http.post<{ message: { content: string } }>(`${this.ollamaUrl}/api/chat`, {
           model: this.model,
           messages: [
             {
               role: 'system',
-              content: 'You are Veronica, an AI assistant for a smart aquarium. Provide short, helpful answers based on current status. Only English.',
+              content: `You are Veronica, a smart aquarium AI. Be concise and helpful. Current tank readings: ${sensorContext || 'unavailable'}. Answer in 1-3 sentences. English only.`,
             },
-            { role: 'user', content: prompt },
+            { role: 'user', content: cleanText },
           ],
           stream: false,
         }),
       );
 
-      const aiResponse = data.message?.content ?? 'I am sorry, but I cannot process that right now.';
+      const aiResponse = res.data?.message?.content ?? 'Sorry, I could not process that right now.';
+      const durationMs = Date.now() - t0;
 
-      // 4. Persist session
       const session = this.sessionRepo.create({
-        transcribedText: text,
+        transcribedText: cleanText,
         aiResponse,
         snapshotId,
         wakeWordAt: new Date(),
+        durationMs,
       });
       await this.sessionRepo.save(session);
 
       return aiResponse;
     } catch (error) {
-      this.logger.error(`Ollama connection error: ${error.message}`);
-      return 'I am having trouble connecting to my brain. Please check if Ollama is running.';
+      this.logger.error(`Ollama error: ${error.message}`);
+
+      // Smart fallback: answer from real sensor data without LLM
+      return this.sensorFallback(cleanText, latestReadings);
     }
   }
 
+  private sensorFallback(question: string, readings: any[]): string {
+    const get = (type: string) => readings.find(r => r.type?.toLowerCase() === type.toLowerCase());
+    const pH   = get('pH');
+    const temp = get('TEMP') ?? get('temp_c');
+    const do2  = get('DO2') ?? get('do_mg_l');
+    const co2  = get('CO2');
+
+    const hasData = readings.length > 0;
+
+    if (!hasData) {
+      return "I can't reach the sensors right now. Please check that the serial bridge is running and connected to the backend.";
+    }
+
+    const q = question.toLowerCase();
+
+    if (/ph|acid|alkaline/.test(q)) {
+      return pH
+        ? `Current pH is ${pH.value} — ${pH.status === 'ok' ? 'within the safe range (6.8–7.5).' : `⚠️ status is ${pH.status}, which needs attention.`}`
+        : "I can read the sensors but pH data isn't available yet.";
+    }
+    if (/temp|hot|cold|warm/.test(q)) {
+      return temp
+        ? `Water temperature is ${temp.value}°C — ${temp.status === 'ok' ? 'safe (24–28°C).' : `⚠️ ${temp.status}.`}`
+        : "Temperature sensor data not available yet.";
+    }
+    if (/oxygen|o2|do|dissolv/.test(q)) {
+      return do2
+        ? `Dissolved oxygen is ${do2.value} mg/L — ${do2.status === 'ok' ? 'good (safe range 6–9 mg/L).' : `⚠️ ${do2.status}.`}`
+        : "Dissolved oxygen data not available yet.";
+    }
+    if (/status|ok|fine|good|health|safe|all/.test(q)) {
+      const issues = [pH, temp, do2, co2].filter(s => s && s.status !== 'ok');
+      if (issues.length === 0) {
+        return `All sensors look good! pH ${pH?.value ?? '–'}, temp ${temp?.value ?? '–'}°C, O₂ ${do2?.value ?? '–'} mg/L. Your tank is healthy.`;
+      }
+      return `I see ${issues.length} issue(s): ${issues.map(s => `${s.type} is ${s.status}`).join(', ')}. I'd check those.`;
+    }
+
+    // Generic fallback with live data
+    const summary = [
+      pH   ? `pH ${pH.value}`   : null,
+      temp ? `${temp.value}°C`  : null,
+      do2  ? `O₂ ${do2.value} mg/L` : null,
+    ].filter(Boolean).join(', ');
+
+    return `I can see your live tank data (${summary}) but my AI brain (Ollama) is offline right now. Start Ollama and run: ollama pull qwen2.5:3b to get full answers.`;
+  }
+
   private buildPrompt(text: string, sensors: string): string {
-    return `User: "${text}"
-Current Status: ${sensors}
-Instructions: Answer the user's question briefly using the provided data if relevant.`;
+    return `User: "${text}"\nCurrent tank: ${sensors}\nAnswer briefly using the data if relevant.`;
   }
 
   async getSessions() {

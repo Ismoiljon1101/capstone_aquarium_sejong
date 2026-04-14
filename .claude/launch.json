@@ -5,7 +5,8 @@
       "name": "Backend (NestJS)",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "backend", "run", "dev"],
-      "port": 3000
+      "port": 3000,
+      "autoPort": false
     },
     {
       "name": "Serial Bridge (Mock Arduino)",
@@ -22,8 +23,9 @@
     {
       "name": "Expo Mobile",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "fishlinic-mobile", "exec", "expo", "start", "--web", "--port", "8081"],
-      "port": 8081
+      "runtimeArgs": ["--filter", "fishlinic-mobile", "exec", "expo", "start", "--web", "--clear"],
+      "port": 8081,
+      "autoPort": true
     },
     {
       "name": "AI Predictor (FastAPI)",
