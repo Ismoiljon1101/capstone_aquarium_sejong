@@ -159,6 +159,7 @@ export default function FishHealthScreen() {
   const [speaking, setSpeaking] = useState(false);
   const [fishCount, setFishCount] = useState(0);
   const [mode, setMode]         = useState<'chat' | 'voice'>('chat');
+  const [online, setOnline]     = useState<boolean | null>(null);
 
   const scrollRef     = useRef<ScrollView>(null);
   const callRef       = useRef(callActive);
@@ -168,6 +169,14 @@ export default function FishHealthScreen() {
 
   const orbState: 'idle' | 'listening' | 'thinking' | 'speaking' =
     listening ? 'listening' : loading ? 'thinking' : speaking ? 'speaking' : 'idle';
+
+  // ── Online/offline ping ──
+  useEffect(() => {
+    const check = () => api.getLatest().then(() => setOnline(true)).catch(() => setOnline(false));
+    check();
+    const id = setInterval(check, 15000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     // Greeting
@@ -272,7 +281,20 @@ export default function FishHealthScreen() {
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: '800', color: '#f1f5f9' }}>Veronica AI</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#f1f5f9' }}>Veronica AI</Text>
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 3,
+              paddingHorizontal: 6, paddingVertical: 2,
+              borderRadius: 8,
+              backgroundColor: online === true ? '#16a34a18' : online === false ? '#dc262618' : '#33333318',
+            }}>
+              <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: online === true ? '#22c55e' : online === false ? '#ef4444' : '#64748b' }} />
+              <Text style={{ fontSize: 9, fontWeight: '700', color: online === true ? '#22c55e' : online === false ? '#ef4444' : '#64748b', letterSpacing: 0.5 }}>
+                {online === true ? 'ONLINE' : online === false ? 'OFFLINE' : '···'}
+              </Text>
+            </View>
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
             {listening && <Waveform active />}
             {!listening && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor }} />}

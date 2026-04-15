@@ -10,6 +10,7 @@ import { VisionModule } from './modules/vision/vision.module';
 import { VoiceModule } from './modules/voice/voice.module';
 import { FishModule } from './modules/fish/fish.module';
 import { CronModule } from './modules/cron/cron.module';
+import { ManagementModule } from './modules/management/management.module';
 import { GatewayModule } from './modules/gateway/gateway.module';
 import { DatabaseModule } from './modules/database/database.module';
 import { LegacyController } from './modules/database/legacy.controller';
@@ -26,6 +27,7 @@ import { LegacyController } from './modules/database/legacy.controller';
     VoiceModule,
     FishModule,
     CronModule,
+    ManagementModule,
     GatewayModule,
   ],
   controllers: [AppController, LegacyController],
