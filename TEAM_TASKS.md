@@ -56,20 +56,30 @@
 
 ---
 
-## Firdavs — Mobile Push & AI Polish
+## Firdavs — AI Predictor & ML Models
 
-**Goal**: production-feel mobile with real push alerts + AI predictor robustness.
+**Goal**: robust, accurate AI inference — all models load, GPU-aware, results visible in UI.
 
 | # | Task | Files | Done when |
 |---|---|---|---|
-| 1 | Expo push notifications — register token, save via `PATCH /management/tank-config` (`pushToken` field already in entity) | `apps/mobile/App.tsx`, `src/hooks/usePushToken.ts` (new), backend `management.service.ts` | token stored in DB |
-| 2 | Backend route: send push via Expo API when scheduler creates CRITICAL alert | `services/backend/src/modules/alerts/push.service.ts` (new) | phone buzzes on emergency |
-| 3 | Deep linking — notification tap → Alerts screen highlighting that alert | `apps/mobile/src/navigation/AppNavigator.tsx`, `AlertsScreen.tsx` | tapping notif opens app to correct alert |
-| 4 | AI predictor GPU detection + graceful model-missing handling | `services/ai-predictor/src/routes/*.py` | service starts even if a model file missing |
-| 5 | Alert sound + haptic on critical (toggle already in SettingsScreen) | `apps/mobile/src/hooks/useSocket.ts` | haptic fires when critical alert arrives |
+| 1 | GPU detection + CPU fallback in predictor | `services/ai-predictor/src/main.py`, `routes/*.py` | service logs `device: cuda` or `device: cpu` on start |
+| 2 | Graceful missing-model handling — service starts even if a `.pt`/`.pkl` file absent | `services/ai-predictor/src/routes/predict_quality.py`, `predict_disease.py`, `predict_count.py` | 503 returned cleanly, no crash |
+| 3 | Model readiness endpoint `/ready` — returns which models loaded successfully | `services/ai-predictor/src/main.py` | Settings screen AI Predictor badge shows per-model status |
+| 4 | Disease detection: wire `/vision/detect-disease` → camera snapshot → return annotated bounding boxes | `services/backend/src/modules/vision/vision.service.ts`, `services/ai-predictor/src/routes/predict_disease.py` | YOLO boxes returned as JSON `[{label, confidence, bbox}]` |
+| 5 | ConvLSTM-VAE anomaly detection: `/predict/anomaly` route consuming 10-reading window from sensor history | `services/ai-predictor/src/routes/predict_anomaly.py` (new), backend `voice.service.ts` system prompt | anomaly score included in Veronica's context |
 
-**Branch**: `feat/firdavs-push`
-**Deliverable**: phone buzzes when water quality critical, even if app closed.
+**Branch**: `feat/firdavs-ai`
+**Deliverable**: all 4 models load reliably, disease bounding boxes display on dashboard, anomaly score fed to Veronica.
+
+---
+
+## Ismail (you) — Mobile Push Notifications
+
+| # | Task | Files | Done when |
+|---|---|---|---|
+| 1 | Expo push token registration on app start | `apps/mobile/App.tsx`, `src/hooks/usePushToken.ts` (new) | token saved via `PATCH /management/tank-config` |
+| 2 | Backend push sender when scheduler creates CRITICAL alert | `services/backend/src/modules/alerts/push.service.ts` (new) | phone buzzes on emergency threshold breach |
+| 3 | Deep linking — notification tap → Alerts screen | `apps/mobile/src/navigation/AppNavigator.tsx`, `AlertsScreen.tsx` | tap opens correct alert |
 
 ---
 
