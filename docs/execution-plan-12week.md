@@ -1,4 +1,15 @@
-# FISHLINIC — MASTER EXECUTION PLAN
+# FISHLINIC — MASTER EXECUTION PLAN (HISTORICAL SNAPSHOT)
+
+> **Archive note (2026-04-17)**: Written 2026-04-03 against the *legacy*
+> codebase (`mock-server/`, `ai-service/`, `Dashboard-Code/`, Prisma). The
+> project has since been reorganized into the current NestJS monorepo with
+> TypeORM. Many "as-is" problems listed here (base64 passwords, God-files,
+> Prisma mismatch, zero telemetry persistence) **no longer apply to the
+> current codebase**.
+>
+> Kept as a historical planning artifact. For live sprint status see
+> `docs/team-ownership.md` and `project_status.md`.
+
 ## Project: Smart Aquaculture Monitoring System
 ## Role: App Development Lead
 ## Duration: 12 Weeks | Start: 2026-04-07
