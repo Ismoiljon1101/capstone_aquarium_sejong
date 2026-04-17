@@ -12,29 +12,39 @@
       "name": "Serial Bridge (Mock Arduino)",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "serial-bridge", "run", "dev"],
-      "port": 3001
+      "port": 3001,
+      "autoPort": false
     },
     {
       "name": "Dashboard (Next.js)",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "fishlinic", "run", "dev"],
-      "port": 3002
-    },
-    {
-      "name": "Expo Mobile",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "fishlinic-mobile", "exec", "expo", "start", "--web", "--clear"],
-      "port": 8081,
+      "port": 3002,
       "autoPort": true
     },
     {
+      "name": "Expo Mobile",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["expo", "start", "--web", "--clear"],
+      "cwd": "${workspaceFolder}/apps/mobile",
+      "port": 8081
+    },
+    {
+      "name": "Ollama (Veronica LLM)",
+      "runtimeExecutable": "ollama",
+      "runtimeArgs": ["serve"],
+      "port": 11434,
+      "autoPort": false
+    },
+    {
       "name": "AI Predictor (FastAPI)",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8001", "--app-dir", "services/ai-predictor"],
-      "env": {
-        "MODEL_PATH": "resources/models"
-      },
-      "port": 8001
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Users\\ismoi\\OneDrive\\Desktop\\Capstore_aquaquarium\\services\\ai-predictor && set MODEL_PATH=C:\\Users\\ismoi\\OneDrive\\Desktop\\Capstore_aquaquarium\\resources\\models && python -m uvicorn src.main:app --host 0.0.0.0 --port 8001 --reload"
+      ],
+      "port": 8001,
+      "autoPort": false
     }
   ]
 }
