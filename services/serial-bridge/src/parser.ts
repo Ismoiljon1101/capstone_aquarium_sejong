@@ -1,4 +1,10 @@
-import { SensorReading } from '../../shared/types/sensor.types';
+type BridgeSensorReading = {
+  sensorId: number;
+  type: 'pH' | 'temp_c' | 'do_mg_l' | 'CO2';
+  value: number;
+  unit: string;
+  timestamp: string;
+};
 
 /**
  * Parser for Arduino serial data.
@@ -9,13 +15,13 @@ export class SerialParser {
    * Parses a single line of serial data.
    * Format: {"pH":7.12,"do_mg_l":7.8,"temp_c":26.4}
    */
-  public parse(line: string): Partial<SensorReading>[] {
+  public parse(line: string): BridgeSensorReading[] {
     try {
       if (!line.startsWith('{')) return [];
       
       const data = JSON.parse(line);
       const timestamp = new Date().toISOString();
-      const readings: Partial<SensorReading>[] = [];
+      const readings: BridgeSensorReading[] = [];
 
       // Map Arduino JSON fields to SensorReading interface
       // sensorId: 1=pH, 2=temp, 3=DO, 4=CO2
@@ -34,7 +40,8 @@ export class SerialParser {
 
       return readings;
     } catch (error) {
-      console.error('[Parser] JSON parse error:', error.message);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Parser] JSON parse error:', message);
       return [];
     }
   }
