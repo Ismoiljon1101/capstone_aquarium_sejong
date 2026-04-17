@@ -39,20 +39,30 @@
 
 ---
 
-## Maral — Dashboard & Vision
+## Maral — Database & Dashboard
 
-**Goal**: professor-ready web dashboard with AI visualization + feature parity with mobile.
+**Goal**: production-ready DB + professor-ready web dashboard with feature parity with mobile.
+
+### Database (priority first)
 
 | # | Task | Files | Done when |
 |---|---|---|---|
-| 1 | Camera snapshot + YOLO disease overlay on fish-health page | `apps/dashboard/app/dashboard/fish-health/`, backend `modules/vision` | latest frame + bounding boxes render |
-| 2 | Growth tracking chart (fish count over time) | `apps/dashboard/app/dashboard/fish-health/` | line chart from `/fish/count` history |
-| 3 | Alerts management page — ack/resolve from web | `apps/dashboard/app/dashboard/alerts/` | uses `PATCH /alerts/:id/acknowledge` |
-| 4 | History — time-range export to CSV | `apps/dashboard/app/dashboard/history/` | download button outputs valid CSV |
-| 5 | Wire dashboard settings to `/management/*` endpoints (schedules + thresholds) | `apps/dashboard/app/settings/` | web CRUD matches mobile Controls screen |
+| 1 | Replace TypeORM `synchronize: true` with proper migrations | `services/backend/src/modules/database/database.module.ts`, `migrations/` (new folder) | `pnpm migration:run` applies schema cleanly on fresh Postgres |
+| 2 | Supabase production setup — `DATABASE_URL` in `.env.production`, SSL config | `services/backend/src/modules/database/database.module.ts` | backend connects to Supabase, data persists across restarts |
+| 3 | Add missing entities to DB config — verify `FishGrowth`, all new management entities registered | `services/backend/src/modules/database/database.config.ts` | no `EntityMetadataNotFoundError` on startup |
+| 4 | Seed script for default tank config + light schedule (singleton rows id=1) | `services/backend/src/modules/database/seed.ts` (new) | fresh DB has sane defaults, no null crashes |
 
-**Branch**: `feat/maral-dashboard`
-**Deliverable**: dashboard has feature parity with mobile.
+### Dashboard
+
+| # | Task | Files | Done when |
+|---|---|---|---|
+| 5 | Camera snapshot + YOLO bounding boxes on fish-health page | `apps/dashboard/app/dashboard/fish-health/`, backend `modules/vision` | latest frame + boxes render |
+| 6 | Growth tracking chart (fish count over time) | `apps/dashboard/app/dashboard/fish-health/` | line chart from `/fish/count` history |
+| 7 | Alerts page — ack/resolve from web (`PATCH /alerts/:id/acknowledge`) | `apps/dashboard/app/dashboard/alerts/` | button marks alert resolved |
+| 8 | Wire dashboard settings → `/management/*` (schedules + thresholds) | `apps/dashboard/app/settings/` | web CRUD matches mobile Controls screen |
+
+**Branch**: `feat/maral-db-dashboard`
+**Deliverable**: Supabase connected, migrations scripted, dashboard has feature parity with mobile.
 
 ---
 
