@@ -8,6 +8,9 @@ import { FishCount } from './entities/fish-count.entity';
 import { HealthReport } from './entities/health-report.entity';
 import { UserCommandEntity } from './entities/user-command.entity';
 import { VoiceSessionEntity } from './entities/voice-session.entity';
+import { FeedScheduleEntity } from './entities/feed-schedule.entity';
+import { LightScheduleEntity } from './entities/light-schedule.entity';
+import { TankConfigEntity } from './entities/tank-config.entity';
 import { DatabaseService } from './database.service';
 import { DatabaseController } from './database.controller';
 
@@ -27,6 +30,7 @@ import { DatabaseController } from './database.controller';
             entities: [
               SensorReadingEntity, AlertEntity, CameraSnapshotEntity,
               FishCount, HealthReport, UserCommandEntity, VoiceSessionEntity,
+              FeedScheduleEntity, LightScheduleEntity, TankConfigEntity,
             ],
             synchronize: true,
             logging: false,
@@ -47,6 +51,9 @@ import { DatabaseController } from './database.controller';
             HealthReport,
             UserCommandEntity,
             VoiceSessionEntity,
+            FeedScheduleEntity,
+            LightScheduleEntity,
+            TankConfigEntity,
           ],
           synchronize: true, // Auto-create tables for dev mode
         };
@@ -60,6 +67,9 @@ import { DatabaseController } from './database.controller';
       HealthReport,
       UserCommandEntity,
       VoiceSessionEntity,
+      FeedScheduleEntity,
+      LightScheduleEntity,
+      TankConfigEntity,
     ]),
   ],
   controllers: [DatabaseController],

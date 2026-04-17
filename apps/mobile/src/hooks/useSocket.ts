@@ -4,14 +4,20 @@ import { io, Socket } from 'socket.io-client';
 const WS_URL = process.env.EXPO_PUBLIC_WS_URL ?? 'http://localhost:3000';
 
 export type SensorReading = {
-  pH: number;
-  temp_c: number;
-  do_mg_l: number;
+  sensorId?: number;
+  type?: string;
+  value?: number;
+  unit?: string;
+  status?: 'ok' | 'warn' | 'critical';
   timestamp: string;
+  pH?: number;
+  temp_c?: number;
+  do_mg_l?: number;
 };
 
 export type AlertPayload = {
-  id: number;
+  id?: number;
+  alertId?: number;
   message: string;
   severity: 'INFO' | 'WARNING' | 'CRITICAL';
   createdAt: string;
@@ -27,13 +33,25 @@ export type HealthReport = {
   tempStatus: 'ok' | 'warn' | 'critical';
   doStatus: 'ok' | 'warn' | 'critical';
   overallScore: number;
-  createdAt: string;
+  createdAt?: string;
+  timestamp?: string;
 };
 
-/**
- * useSocket — connects to NestJS Socket.IO gateway.
- * Listens for all 4 real-time events and exposes typed state.
- */
+let socket: Socket | null = null;
+
+function getSocket() {
+  if (!socket) {
+    socket = io(WS_URL, {
+      transports: ['websocket'],
+      reconnectionAttempts: 5,
+      timeout: 10000,
+      autoConnect: true,
+    });
+  }
+
+  return socket;
+}
+
 export function useSocket() {
   const [connected, setConnected] = useState(false);
   const [telemetry, setTelemetry] = useState<SensorReading | null>(null);
@@ -42,21 +60,41 @@ export function useSocket() {
   const [healthReport, setHealthReport] = useState<HealthReport | null>(null);
 
   useEffect(() => {
-    const socket: Socket = io(WS_URL, {
-      transports: ['websocket'],
-      reconnectionAttempts: 5,
-      timeout: 10000,
-    });
+    const client = getSocket();
 
-    socket.on('connect', () => setConnected(true));
-    socket.on('disconnect', () => setConnected(false));
-    socket.on('sensor:update', (data: SensorReading) => setTelemetry(data));
-    socket.on('alert:new', (data: AlertPayload) => setLatestAlert(data));
-    socket.on('fish:count', (data: FishCountPayload) => setFishCount(data));
-    socket.on('health:report', (data: HealthReport) => setHealthReport(data));
+    const handleConnect = () => setConnected(true);
+    const handleDisconnect = () => setConnected(false);
+    const handleSensorUpdate = (data: SensorReading) => setTelemetry(data);
+    const handleAlert = (data: AlertPayload) => setLatestAlert(data);
+    const handleFishCount = (data: FishCountPayload) => setFishCount(data);
+    const handleHealthReport = (data: HealthReport) => setHealthReport(data);
 
-    return () => { socket.disconnect(); };
+    setConnected(client.connected);
+    client.on('connect', handleConnect);
+    client.on('disconnect', handleDisconnect);
+    client.on('sensor:update', handleSensorUpdate);
+    client.on('alert:new', handleAlert);
+    client.on('fish:count', handleFishCount);
+    client.on('health:report', handleHealthReport);
+
+    return () => {
+      client.off('connect', handleConnect);
+      client.off('disconnect', handleDisconnect);
+      client.off('sensor:update', handleSensorUpdate);
+      client.off('alert:new', handleAlert);
+      client.off('fish:count', handleFishCount);
+      client.off('health:report', handleHealthReport);
+    };
   }, []);
 
-  return { connected, telemetry, latestAlert, fishCount, healthReport };
+  const on = <T>(event: string, handler: (payload: T) => void) => {
+    const client = getSocket();
+    client.on(event, handler as (...args: unknown[]) => void);
+
+    return () => {
+      client.off(event, handler as (...args: unknown[]) => void);
+    };
+  };
+
+  return { connected, telemetry, latestAlert, fishCount, healthReport, on, socket: getSocket() };
 }

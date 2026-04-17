@@ -1,210 +1,235 @@
-# 🐟 Fishlinic — AI Smart Aquarium System
+# Fishlinic — AI Smart Aquarium
 
-> Autonomous, fully offline AI-powered aquarium fish health monitoring system.
-> Combines live water chemistry telemetry, computer vision, and a voice assistant.
+> Autonomous AI-powered aquarium monitoring: live water chemistry,
+> computer vision, voice assistant, real-time alerts.
 
----
-
-## 👥 Team
-
-| Name | Role | Owns |
-|---|---|---|
-| **Ismail** | Backend Lead & Architect | `services/backend/` |
-| **Maral** | Database Engineer | `services/backend/src/modules/database/` |
-| **Hamidullo** | Frontend Engineer | `apps/dashboard/` · `apps/mobile/` |
-| **Firdavs** | AI & Voice Engineer | `services/ai-predictor/` · `apps/assistant/` |
-| **Sarvar** | Hardware & IoT Engineer | `firmware/` · `services/serial-bridge/` |
+**Status**: software stack working on simulated data. Hardware integration
+sprint in progress — see `project_status.md` and `docs/team-ownership.md`.
 
 ---
 
-## 📁 Folder Structure
+## Team
+
+| Name        | Role                          | Primary folders                                                             |
+|-------------|-------------------------------|-----------------------------------------------------------------------------|
+| Ismail      | Lead Architect / Backend / Mobile | `services/backend/`, `apps/mobile/`, `shared/types/`, `docs/`           |
+| Maral       | Database Specialist           | `services/backend/src/modules/database/`, `migrations/`, Supabase           |
+| Hamidullah  | Frontend / UI / Dashboard     | `apps/dashboard/`, atoms/molecules/organisms, mobile UI styling             |
+| Firdavs     | AI Engineer                   | `services/ai-predictor/`, ML models in `resources/models/`                  |
+| Sarvar      | Hardware Engineer             | `firmware/main/`, `firmware/secondary/`, `services/serial-bridge/`          |
+
+Full task list per person: **[`docs/team-ownership.md`](docs/team-ownership.md)**.
+
+---
+
+## Folder structure
 
 ```
 fishlinic/
-│
 ├── apps/
-│   ├── dashboard/          ← Next.js 15 web dashboard (Hamidullo)
-│   ├── mobile/             ← React Native mobile app (Hamidullo)
-│   └── assistant/          ← Veronica voice assistant Python app (Firdavs)
-│
+│   ├── dashboard/          Next.js web dashboard (Hamidullah)
+│   ├── mobile/             Expo SDK 54 + RN 0.81.5 app (Ismail)
+│   └── assistant/          Veronica Python voice pipeline (Firdavs)
 ├── services/
-│   ├── backend/            ← NestJS backend API (Ismail)
-│   │   └── src/
-│   │       ├── modules/
-│   │       │   ├── serial/         ← Receives Arduino data
-│   │       │   ├── sensors/        ← pH, Temp, DO2 logic
-│   │       │   ├── actuators/      ← Feeder, pump, LED control
-│   │       │   ├── alerts/         ← Threshold alerts & emergency
-│   │       │   ├── vision/         ← Calls AI predictor
-│   │       │   ├── voice/          ← Calls Ollama LLM
-│   │       │   ├── fish/           ← Fish count, growth, health
-│   │       │   ├── cron/           ← 24/7 scheduled jobs
-│   │       │   ├── gateway/        ← Socket.IO real-time events
-│   │       │   └── database/       ← TypeORM entities (Maral)
-│   │       └── app.module.ts
-│   │
-│   ├── serial-bridge/      ← Node.js: Arduino USB → NestJS (Sarvar)
-│   └── ai-predictor/       ← FastAPI: YOLO + RF + ConvLSTM (Firdavs)
-│
+│   ├── backend/            NestJS API (Ismail)
+│   │   └── src/modules/    sensors, alerts, actuators, vision, voice,
+│   │                       fish, cron, gateway, serial, management, database
+│   ├── serial-bridge/      Node.js Arduino USB ↔ backend (Sarvar)
+│   └── ai-predictor/       FastAPI: YOLO + RF + ConvLSTM-VAE (Firdavs)
 ├── firmware/
-│   ├── main/               ← Arduino: pH, DO2, CO2 sensors (Sarvar)
-│   └── secondary/          ← Arduino: Temp + relay actuators (Sarvar)
-│
-├── shared/
-│   └── types/              ← Shared TypeScript types (everyone imports from here)
-│
-├── resources/
-│   └── models/             ← AI model files: yolo_disease.pt, rf_quality.pkl, convlstm_vae.pt
-│
-└── docs/
-    ├── api-contracts.md    ← All API endpoints & Socket.IO events
-    ├── team-handoff.md     ← Setup instructions per person
-    ├── ER-diagram.html     ← Database entity relationships
-    └── architecture.html   ← Full system architecture diagram
+│   ├── main/               Arduino: pH, DO2, CO2 (Sarvar)
+│   └── secondary/          Arduino: Temp + relay actuators (Sarvar)
+├── shared/types/           Shared TypeScript types (everyone imports)
+├── resources/models/       AI model files (.pt .pth .pkl)
+└── docs/                   API contracts, serial protocol, ops, setup
 ```
 
 ---
 
-## 🚀 Startup Order
+## Service ports
 
-Run services in this exact order:
+| Service         | Port  | Notes                                  |
+|-----------------|-------|----------------------------------------|
+| Backend (NestJS)| 3000  | REST + Socket.IO gateway               |
+| Serial bridge   | 3001  | Arduino USB; mock mode fallback        |
+| Dashboard       | 3002  | Next.js                                |
+| AI predictor    | 8001  | FastAPI                                |
+| Mobile (Expo)   | 8081  | Web + device via Metro                 |
+| Ollama          | 11434 | Veronica LLM (`qwen2.5:3b`)            |
+
+---
+
+## Getting started
 
 ```bash
-# 1. Backend (Ismail)
+# 1. Clone + install (from repo root)
+git clone <repo>
+cd capstone_aquarium_sejong
+pnpm install
+
+# 2. Backend (NestJS) — port 3000
 cd services/backend
-pnpm install
-cp .env.example .env        # fill in DATABASE_URL from Maral
-pnpm start:dev              # runs on port 3000
+cp .env.example .env            # fill DATABASE_URL (SQLite works out of the box)
+pnpm dev
 
-# 2. Serial Bridge (Sarvar)
+# 3. Serial bridge — port 3001 (mock mode if no Arduino)
 cd services/serial-bridge
-pnpm install
 cp .env.example .env
-MOCK_MODE=true pnpm start   # runs on port 3001 — no Arduino needed in dev
+pnpm dev
 
-# 3. AI Predictor (Firdavs)
+# 4. AI predictor — port 8001
 cd services/ai-predictor
 pip install -r requirements.txt
-cp .env.example .env
-uvicorn main:app --port 8000 --reload
+uvicorn src.main:app --port 8001 --reload
 
-# 4. Web Dashboard (Hamidullo)
+# 5. Dashboard — port 3002
 cd apps/dashboard
-pnpm install
 cp .env.example .env.local
-pnpm dev                    # runs on port 3002
+pnpm dev
 
-# 5. Voice Assistant (Firdavs)
-cd apps/assistant
-pip install -r requirements.txt
-cp .env.example .env
-python src/pipeline.py
-
-# 6. Mobile App (Hamidullo) — optional
+# 6. Mobile — port 8081
 cd apps/mobile
-pnpm install
-cp .env.example .env
-npx expo start
+npx expo start                  # press 'w' for web, or scan QR
+```
+
+### Running from the root (optional)
+
+```bash
+pnpm --filter @fishlinic/backend dev        # backend
+pnpm --filter @fishlinic/serial-bridge dev  # bridge
+pnpm --filter fishlinic-mobile dev          # mobile
+pnpm --filter fishlinic-dashboard dev       # dashboard
 ```
 
 ---
 
-## 🔌 How Services Talk to Each Other
+## Data flow
 
 ```
 Arduino (USB Serial JSON)
-    ↓
-Serial Bridge :3001  ──POST /serial/reading──▶  NestJS Backend :3000
-                                                        │
-                                        ┌───────────────┼───────────────┐
-                                        ↓               ↓               ↓
-                                 FastAPI AI :8000   Socket.IO      Ollama :11434
-                                 (YOLO/RF/VAE)      (live push)    (Gemma/Qwen)
-                                                        │
-                                              ┌─────────┴─────────┐
-                                              ↓                   ↓
-                                       Dashboard :3002      Mobile App
-                                       (Next.js)            (Expo)
-                                              ↑
-                                       Voice Assistant
-                                       (Veronica Python)
+    │
+    ▼
+Serial Bridge :3001 ──POST /serial/reading──▶ NestJS Backend :3000
+                                                    │
+                          ┌─────────────────────────┼─────────────────────────┐
+                          ▼                         ▼                         ▼
+                  AI Predictor :8001       Socket.IO gateway           Ollama :11434
+                  (YOLO / RF / VAE)        (sensor:update, etc.)       (Veronica LLM)
+                                                    │
+                                          ┌─────────┴─────────┐
+                                          ▼                   ▼
+                                  Dashboard :3002       Mobile App :8081
 ```
 
 ---
 
-## 🌊 Sensor Thresholds
+## Sensor thresholds
 
-| Parameter | Optimal | Warning | Critical |
-|---|---|---|---|
-| pH | 6.8 – 7.5 | 6.5 – 6.8 or 7.5 – 8.0 | < 6.5 or > 8.0 |
-| Temperature | 24 – 28 °C | 22 – 24 or 28 – 30 °C | < 22 or > 30 °C |
-| Dissolved O₂ | 6 – 9 mg/L | 4 – 6 mg/L | < 4 mg/L |
+| Parameter    | Optimal      | Warning                  | Critical        |
+|--------------|--------------|--------------------------|-----------------|
+| pH           | 6.8 – 7.5    | 6.5–6.8 or 7.5–8.0       | < 6.5 or > 8.0  |
+| Temperature  | 24 – 28 °C   | 22–24 or 28–30 °C        | < 22 or > 30 °C |
+| Dissolved O₂ | 6 – 9 mg/L   | 4 – 6 mg/L               | < 4 mg/L        |
 
----
-
-## 🤖 AI Models
-
-| Model | File | Purpose | Runs on |
-|---|---|---|---|
-| YOLOv8/v11 | `yolo_disease.pt` | Fish disease detection + counting | GPU |
-| ConvLSTM-VAE | `convlstm_vae.pt` | Behavior anomaly detection | GPU |
-| Random Forest | `rf_quality.pkl` | Water quality score | CPU |
-| Qwen2.5 / Gemma 4 | via Ollama | Veronica LLM brain | GPU |
-| Whisper | via faster-whisper | Speech to text | CPU |
-| Kokoro-82M | via kokoro-onnx | Text to speech | CPU |
-| openWakeWord | via openwakeword | Wake word detection | CPU |
+Thresholds are editable via `/management/tank-config` (mobile Controls + dashboard Settings).
 
 ---
 
-## ⏰ Cron Jobs (24/7 Automated Tasks)
+## AI models
 
-| Schedule | Job | What it does |
-|---|---|---|
-| Every 1 min | Threshold check | Reads latest sensors, fires alert if bad |
-| Every 5 min | Vision analysis | Camera snapshot → YOLO + behavior check |
-| Every 8 hrs | Auto feed | Triggers feeder relay |
-| Every 6am | Daily health report | Full AI analysis + saves report |
-| Every 7am | Fish growth monitor | Compares today vs yesterday snapshots |
-| Every 30 min | Emergency check | Extreme threshold → emergency shutoff |
-| Every Sunday | Weekly export | Generates JSONL telemetry archive |
+| Model          | File                  | Purpose                          | Runs on |
+|----------------|-----------------------|----------------------------------|---------|
+| YOLOv8/v11     | `yolo_disease.pt`     | Fish disease detection           | GPU/CPU |
+| YOLOv8/v11     | `yolo_count.pt`       | Fish counting                    | GPU/CPU |
+| ConvLSTM-VAE   | `convlstm_vae.pth`    | Behavior / anomaly detection     | GPU/CPU |
+| Random Forest  | `rf_quality.pkl`      | Water quality score              | CPU     |
+| Qwen2.5:3b     | via Ollama            | Veronica LLM brain               | GPU/CPU |
 
----
-
-## 🔑 Environment Variables
-
-Each service has a `.env.example` — copy it to `.env` and fill in the values.
-**Never commit a real `.env` file. Ever.**
-
-| Service | Key Variables |
-|---|---|
-| `services/backend` | `DATABASE_URL`, `AI_PREDICTOR_URL`, `OLLAMA_URL`, `OLLAMA_MODEL` |
-| `services/serial-bridge` | `SERIAL_PORT`, `BAUD_RATE`, `BACKEND_URL`, `MOCK_MODE` |
-| `services/ai-predictor` | `MODEL_PATH`, `PORT` |
-| `apps/dashboard` | `NEXT_PUBLIC_SOCKET_URL`, `BACKEND_URL`, `NEXTAUTH_SECRET` |
-| `apps/assistant` | `BACKEND_URL`, `OLLAMA_URL`, `OLLAMA_MODEL`, `WAKE_WORD` |
-| `apps/mobile` | `API_URL`, `WS_URL` |
+All under `resources/models/`. Predictor auto-detects device.
 
 ---
 
-## 📋 Rules — Read Before Writing Any Code
+## Dynamic scheduler
 
-- **Never commit `.env`** — only `.env.example` goes to git
-- **All shared TypeScript types** live in `shared/types/` — never duplicate them in your own folder
-- **Max 300 lines per file** — split into smaller files if you go over
-- **Never touch another person's folder** without telling them first
-- **All API questions** → read `docs/api-contracts.md` before asking
-- **All setup questions** → read `docs/team-handoff.md` before asking
-- **Architecture decisions** → Ismail makes the final call
+The backend runs a single **60-second tick** (`services/backend/src/modules/cron/`)
+that does all time-based work — no separate cron jobs.
+
+Each tick:
+1. Evaluates every enabled feed schedule → fires feeder relay if time matches.
+2. Evaluates the light schedule window → toggles LED relay if state should change.
+3. Reads latest sensors → creates CRITICAL alert if past emergency thresholds.
+4. Checks cleaning interval → creates reminder alert if overdue.
+
+Details: **[`docs/operations.md`](docs/operations.md)**.
 
 ---
 
-## 📞 Who to Ask
+## Socket events
 
-| Question | Ask |
-|---|---|
-| Backend API not working | Ismail |
-| Database schema / migration | Maral |
-| Dashboard UI / mobile | Hamidullo |
-| AI model / voice pipeline | Firdavs |
-| Arduino / serial data | Sarvar |
-| Architecture / repo structure | Ismail |
+| Event             | Direction      | Payload                         |
+|-------------------|----------------|---------------------------------|
+| `sensor:update`   | server → client| `SensorReading`                 |
+| `alert:new`       | server → client| `Alert`                         |
+| `fish:count`      | server → client| `FishCount`                     |
+| `actuator:state`  | server → client| `{ type, state }`               |
+| `health:report`   | server → client| `FishHealthReport`              |
+| `command:feed`    | client → server| trigger feeder                  |
+| `command:pump`    | client → server| `{ state: boolean }`            |
+| `command:led`     | client → server| `{ state: boolean }`            |
+
+Full contracts: **[`docs/api-contracts.md`](docs/api-contracts.md)**.
+
+---
+
+## Environment variables
+
+Each service has its own `.env.example`. Copy it to `.env` and fill in.
+**Never commit a real `.env`.**
+
+| Service                  | Key variables                                                    |
+|--------------------------|------------------------------------------------------------------|
+| `services/backend`       | `DATABASE_URL`, `AI_PREDICTOR_URL`, `OLLAMA_URL`, `OLLAMA_MODEL`, `SIMULATE_SENSORS` |
+| `services/serial-bridge` | `SERIAL_PORT`, `BAUD_RATE`, `BACKEND_URL`, `MOCK_MODE`           |
+| `services/ai-predictor`  | `MODEL_PATH`, `PORT`                                             |
+| `apps/dashboard`         | `NEXT_PUBLIC_SOCKET_URL`, `BACKEND_URL`, `NEXTAUTH_SECRET`       |
+| `apps/mobile`            | `API_URL`, `WS_URL`                                              |
+| `apps/assistant`         | `BACKEND_URL`, `OLLAMA_URL`, `OLLAMA_MODEL`, `WAKE_WORD`         |
+
+---
+
+## Detailed setup guides
+
+| Guide | What it covers |
+|-------|---------------|
+| **[`docs/ai-llm-setup.md`](docs/ai-llm-setup.md)** | Install Ollama, pull `qwen2.5:3b`, start AI Predictor, verify pipeline |
+| **[`docs/operations.md`](docs/operations.md)** | Dynamic scheduler, sensor simulator, DB config |
+| **[`docs/supabase-setup.md`](docs/supabase-setup.md)** | Production DB wiring |
+| **[`docs/serial-protocol.md`](docs/serial-protocol.md)** | Arduino ↔ bridge packet format |
+| **[`docs/api-contracts.md`](docs/api-contracts.md)** | All REST + Socket.IO contracts |
+| **[`docs/team-ownership.md`](docs/team-ownership.md)** | Who owns what + current sprint tasks |
+
+---
+
+## Rules
+
+- **Never upgrade `apps/mobile/package.json` versions.** expo~54 + RN 0.81.5 +
+  react 19.1.0 is pinned. Upgrading breaks the web build. See `_versionNote`.
+- **Never commit `.env`** — only `.env.example`.
+- **Shared TS types** live only in `shared/types/`. No duplication.
+- **Max 300 lines per file** (GEMINI Rule 3) — split if over.
+- **Atomic Design** in `apps/mobile/` and `apps/dashboard/`:
+  atoms → molecules → organisms → screens.
+- **Branch per task**, PR into `develop`. No direct pushes.
+- **Ports are fixed** (see table above) — don't change without updating all clients.
+
+---
+
+## Who to ask
+
+| Question                          | Ask        |
+|-----------------------------------|------------|
+| Backend API / architecture        | Ismail     |
+| Database schema / migration       | Maral      |
+| Dashboard UI / mobile styling     | Hamidullah |
+| AI model / voice pipeline         | Firdavs    |
+| Arduino / serial data / wiring    | Sarvar     |

@@ -1,9 +1,20 @@
-# TECHNICAL DEBT REPORT
+# TECHNICAL DEBT REPORT (HISTORICAL SNAPSHOT)
+
+> **Archive note (2026-04-17)**: Written 2026-04-02 against the *legacy*
+> codebase (`mock-server/`, `Dashboard-Code/`, Prisma). The repo has since
+> been reorganized into the NestJS monorepo with TypeORM. Most P1/P2 debts
+> below (base64 passwords, 559-line bridge God-file, 645-line dashboard
+> page, Prisma mismatch, flat component dump) **no longer apply to the
+> current codebase**.
+>
+> Kept as a historical planning artifact. For current sprint work see
+> `docs/team-ownership.md` and `project_status.md`.
+
 ## Project: Fishlinic — Smart Aquaculture Monitoring System
 ## Document Type: Inherited Codebase Assessment
 ## Prepared by: Ismail (New Team)
 ## Date: 2026-04-02
-## Status: Active — Working Document
+## Status: Historical — Archived
 
 ---
 

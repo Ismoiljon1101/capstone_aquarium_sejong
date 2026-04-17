@@ -1,9 +1,12 @@
 import axios from 'axios';
-import { SensorReading } from '../../shared/types/sensor.types';
+type BridgeSensorReading = {
+  sensorId: number;
+  type: 'pH' | 'temp_c' | 'do_mg_l' | 'CO2';
+  value: number;
+  unit: string;
+  timestamp: string;
+};
 
-/**
- * Emitter for forwarding data from serial-bridge to the NestJS backend.
- */
 export class Emitter {
   private backendUrl: string;
 
@@ -11,29 +14,12 @@ export class Emitter {
     this.backendUrl = backendUrl;
   }
 
-  /**
-   * Forwards a sensor reading to the main backend.
-   */
-  public async forwardReading(reading: Partial<SensorReading>): Promise<void> {
+  public async forwardReading(reading: BridgeSensorReading): Promise<void> {
     try {
       await axios.post(`${this.backendUrl}/serial/reading`, reading);
     } catch (error) {
-      console.error('[Emitter] Failed to forward reading:', error.message);
-    }
-  }
-
-  /**
-   * Forwards an actuator state change to the main backend.
-   */
-  public async forwardActuatorState(actuatorId: number, state: boolean): Promise<void> {
-    try {
-      await axios.post(`${this.backendUrl}/actuators/state`, {
-        actuatorId,
-        state,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('[Emitter] Failed to forward actuator state:', error.message);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Emitter] Failed to forward reading:', message);
     }
   }
 }

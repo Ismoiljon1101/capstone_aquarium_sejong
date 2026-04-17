@@ -15,7 +15,21 @@ export function useApi() {
     getActuatorState:   () => api.get('/actuators/state'),
     getFishHealth:      () => api.get('/fish/health'),
     getFishCount:       () => api.get('/fish/count'),
-    voiceQuery:         (text: string) => api.post('/voice/query', { text }),
+    voiceQuery:         (text: string) => api.post('/voice/query', { text }, { timeout: 60000 }),
     getVoiceSessions:   () => api.get('/voice/sessions'),
+
+    // ── Management ──
+    getFeedSchedules:   () => api.get('/management/feed-schedules'),
+    createFeedSchedule: (body: { time: string; daysMask?: number; portionSec?: number; enabled?: boolean }) =>
+                          api.post('/management/feed-schedules', body),
+    updateFeedSchedule: (id: number, body: any) => api.patch(`/management/feed-schedules/${id}`, body),
+    deleteFeedSchedule: (id: number) => api.delete(`/management/feed-schedules/${id}`),
+
+    getLightSchedule:   () => api.get('/management/light-schedule'),
+    updateLightSchedule:(body: any) => api.patch('/management/light-schedule', body),
+
+    getTankConfig:      () => api.get('/management/tank-config'),
+    updateTankConfig:   (body: any) => api.patch('/management/tank-config', body),
+    markTankCleaned:    () => api.post('/management/tank-config/mark-cleaned'),
   };
 }
