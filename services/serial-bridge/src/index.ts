@@ -1,6 +1,8 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import axios from 'axios';
+import { SerialPort } from 'serialport';
+import { ReadlineParser } from '@serialport/parser-readline';
 import { SerialParser } from './parser';
 import { Emitter } from './emitter';
 import { MockHardware } from './mock';
@@ -17,6 +19,8 @@ const parser = new SerialParser();
 const emitter = new Emitter(backendUrl);
 let latestData: any = {};
 let isConnected = false;
+let globalSerialMain: SerialPort | null = null;
+let globalSerialSecondary: SerialPort | null = null;
 
 const handleData = (line: string) => {
   const readings = parser.parse(line);
@@ -27,7 +31,8 @@ const handleData = (line: string) => {
 };
 
 // --- Serial Connection Logic ---
-const mainPortPath = process.env.SERIAL_PORT_MAIN || '/dev/ttyUSB0';
+const mainPortPath = process.env.SERIAL_PORT_MAIN || '';
+const secondaryPortPath = process.env.SERIAL_PORT_SECONDARY || '';
 
 async function startSerial() {
   const isMockAlways = process.env.MOCK_MODE === 'true';
@@ -40,25 +45,64 @@ async function startSerial() {
   }
 
   try {
-    const { SerialPort } = await import('serialport');
-    const { ReadlineParser } = await import('@serialport/parser-readline');
+    const ports = await SerialPort.list();
+    const availablePaths = ports.map(p => p.path);
 
-    const serialMain = new SerialPort({ path: mainPortPath, baudRate: 9600 });
-    const lineParser = serialMain.pipe(new ReadlineParser({ delimiter: '\r\n' }));
-    
-    lineParser.on('data', handleData);
-    serialMain.on('open', () => {
-      isConnected = true;
-      console.log(`[Bridge] Connected to Main Serial at ${mainPortPath}`);
-    });
+    const actualMainPath = mainPortPath && availablePaths.includes(mainPortPath) 
+      ? mainPortPath 
+      : availablePaths.find(p => p.includes('usbserial') || p.includes('usbmodem'));
 
-    serialMain.on('error', (err) => {
-      console.error('[Bridge] Serial Error:', err.message);
-      console.warn('[Bridge] Falling back to Mock mode...');
+    if (actualMainPath) {
+      const serialMain = new SerialPort({ path: actualMainPath, baudRate: 9600 });
+      globalSerialMain = serialMain;
+      const lineParser = serialMain.pipe(new ReadlineParser({ delimiter: '\r\n' }));
+      
+      lineParser.on('data', handleData);
+      serialMain.on('open', () => {
+        isConnected = true;
+        console.log(`[Bridge] Connected to Main Serial at ${actualMainPath}`);
+      });
+      serialMain.on('error', (err) => {
+        console.error(`[Bridge] Main Serial Error on ${actualMainPath}:`, err.message);
+      });
+      serialMain.on('close', () => {
+        console.warn(`[Bridge] Main Serial closed ${actualMainPath}`);
+      });
+    } else {
+      console.warn('[Bridge] No port found for Main Serial.');
+    }
+
+    const actualSecondaryPath = secondaryPortPath && availablePaths.includes(secondaryPortPath)
+      ? secondaryPortPath
+      : availablePaths.find(p => p !== actualMainPath && (p.includes('usbserial') || p.includes('usbmodem')));
+
+    if (actualSecondaryPath) {
+      const serialSecondary = new SerialPort({ path: actualSecondaryPath, baudRate: 9600 });
+      globalSerialSecondary = serialSecondary;
+      const lineParser2 = serialSecondary.pipe(new ReadlineParser({ delimiter: '\r\n' }));
+      
+      lineParser2.on('data', handleData);
+      serialSecondary.on('open', () => {
+        isConnected = true;
+        console.log(`[Bridge] Connected to Secondary Serial at ${actualSecondaryPath}`);
+      });
+      serialSecondary.on('error', (err) => {
+        console.error(`[Bridge] Secondary Serial Error on ${actualSecondaryPath}:`, err.message);
+      });
+      serialSecondary.on('close', () => {
+        console.warn(`[Bridge] Secondary Serial closed ${actualSecondaryPath}`);
+      });
+    } else {
+      console.warn('[Bridge] No port found for Secondary Serial.');
+    }
+
+    if (!actualMainPath && !actualSecondaryPath) {
+      console.warn('[Bridge] No serial ports found. Switching to Mock mode.');
       mock.start();
-    });
-  } catch (err) {
-    console.warn('[Bridge] Serial bindings not found or port unavailable. Switching to Mock mode.');
+    }
+  } catch (err: any) {
+    console.warn('[Bridge] Serial init error. Switching to Mock mode.', err.message);
+    const mock = new MockHardware(handleData);
     mock.start();
   }
 }
@@ -99,6 +143,30 @@ app.post('/feed', async (req, res) => {
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ error: 'Backend unreachable' });
+  }
+});
+
+app.post('/actuate', (req, res) => {
+  const { actuatorId, type, state, relayChannel, source } = req.body;
+  
+  if (type === 'FEEDER') {
+    const cmd = `{"cmd":"feed","duration":1}\n`;
+    const targetPort = globalSerialSecondary || globalSerialMain;
+    
+    if (targetPort) {
+      targetPort.write(cmd, (err) => {
+        if (err) {
+          console.error('[Bridge] Failed to write to Arduino:', err.message);
+          return res.status(500).json({ success: false, error: 'Command write failed' });
+        }
+        res.json({ success: true, message: 'Feeder command sent to Arduino' });
+      });
+    } else {
+      res.status(500).json({ success: false, error: 'No Arduino connected physically' });
+    }
+  } else {
+    // Handle generic relay channel
+    res.json({ success: true, message: 'Relay command not fully implemented yet' });
   }
 });
 

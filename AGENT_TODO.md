@@ -405,24 +405,21 @@
 
 > Sarvar owns this
 
-- [ ] Move all `.ino` files to `firmware/arduino/`
-- [ ] Consolidate into two files:
-  - `firmware/arduino/main_sensors.ino` — pH, DO2, CO2 → USB Serial output
-  - `firmware/arduino/secondary_actuators.ino` — Temp + Relay control (feeder, pump, LED)
-- [ ] Serial output format must match what `serial-bridge/parser.ts` expects:
+- [x] Move all `.ino` files to `firmware/arduino/`
+- [x] Consolidate into a single UNO file (since there's only 1 Arduino):
+  - `firmware/arduino/fishlinic_uno.ino` — pH, DO2, CO2, Temp, Servo
+- [x] Serial output format must match what `serial-bridge/parser.ts` expects:
   ```
-  pH:7.12,TEMP:26.4,DO2:7.8,CO2:0.04\n
+  pH:7.12,do_mg_l:7.8,CO2:400.0,temp_c:26.50
   ```
-- [ ] Create `firmware/README.md` — wiring diagram descriptions, pin mappings:
+- [x] Create `firmware/README.md` — wiring diagram descriptions, pin mappings:
   ```
-  pH Sensor      → A0 (Main Arduino)
-  DO2 Sensor     → A1 (Main Arduino)
-  CO2 Sensor     → A2 (Main Arduino)
-  Temp Sensor    → A3 (Secondary Arduino)
-  Feeder Motor   → Relay CH1 (Secondary Arduino)
-  Air Pump       → Relay CH2 (Secondary Arduino)
-  LED Strip 12V  → Relay CH3 (Secondary Arduino)
-  Status LEDs    → GPIO direct (Secondary Arduino)
+  pH Sensor      → A0
+  DO2 Sensor     → A1
+  CO2 Sensor     → A2
+  Temp Sensor    → Pin 2
+  Feeder Motor   → Pin 9
+  RTC Module     → I2C (SDA/SCL)
   ```
 - [ ] Create `firmware/platformio.ini` if using PlatformIO
 

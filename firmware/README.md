@@ -1,60 +1,37 @@
-# Fishlinic Firmware
+# Fishlinic Firmware Guide
 
-## Overview
+This directory contains the unified Arduino firmware for the Fishlinic Smart Aquaculture system.
 
-Two Arduinos + one ESP32-CAM work together to measure water chemistry and control actuators.
+## Hardware Configuration
 
-## Pin Mappings
+### Unified Controller: `arduino/fishlinic_uno.ino`
+Responsible for water quality monitoring, actuator control, and RTC time tracking.
 
-### Main Arduino — Water Chemistry (`firmware/main.ino`)
+| Component | Pin | Type | Details |
+|---|---|---|---|
+| pH Sensor | A0 | Analog | DFRobot Analog pH Meter |
+| DO Sensor | A1 | Analog | DFRobot Analog DO Meter |
+| CO2 Sensor | A2 | Analog | Analog CO2 Sensor |
+| Temp Sensor | 2 | OneWire | DS18B20 Waterproof |
+| Feeder Servo | 9 | PWM | MG996R or similar |
+| RTC Module | I2C (SDA/SCL) | Digital | DS1307 RTC |
 
-| Sensor | Pin | Notes |
-|--------|-----|-------|
-| pH Sensor | A0 | Analog — calibrate with pH 4 + pH 7 buffers |
-| Dissolved Oxygen (DO2) | A1 | Analog — Atlas Scientific probe |
-| CO2 Sensor | A2 | Analog |
+**Output Format (JSON):**
+`{"pH": 7.12, "do_mg_l": 7.8, "CO2": 400.0, "temp_c": 26.50, "feeding": false, "timestamp": "2026-04-16T18:50:00Z"}`
 
-### Secondary Arduino — Actuators (`firmware/secondary.ino`)
+**Features:**
+- Periodic mixed sensor reporting.
+- Command-based feeding sequences (`{"cmd":"feed","duration":2}`).
+- Multi-cycle feeding handler (non-blocking).
 
-| Component | Pin | Notes |
-|-----------|-----|-------|
-| Temperature Sensor | A3 | DS18B20 one-wire |
-| Feeder Motor | Relay CH1 | 5V relay module |
-| Air Pump | Relay CH2 | 5V relay module |
-| LED Strip 12V | Relay CH3 | 12V — use appropriate relay |
-| Status LEDs | GPIO direct | On-board indicator LEDs |
+---
 
-### ESP32-CAM
+## Communication Protocol
 
-| Function | Notes |
-|----------|-------|
-| Camera stream | `/camera/snapshot` via Serial Bridge |
-| WiFi | Connect to same LAN as Serial Bridge service |
+- **Baud Rate:** 9600
+- **Format:** Minimal JSON followed by `\n` or `\r\n`.
+- **Bridge Integration:** This controller connects to the `serial-bridge` service which forwards readings to the NestJS backend.
 
-## Serial Output Format
-
-Main Arduino sends JSON over USB serial at **9600 baud**:
-
-```json
-{"pH":7.12,"temp_c":26.4,"do_mg_l":7.8}
-```
-
-The Serial Bridge (`services/serial-bridge/`) reads this stream and POSTs to NestJS.
-
-## Relay Channel Mapping
-
-```
-CH1 → Feeder Motor  (POST /actuators/feed)
-CH2 → Air Pump      (POST /actuators/pump)
-CH3 → LED Strip     (POST /actuators/led)
-```
-
-## Calibration
-
-- pH: Use pH 4.0 and pH 7.0 buffer solutions. Adjust `pH_offset` constant in `main.ino`.
-- DO2: Follow Atlas Scientific calibration procedure.
-
-## Dependencies
-
-- Arduino IDE 2.x
-- Libraries: `ArduinoJson`, `DallasTemperature`, `OneWire`
+## Calibration Notes
+- **pH**: Adjust `PH_OFFSET` in the code using a 7.00 buffer solution.
+- **DO**: Adjust `DO_SLOPE` and `DO_INTERCEPT` based on 0% (sodium sulfite) and 100% (saturated空气) calibration points.

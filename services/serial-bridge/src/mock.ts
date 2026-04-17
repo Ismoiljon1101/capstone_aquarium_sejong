@@ -16,6 +16,7 @@ export class MockHardware {
         pH: parseFloat((7.0 + (Math.random() * 0.4 - 0.2)).toFixed(2)),
         temp_c: parseFloat((26.0 + (Math.random() * 2 - 1)).toFixed(1)),
         do_mg_l: parseFloat((7.5 + (Math.random() * 1.5 - 0.75)).toFixed(2)),
+        CO2: parseFloat((400.0 + (Math.random() * 50 - 25)).toFixed(1)),
         timestamp: new Date().toISOString()
       };
       this.onData(JSON.stringify(data));
