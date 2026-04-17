@@ -105,6 +105,11 @@ feature parity with mobile.
 
 ## Firdavs — AI Predictor & ML Models
 
+> **Full setup guide (Ollama + Python + models): [`docs/ai-llm-setup.md`](ai-llm-setup.md)**
+> Read that first before starting any AI work.
+
+
+
 **Branch**: `feat/firdavs-ai`
 **Goal**: robust, accurate AI inference — all models load, GPU-aware,
 results visible in UI.

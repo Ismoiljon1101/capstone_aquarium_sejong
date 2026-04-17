@@ -197,6 +197,19 @@ Each service has its own `.env.example`. Copy it to `.env` and fill in.
 
 ---
 
+## Detailed setup guides
+
+| Guide | What it covers |
+|-------|---------------|
+| **[`docs/ai-llm-setup.md`](docs/ai-llm-setup.md)** | Install Ollama, pull `qwen2.5:3b`, start AI Predictor, verify pipeline |
+| **[`docs/operations.md`](docs/operations.md)** | Dynamic scheduler, sensor simulator, DB config |
+| **[`docs/supabase-setup.md`](docs/supabase-setup.md)** | Production DB wiring |
+| **[`docs/serial-protocol.md`](docs/serial-protocol.md)** | Arduino ↔ bridge packet format |
+| **[`docs/api-contracts.md`](docs/api-contracts.md)** | All REST + Socket.IO contracts |
+| **[`docs/team-ownership.md`](docs/team-ownership.md)** | Who owns what + current sprint tasks |
+
+---
+
 ## Rules
 
 - **Never upgrade `apps/mobile/package.json` versions.** expo~54 + RN 0.81.5 +
