@@ -62,6 +62,7 @@ async function startSerial() {
     return;
   }
 
+  try {
     const { SerialPort } = await import('serialport');
     const { ReadlineParser } = await import('@serialport/parser-readline');
     

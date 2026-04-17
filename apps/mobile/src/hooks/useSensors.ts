@@ -54,8 +54,8 @@ export function sensorContext(sensors: SensorMap, fishCount?: number): string {
   const st = (k: string) => sensors[k]?.status ?? 'ok';
   return [
     `Tank readings: pH ${f('pH')} (${st('pH')})`,
-    `temp ${f('TEMP')}°C (${st('TEMP')})`,
-    `dissolved O₂ ${f('DO2')} mg/L (${st('DO2')})`,
+    `temp ${f('temp_c')}°C (${st('temp_c')})`,
+    `dissolved O₂ ${f('do_mg_l')} mg/L (${st('do_mg_l')})`,
     `CO₂ ${f('CO2')} ppm (${st('CO2')})`,
     fishCount != null ? `fish count ${fishCount}` : '',
   ].filter(Boolean).join(', ') + '.';

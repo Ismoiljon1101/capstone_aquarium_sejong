@@ -7,7 +7,7 @@ import { io, Socket } from 'socket.io-client';
  */
 class SocketService {
   private socket: Socket | null = null;
-  private backendUrl: string = 'http://localhost:3000';
+  private backendUrl: string = process.env.EXPO_PUBLIC_WS_URL || 'http://localhost:3000';
 
   /**
    * // // Initialize the connection

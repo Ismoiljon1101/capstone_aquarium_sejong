@@ -44,14 +44,6 @@ export class SensorsService {
     } as any);
 
     if (status !== 'ok') {
-      await this.actuators.triggerActuator({
-        actuatorId: 1,
-        type: 'FEEDER',
-        relayChannel: 1,
-        state: true,
-        source: 'CRON',
-      } as ActuatorCommand);
-      
       await this.alertsService.createAlert({
         sensorId,
         tankId: 1,

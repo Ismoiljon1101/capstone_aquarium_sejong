@@ -44,6 +44,7 @@ export class FishService {
   async saveGrowthRecord(avgSize: number, count: number) {
     // 1. Get previous record to calculate delta
     const lastRecord = await this.fishGrowthRepo.findOne({
+      where: {},
       order: { createdAt: 'DESC' },
     });
 
@@ -67,12 +68,14 @@ export class FishService {
 
   async getLatestCount() {
     return await this.fishCountRepo.findOne({
+      where: {},
       order: { timestamp: 'DESC' },
     });
   }
 
   async getLatestReport() {
     return await this.healthReportRepo.findOne({
+      where: {},
       order: { timestamp: 'DESC' },
     });
   }

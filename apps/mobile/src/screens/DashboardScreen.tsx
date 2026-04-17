@@ -189,8 +189,8 @@ export default function DashboardScreen() {
         <SectionTitle>Water Parameters</SectionTitle>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
           <SensorPill icon="🧪" label="pH Level"       value={fmtVal('pH', 7.0)}   unit="pH"   color="#10b981" status={fmtSt('pH')} />
-          <SensorPill icon="🌡️" label="Temperature"   value={fmtVal('TEMP', 25)}  unit="°C"   color="#38bdf8" status={fmtSt('TEMP')} />
-          <SensorPill icon="💨" label="Dissolved O₂"  value={fmtVal('DO2', 7.5)}  unit="mg/L" color="#a78bfa" status={fmtSt('DO2')} />
+          <SensorPill icon="🌡️" label="Temperature"   value={fmtVal('temp_c', 25)}  unit="°C"   color="#38bdf8" status={fmtSt('temp_c')} />
+          <SensorPill icon="💨" label="Dissolved O₂"  value={fmtVal('do_mg_l', 7.5)}  unit="mg/L" color="#a78bfa" status={fmtSt('do_mg_l')} />
           <SensorPill icon="☁️" label="CO₂"           value={fmtVal('CO2', 18)}   unit="ppm"  color="#fb923c" status={fmtSt('CO2')} />
         </View>
 
@@ -217,8 +217,8 @@ export default function DashboardScreen() {
           <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
             {[
               { icon: '🧪', label: 'pH',           st: fmtSt('pH') },
-              { icon: '🌡️', label: 'Temperature',  st: fmtSt('TEMP') },
-              { icon: '💨', label: 'Dissolved O₂', st: fmtSt('DO2') },
+              { icon: '🌡️', label: 'Temperature',  st: fmtSt('temp_c') },
+              { icon: '💨', label: 'Dissolved O₂', st: fmtSt('do_mg_l') },
               { icon: '👁️', label: 'Visual Check', st: 'ok' },
               { icon: '🧠', label: 'Behavior',      st: 'ok' },
             ].map(p => (
