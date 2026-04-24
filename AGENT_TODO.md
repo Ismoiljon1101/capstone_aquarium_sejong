@@ -48,9 +48,14 @@ All phases below landed in the repo. Check the paths to confirm.
 All captured in `docs/team-ownership.md` per-engineer sprint tables, not here.
 Short summary:
 
-- Real Arduino → backend end-to-end (Sarvar)
+- [x] Real Arduino → backend end-to-end (Sarvar) — COMPLETED
 - DB migrations + Supabase production wiring (Maral)
 - AI predictor GPU / readiness / ConvLSTM anomaly route (Firdavs)
 - Mobile push notifications (Ismail)
 - Dashboard camera / growth / alerts wiring (Maral + Hamidullah)
 - Tests, CI, Docker, OTA, RBAC — none started yet
+# Veronica / AI Issues Backlog
+
+1. **AI Predictor is Offline:** Veronica cannot see the fish or get the ML quality score because the Python FastAPI service (`services/ai-predictor`) is not running.
+2. **CO2 Ghost Data:** Veronica is reporting CO2 levels (~412 ppm), even though we removed the CO2 sensor. The database is remembering the old "fake" data from the simulator. We need to wipe the old CO2 data from the database or update the backend to ignore it.
+3. **Blind to Actuators:** Veronica says she doesn't know about the pump, feeder, or lights. This is because `voice.service.ts` only passes *sensor* data to Ollama. We need to update the prompt injection to include the current `actuatorState` and schedules so she knows what the hardware is doing.

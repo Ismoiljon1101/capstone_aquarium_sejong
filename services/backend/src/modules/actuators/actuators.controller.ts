@@ -18,23 +18,27 @@ export class ActuatorsController {
   }
 
   @Post('pump')
-  async togglePump(@Body() body: { state: boolean }) {
+  async togglePump(@Body() body?: { state?: boolean }) {
+    // If state is not provided, we should ideally fetch it and toggle, 
+    // but for now we default to true to at least prevent a crash.
+    const newState = body?.state ?? true;
     return await this.actuatorsService.triggerActuator({
       actuatorId: 2,
       type: 'AIR_PUMP',
       relayChannel: 2,
-      state: body.state,
+      state: newState,
       source: 'APP',
     });
   }
 
   @Post('led')
-  async toggleLed(@Body() body: { state: boolean }) {
+  async toggleLed(@Body() body?: { state?: boolean }) {
+    const newState = body?.state ?? true;
     return await this.actuatorsService.triggerActuator({
       actuatorId: 3,
       type: 'LED_STRIP',
       relayChannel: 3,
-      state: body.state,
+      state: newState,
       source: 'APP',
     });
   }

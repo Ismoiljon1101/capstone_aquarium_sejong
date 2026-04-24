@@ -14,7 +14,7 @@ software and pull the LLM.
 |-----------|-------------|------|------|
 | AI Predictor | YOLO disease + count, Random Forest quality score | 8001 | FastAPI + Python |
 | Ollama | Runs Veronica LLM locally | 11434 | Ollama binary |
-| `qwen2.5:3b` | Veronica's brain — answers fish health questions | via Ollama | LLM model |
+| `gemma3:4b` | Veronica's brain — answers fish health questions | via Ollama | LLM model |
 
 ---
 
@@ -100,7 +100,7 @@ routes still work (graceful degradation). Fix the missing model separately.
 
 ## Step 5 — Install Ollama
 
-Ollama runs the `qwen2.5:3b` LLM that powers Veronica.
+Ollama runs the `gemma3:4b` LLM that powers Veronica.
 
 ### Windows
 Download and run the installer:
@@ -130,17 +130,17 @@ ollama --version
 **This is a one-time download (~1.9 GB). Do it once, it stays on disk.**
 
 ```bash
-ollama pull qwen2.5:3b
+ollama pull gemma3:4b
 ```
 
 Wait for it to finish. Check it saved:
 ```bash
 ollama list
-# should show: qwen2.5:3b   357c53fb659c   1.9 GB
+# should show: gemma3:4b   357c53fb659c   1.9 GB
 ```
 
 > The repo also uses `qwen2.5-coder:7b` (4.7 GB) for extended sessions.
-> You only **need** `qwen2.5:3b` for Veronica to work.
+> You only **need** `gemma3:4b` for Veronica to work.
 
 ---
 
@@ -169,7 +169,7 @@ In `services/backend/.env` make sure these are set:
 
 ```env
 OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5:3b
+OLLAMA_MODEL=gemma3:4b
 PREDICTOR_URL=http://localhost:8001
 ```
 
@@ -238,10 +238,10 @@ curl http://localhost:3000/health
 |---------|-----|
 | `ollama: command not found` | Restart terminal after install, or add to PATH |
 | `connection refused :11434` | Run `ollama serve` first |
-| `model not found: qwen2.5:3b` | Run `ollama pull qwen2.5:3b` |
+| `model not found: gemma3:4b` | Run `ollama pull gemma3:4b` |
 | `Quality model not loaded` | Check `resources/models/rf_quality.pkl` exists |
 | YOLO slow on CPU | Normal — first inference loads model. Subsequent calls faster. |
-| Veronica no response | Check Ollama is running + `OLLAMA_MODEL=qwen2.5:3b` in `.env` |
+| Veronica no response | Check Ollama is running + `OLLAMA_MODEL=gemma3:4b` in `.env` |
 | `torch` install fails | Use `pip install torch --index-url https://download.pytorch.org/whl/cpu` |
 
 ---
@@ -269,6 +269,6 @@ No manual path config needed if running from repo root.
 | Variable | Default | Service |
 |----------|---------|---------|
 | `OLLAMA_URL` | `http://localhost:11434` | backend |
-| `OLLAMA_MODEL` | `qwen2.5:3b` | backend |
+| `OLLAMA_MODEL` | `gemma3:4b` | backend |
 | `PREDICTOR_URL` | `http://localhost:8001` | backend |
 | `MODEL_PATH` | `resources/models` | ai-predictor |

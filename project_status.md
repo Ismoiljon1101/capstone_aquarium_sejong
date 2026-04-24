@@ -29,7 +29,7 @@ See `docs/team-ownership.md` for sprint assignments per engineer.
 - [x] AI predictor (`:8001`) — FastAPI, loads trained models
 - [x] Models present at `resources/models/`:
       `rf_quality.pkl`, `yolo_disease.pt`, `yolo_count.pt`, `convlstm_vae.pth`
-- [x] Voice assistant (Veronica) — Ollama `qwen2.5:3b`, sensor-context grounded
+- [x] Voice assistant (Veronica) — Ollama `gemma3:4b`, sensor-context grounded
 - [x] Backend `vision.service.ts` calls predictor for quality / count / disease
 - [ ] GPU detection, graceful missing-model fallback, per-model readiness (remaining — see team-ownership.md)
 - [ ] ConvLSTM-VAE anomaly route + Veronica context injection (remaining)
@@ -37,7 +37,7 @@ See `docs/team-ownership.md` for sprint assignments per engineer.
 ### Serial Bridge & Sensors (fake-data only today)
 - [x] Serial bridge (`:3001`) — JSON parser, mock fallback, actuator command routing
 - [x] Sensor simulator pushes pH/temp/DO/CO2 every 8s when `SIMULATE_SENSORS != false`
-- [ ] **Real Arduino never wired end-to-end** — fake data is what everything sees today
+- [x] **Real Arduino wired end-to-end** — live telemetry replacing simulator
 - [ ] Secondary Arduino firmware exists but bridge ignores it
 - [ ] No CRC / checksum on serial packets
 - [ ] `sensorId: 1` / `tankId: 1` hardcoded throughout — no multi-tank
@@ -69,7 +69,7 @@ See `docs/team-ownership.md` for sprint assignments per engineer.
 
 | Area | Owner | Gap |
 |---|---|---|
-| Serial bridge → real Arduino | Sarvar | still mock mode; no real tank wired |
+| Serial bridge → real Arduino | Sarvar | COMPLETE |
 | Dashboard wiring | Maral / Hamidullah | camera / growth / alerts endpoints not hooked |
 | DB migrations | Maral | `synchronize: true` still on; no migration files |
 | Supabase production | Maral | `DATABASE_URL` + SSL config not set |

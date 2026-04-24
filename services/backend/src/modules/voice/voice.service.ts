@@ -22,7 +22,7 @@ export class VoiceService {
     private sessionRepo: Repository<VoiceSessionEntity>,
   ) {
     this.ollamaUrl    = this.config.get('OLLAMA_URL')    ?? 'http://localhost:11434';
-    this.model        = this.config.get('OLLAMA_MODEL')  ?? 'qwen2.5:3b';
+    this.model        = this.config.get('OLLAMA_MODEL')  ?? 'gemma3:4b';
     this.predictorUrl = this.config.get('PREDICTOR_URL') ?? 'http://localhost:8001';
   }
 
@@ -189,7 +189,7 @@ export class VoiceService {
       quality ? `quality ${quality.score}/100` : null,
     ].filter(Boolean).join(', ');
 
-    return `Live tank data (${summary}) — my AI brain (Ollama) is offline. Start Ollama and run: ollama pull qwen2.5:3b to get full answers.`;
+    return `Live tank data (${summary}) — my AI brain (Ollama) is offline. Start Ollama and run: ollama pull gemma3:4b to get full answers.`;
   }
 
   async getSessions() {

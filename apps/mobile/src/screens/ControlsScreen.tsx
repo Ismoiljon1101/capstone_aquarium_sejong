@@ -211,8 +211,20 @@ export default function ControlsScreen() {
     await api.triggerFeed().catch(() => null);
     setTimeout(() => setFeeding(false), 3000);
   };
-  const pumpToggle = async () => { setPumpL(true); await api.togglePump().catch(() => null); setPump(p => !p); setPumpL(false); };
-  const ledToggle  = async () => { setLedL(true);  await api.toggleLed().catch(() => null);  setLed(l => !l);  setLedL(false); };
+  const pumpToggle = async () => { 
+    const nextState = !pump;
+    setPumpL(true); 
+    await api.togglePump({ state: nextState }).catch(() => null); 
+    setPump(nextState); 
+    setPumpL(false); 
+  };
+  const ledToggle  = async () => { 
+    const nextState = !led;
+    setLedL(true);  
+    await api.toggleLed({ state: nextState }).catch(() => null);  
+    setLed(nextState);  
+    setLedL(false); 
+  };
 
   // ── Feed CRUD ──────────────────────────────────────────────────────────────
   const addFeed = async () => {

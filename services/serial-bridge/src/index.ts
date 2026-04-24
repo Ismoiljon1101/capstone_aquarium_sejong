@@ -115,6 +115,8 @@ async function handleCommand(command: BridgeCommand) {
   let payload = `${JSON.stringify(command)}\n`;
   if (command.type === 'FEEDER') {
     payload = `{"cmd":"feed","duration":1}\n`;
+  } else if (command.type === 'AIR_PUMP') {
+    payload = command.state ? "PUMP_ON\n" : "PUMP_OFF\n";
   }
 
   if (serialMain && serialMain.isOpen) {
