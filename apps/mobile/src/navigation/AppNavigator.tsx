@@ -16,13 +16,23 @@ const Tab = createBottomTabNavigator();
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const TABS: { name: string; icon: IoniconName; iconActive: IoniconName; component: React.ComponentType<any> }[] = [
-  { name: 'Dashboard', icon: 'home-outline',         iconActive: 'home',           component: DashboardScreen },
-  { name: 'Alerts',    icon: 'notifications-outline', iconActive: 'notifications',  component: AlertsScreen },
-  { name: 'Controls',  icon: 'flash-outline',         iconActive: 'flash',          component: ControlsScreen },
-  { name: 'Fish AI',   icon: 'fish-outline',          iconActive: 'fish',           component: FishHealthScreen },
-  { name: 'History',   icon: 'bar-chart-outline',     iconActive: 'bar-chart',      component: HistoryScreen },
-  { name: 'Settings',  icon: 'settings-outline',      iconActive: 'settings',       component: SettingsScreen },
+type TabDef = {
+  name: string;
+  icon: IoniconName;
+  iconActive: IoniconName;
+  component: React.ComponentType<any>;
+  hidden?: boolean;
+};
+
+// Visible primary destinations (4) + hidden routes for Alerts/Settings
+// (Alerts and Settings are reached via header bell + avatar)
+const TABS: TabDef[] = [
+  { name: 'Dashboard', icon: 'home-outline',     iconActive: 'home',     component: DashboardScreen },
+  { name: 'Controls',  icon: 'flash-outline',    iconActive: 'flash',    component: ControlsScreen },
+  { name: 'Fish AI',   icon: 'fish-outline',     iconActive: 'fish',     component: FishHealthScreen },
+  { name: 'History',   icon: 'bar-chart-outline', iconActive: 'bar-chart', component: HistoryScreen },
+  { name: 'Alerts',    icon: 'notifications-outline', iconActive: 'notifications', component: AlertsScreen, hidden: true },
+  { name: 'Settings',  icon: 'settings-outline', iconActive: 'settings', component: SettingsScreen, hidden: true },
 ];
 
 export default function AppNavigator() {
@@ -40,10 +50,12 @@ export default function AppNavigator() {
           const tab = TABS.find(t => t.name === route.name);
           return {
             headerShown: false,
-            tabBarStyle: tabBar,
+            tabBarStyle: tab?.hidden ? { display: 'none' } : tabBar,
             tabBarActiveTintColor: '#38bdf8',
             tabBarInactiveTintColor: '#64748b',
             tabBarLabelStyle: styles.label,
+            tabBarItemStyle: tab?.hidden ? { display: 'none' } : undefined,
+            tabBarButton: tab?.hidden ? () => null : undefined,
             tabBarIcon: ({ focused, color }) => (
               <View style={[styles.wrap, focused && styles.active]}>
                 <Ionicons

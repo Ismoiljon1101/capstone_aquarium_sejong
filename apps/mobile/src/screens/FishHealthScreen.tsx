@@ -9,6 +9,7 @@ import * as Speech from 'expo-speech';
 import { useApi } from '../hooks/useApi';
 import { useSensors, sensorContext } from '../hooks/useSensors';
 import { useSocket } from '../hooks/useSocket';
+import AppHeader from '../components/AppHeader';
 
 declare const window: any;
 
@@ -398,11 +399,12 @@ export default function FishHealthScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#020617' }}>
       <StatusBar barStyle="light-content" backgroundColor="#020617" />
+      <AppHeader title="Fish AI" subtitle="Veronica — your aquarium assistant" />
 
-      {/* ── Top bar ── */}
+      {/* ── Veronica controls bar ── */}
       <View style={{
-        paddingTop: insets.top + 10,
-        paddingBottom: 14, paddingHorizontal: 18,
+        paddingTop: 10,
+        paddingBottom: 12, paddingHorizontal: 18,
         borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
         backgroundColor: '#020617',
         flexDirection: 'row', alignItems: 'center', gap: 12,

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApi } from '../hooks/useApi';
+import AppHeader from '../components/AppHeader';
 
 type Range = '24h' | '1w' | '1m';
 
@@ -82,12 +83,12 @@ export default function HistoryScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#020617' }}>
+      <AppHeader title="History" subtitle="Sensor readings over time" />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: Math.max(insets.bottom, 40) }}
+        contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 40) }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#38bdf8" colors={['#38bdf8']} />}
       >
-        <Text style={{ fontSize: 28, fontWeight: '800', color: '#f1f5f9', letterSpacing: -1, marginBottom: 16 }}>History</Text>
 
         {/* Range selector */}
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>

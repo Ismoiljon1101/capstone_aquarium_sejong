@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Animated } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
 import { useSensors } from '../hooks/useSensors';
+import AppHeader from '../components/AppHeader';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Alert { alertId: number; type: string; message: string; severity: string; createdAt: string; }
@@ -72,7 +72,6 @@ function AlertChip({ alert, onAck }: { alert: Alert; onAck: (id: number) => void
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
-  const insets = useSafeAreaInsets();
   const { connected, on } = useSocket();
   const api = useApi();
   const sensors = useSensors();
@@ -132,32 +131,13 @@ export default function DashboardScreen() {
 
   return (
     <Animated.View style={{ flex: 1, backgroundColor: '#020617', opacity: fade }}>
+      <AppHeader title="Fishlinic" subtitle={getGreeting()} branded />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 18, paddingTop: insets.top + 14, paddingBottom: 32 }}
+        contentContainerStyle={{ padding: 18, paddingTop: 16, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#38bdf8" colors={['#38bdf8']} />}
       >
-        {/* ── Header ── */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
-          <View>
-            <Text style={{ fontSize: 13, color: '#94a3b8', fontWeight: '500' }}>{getGreeting()}</Text>
-            <Text style={{ fontSize: 28, fontWeight: '800', color: '#f8fafc', letterSpacing: -0.8, marginTop: 1 }}>Fishlinic</Text>
-          </View>
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', gap: 5,
-            backgroundColor: connected ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.04)',
-            paddingHorizontal: 11, paddingVertical: 6,
-            borderRadius: 20, borderWidth: 1,
-            borderColor: connected ? 'rgba(52,211,153,0.25)' : 'rgba(255,255,255,0.06)',
-            marginTop: 4,
-          }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: connected ? '#34d399' : '#94a3b8' }} />
-            <Text style={{ fontSize: 12, fontWeight: '700', color: connected ? '#34d399' : '#94a3b8' }}>
-              {connected ? 'Live' : 'Offline'}
-            </Text>
-          </View>
-        </View>
 
         {/* ── Health Score + Fish ── */}
         <View style={{

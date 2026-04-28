@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import AppHeader from '../components/AppHeader';
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
 
@@ -166,7 +167,7 @@ function FeedRow({ s, onUpdate, onDelete }: {
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function ControlsScreen() {
   const insets = useSafeAreaInsets();
-  const { connected, on } = useSocket();
+  const { on } = useSocket();
   const api = useApi();
 
   // Quick toggle state
@@ -282,24 +283,10 @@ export default function ControlsScreen() {
       style={{ flex: 1, backgroundColor: '#020617' }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <AppHeader title="Controls" subtitle="Manual triggers & schedules" />
       <ScrollView contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: Math.max(insets.bottom, 60) }}
+        contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 60) }}
         keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-
-        {/* ── Header ── */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: '#f1f5f9', letterSpacing: -1 }}>Controls</Text>
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', gap: 6,
-            backgroundColor: 'rgba(255,255,255,0.04)', paddingHorizontal: 10, paddingVertical: 5,
-            borderRadius: 16,
-          }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: connected ? '#34d399' : '#f87171' }} />
-            <Text style={{ fontSize: 11, fontWeight: '600', color: connected ? '#34d399' : '#f87171' }}>
-              {connected ? 'Connected' : 'Offline'}
-            </Text>
-          </View>
-        </View>
 
         {/* ── Quick: Feed button ── */}
         <TouchableOpacity onPress={feed} disabled={feeding} activeOpacity={0.8}

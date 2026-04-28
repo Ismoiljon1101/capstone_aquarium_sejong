@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
+import AppHeader from '../components/AppHeader';
 
 interface Alert { alertId: number; message: string; severity: string; createdAt?: string; }
 
@@ -43,20 +44,21 @@ export default function AlertsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#020617' }}>
+      <AppHeader title="Alerts" back />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16 }}
+        contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 40) }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#38bdf8" colors={['#38bdf8']} />}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: '#f1f5f9', letterSpacing: -1 }}>Alerts</Text>
-          {alerts.length > 0 && (
+        {alerts.length > 0 && (
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 8 }}>
             <TouchableOpacity onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); alerts.forEach(a => api.acknowledgeAlert(a.alertId).catch(() => null)); setAlerts([]); }}
-              style={{ backgroundColor: 'rgba(239,68,68,0.12)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderCurve: 'continuous' }}>
-              <Text style={{ color: '#f87171', fontSize: 12, fontWeight: '700' }}>Clear All</Text>
+              accessibilityLabel="Clear all alerts" accessibilityRole="button"
+              style={{ backgroundColor: 'rgba(239,68,68,0.12)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, minHeight: 36, justifyContent: 'center' }}>
+              <Text style={{ color: '#f87171', fontSize: 13, fontWeight: '700' }}>Clear All</Text>
             </TouchableOpacity>
-          )}
-        </View>
+          </View>
+        )}
         <Text style={{ fontSize: 14, color: '#94a3b8', marginBottom: 20, fontVariant: ['tabular-nums'] }}>
           {alerts.length} active alert{alerts.length !== 1 ? 's' : ''}
         </Text>

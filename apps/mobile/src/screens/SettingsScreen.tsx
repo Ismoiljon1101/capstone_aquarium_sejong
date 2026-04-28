@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AppHeader from '../components/AppHeader';
 import { useSocket } from '../hooks/useSocket';
 
 // ── Persistent storage (localStorage on web, fallback to memory) ──────────────
@@ -200,12 +201,12 @@ export default function SettingsScreen() {
       style={{ flex: 1, backgroundColor: '#020617' }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <AppHeader title="Settings" back />
       <ScrollView
-        contentContainerStyle={{ padding: 18, paddingTop: insets.top + 16, paddingBottom: Math.max(insets.bottom, 40) }}
+        contentContainerStyle={{ padding: 18, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 40) }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={{ fontSize: 28, fontWeight: '800', color: '#f1f5f9', letterSpacing: -0.8, marginBottom: 22 }}>Settings</Text>
 
         {/* ── Connection ── */}
         <Section title="Connection">
