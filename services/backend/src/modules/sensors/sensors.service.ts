@@ -70,20 +70,29 @@ export class SensorsService {
   }
 
   async getHistory(sensorId: number, range: string): Promise<SensorReadingEntity[]> {
-    const now = new Date();
-    let from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
-    if (range === '1w') from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    else if (range === '1m') from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
+    const { from, now } = this.rangeToWindow(range);
     return await this.sensorRepository.find({
-      where: {
-        sensorId,
-        timestamp: Between(from, now),
-      },
+      where: { sensorId, timestamp: Between(from, now) },
       order: { timestamp: 'ASC' },
       take: 5000,
     });
+  }
+
+  async getAllHistory(range: string): Promise<SensorReadingEntity[]> {
+    const { from, now } = this.rangeToWindow(range);
+    return await this.sensorRepository.find({
+      where: { timestamp: Between(from, now) },
+      order: { timestamp: 'DESC' },
+      take: 2000,
+    });
+  }
+
+  private rangeToWindow(range: string): { from: Date; now: Date } {
+    const now = new Date();
+    const ms = range === '1m' ? 30 * 24 * 3600_000
+              : range === '1w' ?  7 * 24 * 3600_000
+              :                       24 * 3600_000;
+    return { from: new Date(now.getTime() - ms), now };
   }
 
   async checkThresholds(): Promise<void> {

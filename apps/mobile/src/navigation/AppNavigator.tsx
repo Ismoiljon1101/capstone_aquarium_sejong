@@ -7,6 +7,7 @@ import DashboardScreen from '../screens/DashboardScreen';
 import AlertsScreen    from '../screens/AlertsScreen';
 import ControlsScreen  from '../screens/ControlsScreen';
 import FishHealthScreen from '../screens/FishHealthScreen';
+import HistoryScreen   from '../screens/HistoryScreen';
 import SettingsScreen  from '../screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
@@ -16,6 +17,7 @@ const TABS = [
   { name: 'Alerts',    icon: '🔔', component: AlertsScreen },
   { name: 'Controls',  icon: '⚡', component: ControlsScreen },
   { name: 'Fish AI',   icon: '🐟', component: FishHealthScreen },
+  { name: 'History',   icon: '📊', component: HistoryScreen },
   { name: 'Settings',  icon: '⚙️', component: SettingsScreen },
 ];
 

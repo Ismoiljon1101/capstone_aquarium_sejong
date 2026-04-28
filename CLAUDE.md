@@ -25,3 +25,12 @@
 - Socket events: sensor:update, alert:new, fish:count, health:report, actuator:state
 - API base: http://localhost:3000
 - Dark theme: bg #020617, cards #0f172a
+
+## Active Tasks
+- [x] Add HistoryScreen to navigation
+- [x] Fix HistoryScreen range selector (was always calling getLatest)
+- [x] Delete dead HomeScreen
+- [x] Fix backend nest CLI (pnpm exec nest)
+- [x] Delete 11 orphaned component/service files (molecules, organisms, socket.service.ts)
+- [x] Add GET /sensors/history?range= endpoint to backend (SensorsController + SensorsService)
+- [x] Fix useSocket.ts: wrap `on` in useCallback — was causing infinite loops in screens using [on] deps
