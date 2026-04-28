@@ -1,34 +1,29 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
-import DashboardScreen from '../screens/DashboardScreen';
-import AlertsScreen    from '../screens/AlertsScreen';
-import ControlsScreen  from '../screens/ControlsScreen';
+import DashboardScreen  from '../screens/DashboardScreen';
+import AlertsScreen     from '../screens/AlertsScreen';
+import ControlsScreen   from '../screens/ControlsScreen';
 import FishHealthScreen from '../screens/FishHealthScreen';
-import HistoryScreen   from '../screens/HistoryScreen';
-import SettingsScreen  from '../screens/SettingsScreen';
+import HistoryScreen    from '../screens/HistoryScreen';
+import SettingsScreen   from '../screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
-const TABS = [
-  { name: 'Dashboard', icon: '🏠', component: DashboardScreen },
-  { name: 'Alerts',    icon: '🔔', component: AlertsScreen },
-  { name: 'Controls',  icon: '⚡', component: ControlsScreen },
-  { name: 'Fish AI',   icon: '🐟', component: FishHealthScreen },
-  { name: 'History',   icon: '📊', component: HistoryScreen },
-  { name: 'Settings',  icon: '⚙️', component: SettingsScreen },
-];
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
-  return (
-    <View style={[styles.wrap, focused && styles.active]}>
-      <Text style={{ fontSize: 18, opacity: focused ? 1 : 0.5 }}>{icon}</Text>
-    </View>
-  );
-}
+const TABS: { name: string; icon: IoniconName; iconActive: IoniconName; component: React.ComponentType<any> }[] = [
+  { name: 'Dashboard', icon: 'home-outline',         iconActive: 'home',           component: DashboardScreen },
+  { name: 'Alerts',    icon: 'notifications-outline', iconActive: 'notifications',  component: AlertsScreen },
+  { name: 'Controls',  icon: 'flash-outline',         iconActive: 'flash',          component: ControlsScreen },
+  { name: 'Fish AI',   icon: 'fish-outline',          iconActive: 'fish',           component: FishHealthScreen },
+  { name: 'History',   icon: 'bar-chart-outline',     iconActive: 'bar-chart',      component: HistoryScreen },
+  { name: 'Settings',  icon: 'settings-outline',      iconActive: 'settings',       component: SettingsScreen },
+];
 
 export default function AppNavigator() {
   const insets = useSafeAreaInsets();
@@ -47,9 +42,17 @@ export default function AppNavigator() {
             headerShown: false,
             tabBarStyle: tabBar,
             tabBarActiveTintColor: '#38bdf8',
-            tabBarInactiveTintColor: '#475569',
+            tabBarInactiveTintColor: '#64748b',
             tabBarLabelStyle: styles.label,
-            tabBarIcon: ({ focused }) => <TabIcon icon={tab?.icon ?? ''} focused={focused} />,
+            tabBarIcon: ({ focused, color }) => (
+              <View style={[styles.wrap, focused && styles.active]}>
+                <Ionicons
+                  name={focused ? (tab?.iconActive ?? tab?.icon ?? 'home') : (tab?.icon ?? 'home')}
+                  size={22}
+                  color={color}
+                />
+              </View>
+            ),
           };
         }}
       >
@@ -70,7 +73,7 @@ const styles = StyleSheet.create({
     elevation: 0,
     shadowOpacity: 0,
   },
-  label: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2, marginTop: 2 },
-  wrap:  { width: 40, height: 30, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2, marginTop: 2 },
+  wrap:  { width: 44, height: 32, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   active: { backgroundColor: 'rgba(56,189,248,0.12)' },
 });

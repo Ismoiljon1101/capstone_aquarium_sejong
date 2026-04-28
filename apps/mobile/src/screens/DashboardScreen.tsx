@@ -43,7 +43,7 @@ function SensorPill({ icon, label, value, unit, color, status }: {
         {value}
         {!noData && <Text style={{ fontSize: 12, fontWeight: '600', color: color + '80' }}> {unit}</Text>}
       </Text>
-      <Text style={{ fontSize: 11, color: '#64748b', marginTop: 3, fontWeight: '500' }}>{label}</Text>
+      <Text style={{ fontSize: 13, color: '#94a3b8', marginTop: 4, fontWeight: '500' }}>{label}</Text>
     </View>
   );
 }
@@ -60,10 +60,11 @@ function AlertChip({ alert, onAck }: { alert: Alert; onAck: (id: number) => void
       padding: 12, marginBottom: 8,
     }}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c, flexShrink: 0 }} />
-      <Text style={{ flex: 1, fontSize: 12, color: '#cbd5e1', lineHeight: 17 }}>{alert.message}</Text>
+      <Text style={{ flex: 1, fontSize: 14, color: '#e2e8f0', lineHeight: 20 }}>{alert.message}</Text>
       <TouchableOpacity onPress={() => onAck(alert.alertId)} activeOpacity={0.7}
-        style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: c + '20', borderRadius: 8 }}>
-        <Text style={{ fontSize: 10, color: c, fontWeight: '700' }}>ACK</Text>
+        accessibilityLabel="Acknowledge alert" accessibilityRole="button"
+        style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: c + '20', borderRadius: 8, minHeight: 36, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 12, color: c, fontWeight: '700' }}>ACK</Text>
       </TouchableOpacity>
     </View>
   );
@@ -140,8 +141,8 @@ export default function DashboardScreen() {
         {/* ── Header ── */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <View>
-            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500' }}>{getGreeting()}</Text>
-            <Text style={{ fontSize: 26, fontWeight: '900', color: '#f8fafc', letterSpacing: -0.8, marginTop: 1 }}>Fishlinic</Text>
+            <Text style={{ fontSize: 13, color: '#94a3b8', fontWeight: '500' }}>{getGreeting()}</Text>
+            <Text style={{ fontSize: 28, fontWeight: '800', color: '#f8fafc', letterSpacing: -0.8, marginTop: 1 }}>Fishlinic</Text>
           </View>
           <View style={{
             flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -151,8 +152,8 @@ export default function DashboardScreen() {
             borderColor: connected ? 'rgba(52,211,153,0.25)' : 'rgba(255,255,255,0.06)',
             marginTop: 4,
           }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: connected ? '#34d399' : '#64748b' }} />
-            <Text style={{ fontSize: 11, fontWeight: '700', color: connected ? '#34d399' : '#64748b' }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: connected ? '#34d399' : '#94a3b8' }} />
+            <Text style={{ fontSize: 12, fontWeight: '700', color: connected ? '#34d399' : '#94a3b8' }}>
               {connected ? 'Live' : 'Offline'}
             </Text>
           </View>
@@ -170,7 +171,7 @@ export default function DashboardScreen() {
               <Text style={{ fontSize: 50, fontWeight: '900', color: scoreColor, letterSpacing: -3, lineHeight: 52, fontVariant: ['tabular-nums'] }}>
                 {hasData ? healthScore : '--'}
               </Text>
-              {hasData && <Text style={{ fontSize: 10, color: scoreColor + '80', fontWeight: '700', letterSpacing: 0.5 }}>/100</Text>}
+              {hasData && <Text style={{ fontSize: 12, color: scoreColor + 'aa', fontWeight: '700', letterSpacing: 0.5 }}>/100</Text>}
             </View>
 
             <View style={{ width: 1, height: 56, backgroundColor: 'rgba(255,255,255,0.06)' }} />
@@ -181,7 +182,7 @@ export default function DashboardScreen() {
                 <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: scoreColor }} />
                 <Text style={{ fontSize: 14, fontWeight: '800', color: '#e2e8f0' }}>{scoreLabel}</Text>
               </View>
-              <Text style={{ fontSize: 12, color: '#64748b', lineHeight: 17, marginBottom: 10 }}>
+              <Text style={{ fontSize: 14, color: '#94a3b8', lineHeight: 20, marginBottom: 10 }}>
                 {!hasData ? 'Waiting for sensor data...' : fishStatus === 'ok' ? 'All parameters within safe range' : 'Check alerts below'}
               </Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -216,8 +217,8 @@ export default function DashboardScreen() {
               { label: 'VISION', value: hasData ? 'YOLO v11' : '--', color: hasData ? '#a78bfa' : '#475569' },
             ].map((item, i) => (
               <View key={item.label} style={{ flex: 1, alignItems: 'center', borderRightWidth: i < 2 ? 1 : 0, borderRightColor: 'rgba(255,255,255,0.06)' }}>
-                <Text style={{ fontSize: 18, fontWeight: '900', color: item.color }}>{item.value}</Text>
-                <Text style={{ fontSize: 9, color: '#475569', fontWeight: '700', letterSpacing: 0.5, marginTop: 3 }}>{item.label}</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: item.color }}>{item.value}</Text>
+                <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '700', letterSpacing: 0.5, marginTop: 4 }}>{item.label}</Text>
               </View>
             ))}
           </View>
@@ -238,7 +239,7 @@ export default function DashboardScreen() {
                 <Text style={{ fontSize: 14, marginRight: 10 }}>{p.icon}</Text>
                 <Text style={{ flex: 1, fontSize: 13, color: '#94a3b8' }}>{p.label}</Text>
                 <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: statusColor(p.st) + '18' }}>
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: statusColor(p.st) }}>{p.st.toUpperCase()}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: statusColor(p.st) }}>{p.st.toUpperCase()}</Text>
                 </View>
               </View>
             ))}
@@ -262,7 +263,7 @@ export default function DashboardScreen() {
           borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
           padding: 14, marginBottom: 4,
         }}>
-          <Text style={{ fontSize: 11, color: '#475569', marginBottom: 10 }}>Go to Controls to manage devices</Text>
+          <Text style={{ fontSize: 13, color: '#94a3b8', marginBottom: 10 }}>Go to Controls to manage devices</Text>
           {[
             { icon: '💨', label: 'Air Pump', color: '#06b6d4' },
             { icon: '💡', label: 'LED Strip', color: '#f59e0b' },
@@ -274,8 +275,8 @@ export default function DashboardScreen() {
             }}>
               <Text style={{ fontSize: 16 }}>{d.icon}</Text>
               <Text style={{ flex: 1, fontSize: 13, color: '#cbd5e1' }}>{d.label}</Text>
-              <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: 'rgba(100,116,139,0.15)' }}>
-                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748b' }}>AUTO</Text>
+              <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(148,163,184,0.1)' }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8' }}>AUTO</Text>
               </View>
             </View>
           ))}
@@ -287,7 +288,7 @@ export default function DashboardScreen() {
 
 function SectionTitle({ children }: { children: string }) {
   return (
-    <Text style={{ fontSize: 14, fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>
+    <Text style={{ fontSize: 12, fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
       {children}
     </Text>
   );
@@ -296,7 +297,7 @@ function SectionTitle({ children }: { children: string }) {
 function Tag({ label, color }: { label: string; color: string }) {
   return (
     <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, backgroundColor: color + '15', borderColor: color + '30' }}>
-      <Text style={{ fontSize: 10, fontWeight: '700', color }}>{label}</Text>
+      <Text style={{ fontSize: 11, fontWeight: '700', color }}>{label}</Text>
     </View>
   );
 }

@@ -12,6 +12,7 @@ import {
   TextInput, Switch, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
 
@@ -37,9 +38,9 @@ const COLORS = ['#ffffff', '#fef3c7', '#bae6fd', '#a5f3fc', '#bbf7d0', '#fbcfe8'
 // ─── Small UI primitives ─────────────────────────────────────────────────────
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <View style={{ marginTop: 6, marginBottom: 8 }}>
-      <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', letterSpacing: 1, textTransform: 'uppercase' }}>{title}</Text>
-      {subtitle && <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{subtitle}</Text>}
+    <View style={{ marginTop: 8, marginBottom: 8 }}>
+      <Text style={{ fontSize: 12, fontWeight: '800', color: '#94a3b8', letterSpacing: 1, textTransform: 'uppercase' }}>{title}</Text>
+      {subtitle && <Text style={{ fontSize: 13, color: '#94a3b8', marginTop: 3, lineHeight: 18 }}>{subtitle}</Text>}
     </View>
   );
 }
@@ -70,7 +71,7 @@ function NumField({ value, onChange, suffix, width = 64 }: {
         keyboardType="numeric"
         style={{
           width, backgroundColor: '#1e293b', borderRadius: 8,
-          paddingHorizontal: 8, paddingVertical: 6, fontSize: 12,
+          paddingHorizontal: 8, paddingVertical: 8, fontSize: 13,
           color: '#e2e8f0', textAlign: 'center',
           borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
         }}
@@ -104,11 +105,13 @@ function Btn({ label, onPress, color = '#0891b2', disabled }: {
 }) {
   return (
     <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.8}
+      accessibilityRole="button"
       style={{
-        paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+        paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8,
         backgroundColor: disabled ? '#1e293b' : color,
+        minHeight: 44, justifyContent: 'center',
       }}>
-      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{label}</Text>
+      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -133,8 +136,9 @@ function FeedRow({ s, onUpdate, onDelete }: {
         <Switch value={s.enabled} onValueChange={v => onUpdate({ enabled: v })}
           trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
         <TouchableOpacity onPress={onDelete} activeOpacity={0.7}
-          style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#7f1d1d22', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 14, color: '#ef4444' }}>✕</Text>
+          accessibilityLabel="Delete feeding schedule" accessibilityRole="button"
+          style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#7f1d1d22', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 16, color: '#ef4444' }}>✕</Text>
         </TouchableOpacity>
       </View>
       <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -142,13 +146,15 @@ function FeedRow({ s, onUpdate, onDelete }: {
           const active = (s.daysMask & (1 << i)) !== 0;
           return (
             <TouchableOpacity key={i} onPress={() => toggleDay(i)} activeOpacity={0.7}
+              accessibilityLabel={`Toggle ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][i]}`}
+              accessibilityRole="button"
               style={{
-                width: 30, height: 30, borderRadius: 15,
+                width: 40, height: 40, borderRadius: 12,
                 alignItems: 'center', justifyContent: 'center',
                 backgroundColor: active ? '#0891b2' : '#1e293b',
                 borderWidth: 1, borderColor: active ? '#0891b2' : 'rgba(255,255,255,0.06)',
               }}>
-              <Text style={{ fontSize: 11, fontWeight: '800', color: active ? '#fff' : '#64748b' }}>{d}</Text>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: active ? '#fff' : '#94a3b8' }}>{d}</Text>
             </TouchableOpacity>
           );
         })}
@@ -209,23 +215,26 @@ export default function ControlsScreen() {
 
   // ── Quick actions ──────────────────────────────────────────────────────────
   const feed = async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setFeeding(true);
     await api.triggerFeed().catch(() => null);
     setTimeout(() => setFeeding(false), 3000);
   };
-  const pumpToggle = async () => { 
+  const pumpToggle = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const nextState = !pump;
-    setPumpL(true); 
-    await api.togglePump({ state: nextState }).catch(() => null); 
-    setPump(nextState); 
-    setPumpL(false); 
+    setPumpL(true);
+    await api.togglePump({ state: nextState }).catch(() => null);
+    setPump(nextState);
+    setPumpL(false);
   };
-  const ledToggle  = async () => { 
+  const ledToggle = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const nextState = !led;
-    setLedL(true);  
-    await api.toggleLed({ state: nextState }).catch(() => null);  
-    setLed(nextState);  
-    setLedL(false); 
+    setLedL(true);
+    await api.toggleLed({ state: nextState }).catch(() => null);
+    setLed(nextState);
+    setLedL(false);
   };
 
   // ── Feed CRUD ──────────────────────────────────────────────────────────────
@@ -279,7 +288,7 @@ export default function ControlsScreen() {
 
         {/* ── Header ── */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <Text style={{ fontSize: 28, fontWeight: '900', color: '#f1f5f9', letterSpacing: -1 }}>Controls</Text>
+          <Text style={{ fontSize: 28, fontWeight: '800', color: '#f1f5f9', letterSpacing: -1 }}>Controls</Text>
           <View style={{
             flexDirection: 'row', alignItems: 'center', gap: 6,
             backgroundColor: 'rgba(255,255,255,0.04)', paddingHorizontal: 10, paddingVertical: 5,
@@ -294,6 +303,7 @@ export default function ControlsScreen() {
 
         {/* ── Quick: Feed button ── */}
         <TouchableOpacity onPress={feed} disabled={feeding} activeOpacity={0.8}
+          accessibilityLabel="Feed fish now" accessibilityRole="button"
           style={{
             flexDirection: 'row', alignItems: 'center',
             backgroundColor: feeding ? 'rgba(56,189,248,0.08)' : '#0f172a',
@@ -317,6 +327,7 @@ export default function ControlsScreen() {
           { icon: '💡', label: 'LED Light', desc: '12V aquarium strip',  active: led,  loading: ledL,  color: '#f59e0b', onPress: ledToggle },
         ].map(d => (
           <TouchableOpacity key={d.label} onPress={d.onPress} disabled={d.loading} activeOpacity={0.8}
+            accessibilityLabel={`Toggle ${d.label}`} accessibilityRole="switch"
             style={{
               flexDirection: 'row', alignItems: 'center',
               backgroundColor: d.active ? d.color + '0A' : '#0f172a',
@@ -342,7 +353,7 @@ export default function ControlsScreen() {
           backgroundColor: '#0f172a', borderRadius: 16, padding: 16,
           borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', marginTop: 12, marginBottom: 28,
         }}>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Relay Status</Text>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Relay Status</Text>
           {[
             { label: 'Feeder',    active: feeding, color: '#3b82f6' },
             { label: 'Air Pump',  active: pump,    color: '#06b6d4' },
@@ -359,10 +370,10 @@ export default function ControlsScreen() {
         {/*                          MANAGEMENT                               */}
         {/* ═════════════════════════════════════════════════════════════════ */}
         <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: 22 }} />
-        <Text style={{ fontSize: 22, fontWeight: '900', color: '#f1f5f9', letterSpacing: -0.5, marginBottom: 2 }}>
+        <Text style={{ fontSize: 22, fontWeight: '800', color: '#f1f5f9', letterSpacing: -0.5, marginBottom: 2 }}>
           Tank Management
         </Text>
-        <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 18 }}>
+        <Text style={{ fontSize: 14, color: '#94a3b8', marginBottom: 18, lineHeight: 20 }}>
           Schedules &amp; thresholds. Active even before hardware is plugged in.
         </Text>
 

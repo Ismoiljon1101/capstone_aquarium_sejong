@@ -132,7 +132,7 @@ function Row({ icon, label, right, onPress }: {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={{ marginBottom: 20 }}>
-      <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, marginLeft: 4 }}>{title}</Text>
+      <Text style={{ fontSize: 12, fontWeight: '800', color: '#94a3b8', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, marginLeft: 4 }}>{title}</Text>
       <View style={{ backgroundColor: '#0f172a', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
         {children}
       </View>
@@ -205,12 +205,12 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={{ fontSize: 26, fontWeight: '900', color: '#f1f5f9', letterSpacing: -0.8, marginBottom: 22 }}>Settings</Text>
+        <Text style={{ fontSize: 28, fontWeight: '800', color: '#f1f5f9', letterSpacing: -0.8, marginBottom: 22 }}>Settings</Text>
 
         {/* ── Connection ── */}
         <Section title="Connection">
           <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' }}>
-            <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '600', marginBottom: 6 }}>Backend URL</Text>
+            <Text style={{ fontSize: 13, color: '#94a3b8', fontWeight: '600', marginBottom: 6 }}>Backend URL</Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
                 value={apiUrl}
@@ -250,8 +250,8 @@ export default function SettingsScreen() {
             <Switch value={alerts} onValueChange={v => { setAlerts(v); store.set(SETTINGS_KEYS.ALERTS, String(v)); }}
               trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
           } />
-          <Row icon="🌐" label="STT Language" right={<Text style={{ fontSize: 12, color: '#64748b' }}>English (US)</Text>} />
-          <Row icon="⚡" label="LLM Model" right={<Text style={{ fontSize: 12, color: '#64748b' }}>{ollamaModel || 'qwen2.5:3b'}</Text>} />
+          <Row icon="🌐" label="STT Language" right={<Text style={{ fontSize: 13, color: '#94a3b8' }}>English (US)</Text>} />
+          <Row icon="⚡" label="LLM Model" right={<Text style={{ fontSize: 13, color: '#94a3b8' }}>{ollamaModel || 'qwen2.5:3b'}</Text>} />
         </Section>
 
         {/* ── Tank Safe Ranges ── */}
@@ -264,10 +264,10 @@ export default function SettingsScreen() {
 
         {/* ── About ── */}
         <Section title="About">
-          <Row icon="🐠" label="Fishlinic Mobile"   right={<Text style={{ fontSize: 12, color: '#475569' }}>v1.0.0</Text>} />
-          <Row icon="🎓" label="Sejong University"  right={<Text style={{ fontSize: 12, color: '#475569' }}>Capstone 2026</Text>} />
-          <Row icon="🤖" label="AI Models"          right={<Text style={{ fontSize: 11, color: '#475569', textAlign: 'right' }}>RF · YOLO · ConvLSTM-VAE</Text>} />
-          <Row icon="📊" label="Sensors"            right={<Text style={{ fontSize: 11, color: '#475569' }}>pH · Temp · DO₂ · CO₂</Text>} />
+          <Row icon="🐠" label="Fishlinic Mobile"   right={<Text style={{ fontSize: 13, color: '#94a3b8' }}>v1.0.0</Text>} />
+          <Row icon="🎓" label="Sejong University"  right={<Text style={{ fontSize: 13, color: '#94a3b8' }}>Capstone 2026</Text>} />
+          <Row icon="🤖" label="AI Models"          right={<Text style={{ fontSize: 12, color: '#94a3b8', textAlign: 'right' }}>RF · YOLO · ConvLSTM-VAE</Text>} />
+          <Row icon="📊" label="Sensors"            right={<Text style={{ fontSize: 12, color: '#94a3b8' }}>pH · Temp · DO₂ · CO₂</Text>} />
         </Section>
 
       </ScrollView>

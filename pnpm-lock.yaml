@@ -135,6 +135,9 @@ importers:
       expo:
         specifier: ~54.0.0
         version: 54.0.33(@babel/core@7.29.0)(@expo/dom-webview@55.0.5)(@expo/metro-runtime@4.0.1(react-native@0.81.5(@babel/core@7.29.0)(@react-native-community/cli@12.3.6)(@types/react@18.2.79)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.29.0)(@react-native-community/cli@12.3.6)(@types/react@18.2.79)(react@19.1.0))(react@19.1.0)
+      expo-haptics:
+        specifier: ^55.0.14
+        version: 55.0.14(expo@54.0.33)
       expo-speech:
         specifier: ^55.0.13
         version: 55.0.13(expo@54.0.33)
@@ -3921,6 +3924,11 @@ packages:
       expo: '*'
       react: '*'
       react-native: '*'
+
+  expo-haptics@55.0.14:
+    resolution: {integrity: sha512-KjDItBsA9mi1f5nRwf8g1wOdfEcLHwvEdt5Jl1sMCDETR/homcGOl+F3QIiPOl/PRlbGVieQsjTtF4DGtHOj6g==}
+    peerDependencies:
+      expo: '*'
 
   expo-keep-awake@15.0.8:
     resolution: {integrity: sha512-YK9M1VrnoH1vLJiQzChZgzDvVimVoriibiDIFLbQMpjYBnvyfUeHJcin/Gx1a+XgupNXy92EQJLgI/9ZuXajYQ==}
@@ -11602,6 +11610,10 @@ snapshots:
       fontfaceobserver: 2.3.0
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.29.0)(@react-native-community/cli@12.3.6)(@types/react@18.2.79)(react@19.1.0)
+
+  expo-haptics@55.0.14(expo@54.0.33):
+    dependencies:
+      expo: 54.0.33(@babel/core@7.29.0)(@expo/dom-webview@55.0.5)(@expo/metro-runtime@4.0.1(react-native@0.81.5(@babel/core@7.29.0)(@react-native-community/cli@12.3.6)(@types/react@18.2.79)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.29.0)(@react-native-community/cli@12.3.6)(@types/react@18.2.79)(react@19.1.0))(react@19.1.0)
 
   expo-keep-awake@15.0.8(expo@54.0.33)(react@19.1.0):
     dependencies:

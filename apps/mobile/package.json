@@ -16,6 +16,7 @@
     "@react-navigation/native": "^7.1.17",
     "axios": "^1.6.2",
     "expo": "~54.0.0",
+    "expo-haptics": "^55.0.14",
     "expo-speech": "^55.0.13",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
