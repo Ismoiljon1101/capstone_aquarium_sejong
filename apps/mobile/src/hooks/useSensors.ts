@@ -15,14 +15,20 @@ export function useSensors(): SensorMap {
   const api = useApi();
   const [sensors, setSensors] = useState<SensorMap>({});
 
-  // Load snapshot from REST on mount
+  // Load snapshot from REST on mount — ignore stale data (>60s old)
   useEffect(() => {
     api.getLatest()
       .then(r => {
         const rows: any[] = Array.isArray(r.data) ? r.data : [];
+        const now = Date.now();
+        const fresh = rows.filter((s: any) => {
+          if (!s.timestamp) return false;
+          return now - new Date(s.timestamp).getTime() < 60_000;
+        });
+        if (fresh.length === 0) return;
         setSensors(prev => {
           const next = { ...prev };
-          rows.forEach((s: any) => {
+          fresh.forEach((s: any) => {
             if (s.type && s.value != null) {
               next[s.type] = { value: Number(s.value), unit: s.unit ?? '', status: s.status ?? 'ok' };
             }

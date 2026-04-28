@@ -14,28 +14,33 @@ function getGreeting() {
 }
 
 function statusColor(s: string) {
-  return s === 'critical' ? '#ef4444' : s === 'warn' || s === 'warning' ? '#fbbf24' : '#34d399';
+  if (s === 'critical') return '#ef4444';
+  if (s === 'warn' || s === 'warning') return '#fbbf24';
+  if (s === 'offline') return '#475569';
+  return '#34d399';
 }
 
 // ─── Sensor pill (inline, horizontal) ────────────────────────────────────────
 function SensorPill({ icon, label, value, unit, color, status }: {
   icon: string; label: string; value: string; unit: string; color: string; status: string;
 }) {
+  const noData = value === '--';
   const dot = statusColor(status);
+  const displayColor = noData ? '#334155' : color;
   return (
     <View style={{
       flex: 1, minWidth: '46%',
       backgroundColor: '#0f172a',
       borderRadius: 16, padding: 14,
-      borderWidth: 1, borderColor: color + '25',
+      borderWidth: 1, borderColor: noData ? 'rgba(255,255,255,0.04)' : color + '25',
     }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <Text style={{ fontSize: 18 }}>{icon}</Text>
+        <Text style={{ fontSize: 18, opacity: noData ? 0.4 : 1 }}>{icon}</Text>
         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />
       </View>
-      <Text style={{ fontSize: 24, fontWeight: '900', color, letterSpacing: -1, fontVariant: ['tabular-nums'] }}>
+      <Text style={{ fontSize: 24, fontWeight: '900', color: displayColor, letterSpacing: -1, fontVariant: ['tabular-nums'] }}>
         {value}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: color + '80' }}> {unit}</Text>
+        {!noData && <Text style={{ fontSize: 12, fontWeight: '600', color: color + '80' }}> {unit}</Text>}
       </Text>
       <Text style={{ fontSize: 11, color: '#64748b', marginTop: 3, fontWeight: '500' }}>{label}</Text>
     </View>
@@ -115,11 +120,12 @@ export default function DashboardScreen() {
   };
 
   const s = (k: string) => sensors[k];
-  const fmtVal = (k: string, def: number) => (s(k)?.value ?? def).toFixed(1);
-  const fmtSt  = (k: string) => s(k)?.status ?? 'ok';
+  const hasData = Object.keys(sensors).length > 0;
+  const fmtVal = (k: string) => s(k)?.value != null ? Number(s(k)!.value).toFixed(1) : '--';
+  const fmtSt  = (k: string) => s(k)?.status ?? 'offline';
 
-  const scoreColor = healthScore >= 90 ? '#34d399' : healthScore >= 70 ? '#fbbf24' : '#ef4444';
-  const scoreLabel = healthScore >= 90 ? 'Excellent' : healthScore >= 70 ? 'Needs Attention' : 'Critical';
+  const scoreColor = !hasData ? '#475569' : healthScore >= 90 ? '#34d399' : healthScore >= 70 ? '#fbbf24' : '#ef4444';
+  const scoreLabel = !hasData ? 'No Data' : healthScore >= 90 ? 'Excellent' : healthScore >= 70 ? 'Needs Attention' : 'Critical';
 
   return (
     <Animated.View style={{ flex: 1, backgroundColor: '#020617', opacity: fade }}>
@@ -160,9 +166,9 @@ export default function DashboardScreen() {
             {/* Score */}
             <View style={{ alignItems: 'center' }}>
               <Text style={{ fontSize: 50, fontWeight: '900', color: scoreColor, letterSpacing: -3, lineHeight: 52, fontVariant: ['tabular-nums'] }}>
-                {healthScore}
+                {hasData ? healthScore : '--'}
               </Text>
-              <Text style={{ fontSize: 10, color: scoreColor + '80', fontWeight: '700', letterSpacing: 0.5 }}>/100</Text>
+              {hasData && <Text style={{ fontSize: 10, color: scoreColor + '80', fontWeight: '700', letterSpacing: 0.5 }}>/100</Text>}
             </View>
 
             <View style={{ width: 1, height: 56, backgroundColor: 'rgba(255,255,255,0.06)' }} />
@@ -174,7 +180,7 @@ export default function DashboardScreen() {
                 <Text style={{ fontSize: 14, fontWeight: '800', color: '#e2e8f0' }}>{scoreLabel}</Text>
               </View>
               <Text style={{ fontSize: 12, color: '#64748b', lineHeight: 17, marginBottom: 10 }}>
-                {fishStatus === 'ok' ? 'All parameters within safe range' : 'Check alerts below'}
+                {!hasData ? 'Waiting for sensor data...' : fishStatus === 'ok' ? 'All parameters within safe range' : 'Check alerts below'}
               </Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 <Tag label={`🐟 ${fishCount} fish`} color="#60a5fa" />
@@ -188,10 +194,10 @@ export default function DashboardScreen() {
         {/* ── Water Parameters 2×2 ── */}
         <SectionTitle>Water Parameters</SectionTitle>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
-          <SensorPill icon="🧪" label="pH Level"       value={fmtVal('pH', 7.0)}   unit="pH"   color="#10b981" status={fmtSt('pH')} />
-          <SensorPill icon="🌡️" label="Temperature"   value={fmtVal('temp_c', 25)}  unit="°C"   color="#38bdf8" status={fmtSt('temp_c')} />
-          <SensorPill icon="💨" label="Dissolved O₂"  value={fmtVal('do_mg_l', 7.5)}  unit="mg/L" color="#a78bfa" status={fmtSt('do_mg_l')} />
-          <SensorPill icon="☁️" label="CO₂"           value={fmtVal('CO2', 18)}   unit="ppm"  color="#fb923c" status={fmtSt('CO2')} />
+          <SensorPill icon="🧪" label="pH Level"      value={fmtVal('pH')}      unit="pH"   color="#10b981" status={fmtSt('pH')} />
+          <SensorPill icon="🌡️" label="Temperature"  value={fmtVal('temp_c')}  unit="°C"   color="#38bdf8" status={fmtSt('temp_c')} />
+          <SensorPill icon="💨" label="Dissolved O₂" value={fmtVal('do_mg_l')} unit="mg/L" color="#a78bfa" status={fmtSt('do_mg_l')} />
+          <SensorPill icon="☁️" label="CO₂"          value={fmtVal('CO2')}     unit="ppm"  color="#fb923c" status={fmtSt('CO2')} />
         </View>
 
         {/* ── Fish Intelligence ── */}
@@ -203,9 +209,9 @@ export default function DashboardScreen() {
         }}>
           <View style={{ flexDirection: 'row', gap: 0 }}>
             {[
-              { label: 'COUNT', value: String(fishCount), color: '#60a5fa' },
-              { label: 'HEALTH', value: fishStatus === 'ok' ? 'Good' : fishStatus === 'warn' ? 'Warn' : 'Critical', color: statusColor(fishStatus) },
-              { label: 'VISION', value: 'YOLO v11', color: '#a78bfa' },
+              { label: 'COUNT',  value: hasData ? String(fishCount) : '--', color: '#60a5fa' },
+              { label: 'HEALTH', value: !hasData ? '--' : fishStatus === 'ok' ? 'Good' : fishStatus === 'warn' ? 'Warn' : 'Critical', color: hasData ? statusColor(fishStatus) : '#475569' },
+              { label: 'VISION', value: hasData ? 'YOLO v11' : '--', color: hasData ? '#a78bfa' : '#475569' },
             ].map((item, i) => (
               <View key={item.label} style={{ flex: 1, alignItems: 'center', borderRightWidth: i < 2 ? 1 : 0, borderRightColor: 'rgba(255,255,255,0.06)' }}>
                 <Text style={{ fontSize: 18, fontWeight: '900', color: item.color }}>{item.value}</Text>
@@ -219,8 +225,8 @@ export default function DashboardScreen() {
               { icon: '🧪', label: 'pH',           st: fmtSt('pH') },
               { icon: '🌡️', label: 'Temperature',  st: fmtSt('temp_c') },
               { icon: '💨', label: 'Dissolved O₂', st: fmtSt('do_mg_l') },
-              { icon: '👁️', label: 'Visual Check', st: 'ok' },
-              { icon: '🧠', label: 'Behavior',      st: 'ok' },
+              { icon: '👁️', label: 'Visual Check', st: hasData ? 'ok' : 'offline' },
+              { icon: '🧠', label: 'Behavior',      st: hasData ? 'ok' : 'offline' },
             ].map(p => (
               <View key={p.label} style={{
                 flexDirection: 'row', alignItems: 'center',
