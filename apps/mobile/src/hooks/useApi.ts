@@ -7,6 +7,7 @@ export function useApi() {
   return {
     getLatest:          () => api.get('/sensors/latest'),
     getSensorHistory:   (id: number, range: string) => api.get(`/sensors/${id}/readings?range=${range}`),
+    getAllSensorHistory: (range: string) => api.get(`/sensors/history?range=${range}`),
     getActiveAlerts:    () => api.get('/alerts/active'),
     acknowledgeAlert:   (id: number) => api.patch(`/alerts/${id}/acknowledge`),
     triggerFeed:        () => api.post('/actuators/feed'),

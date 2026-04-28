@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
 const WS_URL = process.env.EXPO_PUBLIC_WS_URL ?? 'http://localhost:3000';
@@ -87,14 +87,11 @@ export function useSocket() {
     };
   }, []);
 
-  const on = <T>(event: string, handler: (payload: T) => void) => {
+  const on = useCallback(<T>(event: string, handler: (payload: T) => void) => {
     const client = getSocket();
     client.on(event, handler as (...args: unknown[]) => void);
-
-    return () => {
-      client.off(event, handler as (...args: unknown[]) => void);
-    };
-  };
+    return () => { client.off(event, handler as (...args: unknown[]) => void); };
+  }, []);
 
   return { connected, telemetry, latestAlert, fishCount, healthReport, on, socket: getSocket() };
 }

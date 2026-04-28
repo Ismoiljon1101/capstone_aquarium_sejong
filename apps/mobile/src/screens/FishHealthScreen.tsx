@@ -1,13 +1,11 @@
-/**
- * Fish AI Screen — Veronica voice/chat assistant with live tank context.
- * Full-screen Grok/ChatGPT-style voice interface.
- */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform, ActivityIndicator,
-  Animated, Easing, StatusBar,
+  Animated, Easing, StatusBar, Pressable,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Speech from 'expo-speech';
 import { useApi } from '../hooks/useApi';
 import { useSensors, sensorContext } from '../hooks/useSensors';
 import { useSocket } from '../hooks/useSocket';
@@ -17,30 +15,7 @@ declare const window: any;
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Msg { role: 'user' | 'veronica'; text: string; ts: Date; }
 
-// ─── TTS ─────────────────────────────────────────────────────────────────────
-function speak(text: string, onDone?: () => void) {
-  if (Platform.OS !== 'web' || !('speechSynthesis' in window)) { onDone?.(); return; }
-  window.speechSynthesis.cancel();
-  const utt = new window.SpeechSynthesisUtterance(text);
-  utt.lang = 'en-US'; utt.rate = 1.05; utt.pitch = 1.1;
-  const voices = window.speechSynthesis.getVoices();
-  const female = voices.find((v: any) => /female|zira|samantha|karen|google uk english female/i.test(v.name));
-  if (female) utt.voice = female;
-  let keepAlive: any;
-  utt.onend = () => { clearInterval(keepAlive); onDone?.(); };
-  utt.onerror = () => { clearInterval(keepAlive); onDone?.(); };
-  window.speechSynthesis.speak(utt);
-  keepAlive = setInterval(() => {
-    if (!window.speechSynthesis.speaking) { clearInterval(keepAlive); return; }
-    window.speechSynthesis.pause(); window.speechSynthesis.resume();
-  }, 10000);
-}
-
-function stopSpeaking() {
-  if (Platform.OS === 'web' && 'speechSynthesis' in window) window.speechSynthesis.cancel();
-}
-
-// ─── STT hook ────────────────────────────────────────────────────────────────
+// ─── Web-only STT ─────────────────────────────────────────────────────────────
 function useSpeechRecognition() {
   const recRef = useRef<any>(null);
   const supported = Platform.OS === 'web' && typeof window !== 'undefined' &&
@@ -51,10 +26,10 @@ function useSpeechRecognition() {
     try { recRef.current?.abort(); } catch {}
     const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     const rec = new SR();
-    rec.lang = 'en-US'; rec.continuous = false; rec.interimResults = false; rec.maxAlternatives = 1;
+    rec.lang = 'en-US'; rec.continuous = false; rec.interimResults = false;
     let got = false;
     rec.onresult = (e: any) => { const t = e.results[0]?.[0]?.transcript?.trim() ?? ''; if (t) { got = true; onResult(t); } };
-    rec.onend = () => onEnd(got);
+    rec.onend   = () => onEnd(got);
     rec.onerror = (e: any) => { if (e.error !== 'no-speech') console.warn('STT:', e.error); onEnd(got); };
     rec.start();
     recRef.current = rec;
@@ -66,86 +41,246 @@ function useSpeechRecognition() {
   return { supported, start, stop, abort };
 }
 
-// ─── Voice Orb (big animated circle when listening/speaking) ─────────────────
-function VoiceOrb({ state }: { state: 'idle' | 'listening' | 'thinking' | 'speaking' }) {
-  const scale1 = useRef(new Animated.Value(1)).current;
-  const scale2 = useRef(new Animated.Value(1)).current;
-  const scale3 = useRef(new Animated.Value(1)).current;
+// ─── TTS (cross-platform via expo-speech, web falls back to browser) ──────────
+async function speakText(text: string, onDone?: () => void) {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utt = new window.SpeechSynthesisUtterance(text);
+    utt.lang = 'en-US'; utt.rate = 1.05; utt.pitch = 1.1;
+    const voices = window.speechSynthesis.getVoices();
+    const female = voices.find((v: any) => /female|zira|samantha|karen|google uk english female/i.test(v.name));
+    if (female) utt.voice = female;
+    utt.onend   = () => onDone?.();
+    utt.onerror = () => onDone?.();
+    window.speechSynthesis.speak(utt);
+  } else {
+    try {
+      await Speech.stop();
+      Speech.speak(text, {
+        language: 'en-US', pitch: 1.1, rate: 1.0,
+        onDone: onDone,
+        onError: onDone,
+      });
+    } catch { onDone?.(); }
+  }
+}
+
+async function stopSpeaking() {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  } else {
+    try { await Speech.stop(); } catch {}
+  }
+}
+
+// ─── ChatGPT-style orb ───────────────────────────────────────────────────────
+const ORB_STATES = {
+  idle:      { color: '#94a3b8', speed: 2400, intensity: 0.08 },
+  listening: { color: '#22c55e', speed: 700,  intensity: 0.55 },
+  thinking:  { color: '#38bdf8', speed: 1100, intensity: 0.35 },
+  speaking:  { color: '#ffffff', speed: 500,  intensity: 0.65 },
+};
+
+function VoiceOrb({ state }: { state: keyof typeof ORB_STATES }) {
+  const rings = useRef(
+    [0, 1, 2, 3].map(() => ({
+      scale:   new Animated.Value(1),
+      opacity: new Animated.Value(0),
+    }))
+  ).current;
+  const coreScale = useRef(new Animated.Value(1)).current;
+  const coreGlow  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const animations = [scale1, scale2, scale3].map((s, i) =>
+    const cfg = ORB_STATES[state];
+
+    // Stop previous
+    rings.forEach(r => { r.scale.stopAnimation(); r.opacity.stopAnimation(); });
+    coreScale.stopAnimation(); coreGlow.stopAnimation();
+
+    if (state === 'idle') {
+      rings.forEach(r => { r.scale.setValue(1); r.opacity.setValue(0); });
       Animated.loop(Animated.sequence([
-        Animated.delay(i * 200),
-        Animated.timing(s, { toValue: state === 'idle' ? 1 : 1.4 + i * 0.15, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(s, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(coreScale, { toValue: 1.04, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(coreScale, { toValue: 1,    duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])).start();
+      return;
+    }
+
+    // Animate each ring with stagger
+    const anims = rings.map((r, i) =>
+      Animated.loop(Animated.sequence([
+        Animated.delay(i * (cfg.speed / 4)),
+        Animated.parallel([
+          Animated.timing(r.scale,   { toValue: 1 + 0.35 + i * 0.18, duration: cfg.speed * 0.7, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(r.opacity, { toValue: cfg.intensity - i * 0.06, duration: cfg.speed * 0.25, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        ]),
+        Animated.timing(r.opacity,   { toValue: 0, duration: cfg.speed * 0.45, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+        Animated.timing(r.scale,     { toValue: 1, duration: 0, useNativeDriver: true }),
       ]))
     );
-    if (state !== 'idle') { animations.forEach(a => a.start()); return () => animations.forEach(a => a.stop()); }
-    else { [scale1, scale2, scale3].forEach(s => s.setValue(1)); }
+
+    // Core pulse
+    const corePulse = Animated.loop(Animated.sequence([
+      Animated.timing(coreScale, { toValue: 1.08, duration: cfg.speed * 0.5, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      Animated.timing(coreScale, { toValue: 1,    duration: cfg.speed * 0.5, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+    ]));
+    const glowPulse = Animated.loop(Animated.sequence([
+      Animated.timing(coreGlow, { toValue: 1, duration: cfg.speed * 0.5, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      Animated.timing(coreGlow, { toValue: 0, duration: cfg.speed * 0.5, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+    ]));
+
+    anims.forEach(a => a.start());
+    corePulse.start();
+    glowPulse.start();
+
+    return () => { anims.forEach(a => a.stop()); corePulse.stop(); glowPulse.stop(); };
   }, [state]);
 
-  const baseColor = state === 'listening' ? '#22c55e'
-    : state === 'thinking' ? '#38bdf8'
-    : state === 'speaking' ? '#f59e0b'
-    : '#1e293b';
-
-  const icon = state === 'listening' ? '🎙️'
-    : state === 'thinking' ? '⏳'
-    : state === 'speaking' ? '🔊'
-    : '🧠';
+  const cfg   = ORB_STATES[state];
+  const color = cfg.color;
 
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', width: 160, height: 160 }}>
-      {/* Outer rings */}
-      {[scale3, scale2].map((s, i) => (
+    <View style={{ width: 220, height: 220, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Expanding rings */}
+      {rings.map((r, i) => (
         <Animated.View key={i} style={{
           position: 'absolute',
-          width: 140 - i * 20, height: 140 - i * 20,
-          borderRadius: 70 - i * 10,
-          backgroundColor: baseColor + (i === 0 ? '10' : '18'),
-          transform: [{ scale: s }],
+          width: 100 + i * 8, height: 100 + i * 8,
+          borderRadius: 60 + i * 4,
+          borderWidth: 1.5,
+          borderColor: color,
+          opacity: r.opacity,
+          transform: [{ scale: r.scale }],
         }} />
       ))}
-      {/* Core */}
+
+      {/* Glow halo */}
       <Animated.View style={{
-        width: 80, height: 80, borderRadius: 40,
-        backgroundColor: baseColor + '30',
-        borderWidth: 2, borderColor: baseColor + '80',
+        position: 'absolute',
+        width: 110, height: 110, borderRadius: 55,
+        backgroundColor: color,
+        opacity: Animated.multiply(coreGlow, new Animated.Value(0.12)),
+        transform: [{ scale: coreScale }],
+      }} />
+
+      {/* Core orb */}
+      <Animated.View style={{
+        width: 88, height: 88, borderRadius: 44,
+        backgroundColor: '#0f172a',
+        borderWidth: 2,
+        borderColor: color,
         alignItems: 'center', justifyContent: 'center',
-        transform: [{ scale: scale1 }],
+        transform: [{ scale: coreScale }],
+        shadowColor: color,
+        shadowOpacity: 0.6,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 12,
       }}>
-        <Text style={{ fontSize: 28 }}>{icon}</Text>
+        {/* Inner gradient layers */}
+        <View style={{ position: 'absolute', width: 70, height: 70, borderRadius: 35, backgroundColor: color, opacity: 0.06 }} />
+        <View style={{ position: 'absolute', width: 50, height: 50, borderRadius: 25, backgroundColor: color, opacity: 0.10 }} />
+        <Text style={{ fontSize: 30 }}>
+          {state === 'listening' ? '🎙️' : state === 'thinking' ? '🧠' : state === 'speaking' ? '🔊' : '🐟'}
+        </Text>
       </Animated.View>
     </View>
   );
 }
 
-// ─── Waveform bars ───────────────────────────────────────────────────────────
-function Waveform({ active }: { active: boolean }) {
-  const anims = useRef([0,1,2,3,4,5,6].map(() => new Animated.Value(3))).current;
+// ─── Typing indicator ─────────────────────────────────────────────────────────
+function TypingDots() {
+  const dots = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
+
   useEffect(() => {
-    if (!active) { anims.forEach(a => a.setValue(3)); return; }
-    const loops = anims.map((a, i) =>
+    const anims = dots.map((d, i) =>
       Animated.loop(Animated.sequence([
-        Animated.delay(i * 70),
-        Animated.timing(a, { toValue: 18 + (i % 3) * 5, duration: 300 + i * 30, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-        Animated.timing(a, { toValue: 3, duration: 300 + i * 30, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.delay(i * 160),
+        Animated.timing(d, { toValue: -7, duration: 300, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(d, { toValue:  0, duration: 300, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.delay(400),
       ]))
     );
-    loops.forEach(l => l.start());
-    return () => loops.forEach(l => l.stop());
-  }, [active]);
+    anims.forEach(a => a.start());
+    return () => anims.forEach(a => a.stop());
+  }, []);
+
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, height: 24, marginLeft: 8 }}>
-      {anims.map((a, i) => (
-        <Animated.View key={i} style={{ width: 3, height: a, borderRadius: 2, backgroundColor: '#22c55e', opacity: 0.8 }} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 }}>
+      {dots.map((d, i) => (
+        <Animated.View key={i} style={{
+          width: 7, height: 7, borderRadius: 3.5,
+          backgroundColor: '#64748b',
+          transform: [{ translateY: d }],
+        }} />
       ))}
     </View>
   );
 }
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
+// ─── Message bubble ───────────────────────────────────────────────────────────
+function Bubble({ msg }: { msg: Msg }) {
+  const isUser = msg.role === 'user';
+  return (
+    <View style={{
+      flexDirection: 'row',
+      justifyContent: isUser ? 'flex-end' : 'flex-start',
+      alignItems: 'flex-end',
+      marginBottom: 10,
+      paddingHorizontal: 4,
+    }}>
+      {!isUser && (
+        <View style={{
+          width: 30, height: 30, borderRadius: 15,
+          backgroundColor: '#0891b2',
+          alignItems: 'center', justifyContent: 'center',
+          marginRight: 8, marginBottom: 2, flexShrink: 0,
+        }}>
+          <Text style={{ fontSize: 14 }}>🐟</Text>
+        </View>
+      )}
+
+      <View style={{ maxWidth: '75%' }}>
+        <View style={{
+          backgroundColor: isUser ? '#1d4ed8' : '#0f172a',
+          borderRadius: 20,
+          borderTopRightRadius: isUser ? 5 : 20,
+          borderTopLeftRadius:  isUser ? 20 : 5,
+          paddingHorizontal: 15, paddingVertical: 11,
+          borderWidth: 1,
+          borderColor: isUser ? '#2563eb40' : 'rgba(255,255,255,0.07)',
+        }}>
+          <Text selectable style={{ fontSize: 15, color: '#e2e8f0', lineHeight: 22 }}>
+            {msg.text}
+          </Text>
+        </View>
+        <Text style={{
+          fontSize: 10, color: '#334155', marginTop: 3,
+          textAlign: isUser ? 'right' : 'left',
+          marginHorizontal: 4,
+        }}>
+          {msg.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </View>
+
+      {isUser && (
+        <View style={{
+          width: 30, height: 30, borderRadius: 15,
+          backgroundColor: '#1e3a5f',
+          alignItems: 'center', justifyContent: 'center',
+          marginLeft: 8, marginBottom: 2, flexShrink: 0,
+        }}>
+          <Text style={{ fontSize: 14 }}>👤</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function FishHealthScreen() {
+  const insets  = useSafeAreaInsets();
   const api     = useApi();
   const sr      = useSpeechRecognition();
   const sensors = useSensors();
@@ -158,19 +293,19 @@ export default function FishHealthScreen() {
   const [loading, setLoading]   = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [fishCount, setFishCount] = useState(0);
-  const [mode, setMode]         = useState<'chat' | 'voice'>('chat');
   const [online, setOnline]     = useState<boolean | null>(null);
+  const [ttsEnabled, setTts]    = useState(true);
 
-  const scrollRef     = useRef<ScrollView>(null);
-  const callRef       = useRef(callActive);
-  const loadingRef    = useRef(loading);
-  callRef.current     = callActive;
-  loadingRef.current  = loading;
+  const scrollRef    = useRef<ScrollView>(null);
+  const callRef      = useRef(callActive);
+  const loadingRef   = useRef(loading);
+  callRef.current    = callActive;
+  loadingRef.current = loading;
 
-  const orbState: 'idle' | 'listening' | 'thinking' | 'speaking' =
+  const orbState: keyof typeof ORB_STATES =
     listening ? 'listening' : loading ? 'thinking' : speaking ? 'speaking' : 'idle';
 
-  // ── Online/offline ping ──
+  // Backend ping
   useEffect(() => {
     const check = () => api.getLatest().then(() => setOnline(true)).catch(() => setOnline(false));
     check();
@@ -178,16 +313,15 @@ export default function FishHealthScreen() {
     return () => clearInterval(id);
   }, []);
 
+  // Greeting + fish count
   useEffect(() => {
-    // Greeting
     setMsgs([{
       role: 'veronica',
-      text: "Hi! I'm Veronica, your AI aquarium advisor. I have access to your live tank data. Ask me anything about your fish or water quality.",
+      text: "Hi! I'm Veronica, your AI aquarium advisor. I have live access to your tank. Ask me anything — water quality, fish health, feeding advice.",
       ts: new Date(),
     }]);
     api.getFishCount().then(r => setFishCount(r.data?.count ?? 0)).catch(() => null);
-    const u = on('fish:count', (d: any) => setFishCount(d?.count ?? 0));
-    return () => u();
+    return on('fish:count', (d: any) => setFishCount(d?.count ?? 0));
   }, []);
 
   const scrollBottom = () =>
@@ -197,31 +331,33 @@ export default function FishHealthScreen() {
     if (!rawText.trim() || loadingRef.current) return;
     const text = rawText.trim();
     setMsgs(p => [...p, { role: 'user', text, ts: new Date() }]);
-    setLoading(true); scrollBottom();
+    setLoading(true);
+    scrollBottom();
 
-    // Inject live context so Veronica can answer "is my fish ok?" accurately
     const ctx = sensorContext(sensors, fishCount);
-    const fullQuery = `[Live tank data — ${ctx}] User: ${text}`;
-
     let reply = '';
     try {
-      const r = await api.voiceQuery(fullQuery);
+      const r = await api.voiceQuery(`[Live tank: ${ctx}] User: ${text}`);
       reply = String(r?.data?.response ?? r?.data ?? 'Connection error.');
     } catch {
-      reply = 'Could not reach Veronica. Make sure the backend and Ollama are running.';
+      reply = 'Could not reach Veronica. Make sure backend and Ollama are running.';
     }
 
     setMsgs(p => [...p, { role: 'veronica', text: reply, ts: new Date() }]);
-    setLoading(false); scrollBottom();
+    setLoading(false);
+    scrollBottom();
 
-    if (callRef.current) {
+    if (ttsEnabled && (callRef.current || Platform.OS !== 'web')) {
       setSpeaking(true);
-      speak(reply, () => { setSpeaking(false); if (callRef.current) startListening(); });
+      await speakText(reply, () => {
+        setSpeaking(false);
+        if (callRef.current && sr.supported) startListening();
+      });
     }
-  }, [sensors, fishCount]);
+  }, [sensors, fishCount, ttsEnabled]);
 
   const startListening = useCallback(() => {
-    if (!callRef.current) return;
+    if (!callRef.current || !sr.supported) return;
     setListen(true);
     const ok = sr.start(
       (t) => { setListen(false); stopSpeaking(); setSpeaking(false); askVeronica(t); },
@@ -231,10 +367,7 @@ export default function FishHealthScreen() {
           setTimeout(() => { if (callRef.current) startListening(); }, 500);
       },
     );
-    if (!ok) {
-      setListen(false); setCall(false);
-      setMsgs(p => [...p, { role: 'veronica', text: 'Voice not supported. Use Chrome or Edge.', ts: new Date() }]);
-    }
+    if (!ok) setListen(false);
   }, [sr, askVeronica]);
 
   const toggleCall = useCallback(() => {
@@ -242,15 +375,9 @@ export default function FishHealthScreen() {
       sr.abort(); stopSpeaking();
       setCall(false); setListen(false); setSpeaking(false);
     } else {
-      setCall(true); setMode('voice');
-      setTimeout(() => startListening(), 200);
+      setCall(true);
+      if (sr.supported) setTimeout(() => startListening(), 200);
     }
-  }, [callActive, sr, startListening]);
-
-  const forceListen = useCallback(() => {
-    if (!callActive) return;
-    stopSpeaking(); setSpeaking(false); sr.abort(); setListen(false);
-    setTimeout(() => startListening(), 150);
   }, [callActive, sr, startListening]);
 
   const sendText = () => {
@@ -260,33 +387,37 @@ export default function FishHealthScreen() {
     askVeronica(t);
   };
 
-  // ── Status pill ──
-  const statusLabel = listening ? 'Listening...' : loading ? 'Thinking...' : speaking ? 'Speaking...' : callActive ? 'Ready' : 'Tap 📞 to start voice call';
-  const statusColor = listening ? '#22c55e' : loading ? '#38bdf8' : speaking ? '#f59e0b' : callActive ? '#34d399' : '#64748b';
+  const statusLabel = listening ? 'Listening...'
+    : loading   ? 'Thinking...'
+    : speaking  ? 'Speaking...'
+    : callActive ? (Platform.OS === 'web' ? 'Ready — speak or type' : 'Speak via text or tap 🔊')
+    : 'Tap 📞 for voice responses';
+
+  const statusColor = listening ? '#22c55e' : loading ? '#38bdf8' : speaking ? '#f8fafc' : callActive ? '#34d399' : '#475569';
 
   return (
     <View style={{ flex: 1, backgroundColor: '#020617' }}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor="#020617" />
 
       {/* ── Top bar ── */}
       <View style={{
-        flexDirection: 'row', alignItems: 'center', gap: 12,
-        paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12,
+        paddingTop: insets.top + 10,
+        paddingBottom: 14, paddingHorizontal: 18,
         borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
         backgroundColor: '#020617',
+        flexDirection: 'row', alignItems: 'center', gap: 12,
       }}>
         {/* Avatar */}
-        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#0891b2', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 18 }}>🧠</Text>
+        <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#0891b2', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 18 }}>🐟</Text>
         </View>
 
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={{ fontSize: 15, fontWeight: '800', color: '#f1f5f9' }}>Veronica AI</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#f1f5f9' }}>Veronica AI</Text>
             <View style={{
-              flexDirection: 'row', alignItems: 'center', gap: 3,
-              paddingHorizontal: 6, paddingVertical: 2,
-              borderRadius: 8,
+              flexDirection: 'row', alignItems: 'center', gap: 4,
+              paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8,
               backgroundColor: online === true ? '#16a34a18' : online === false ? '#dc262618' : '#33333318',
             }}>
               <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: online === true ? '#22c55e' : online === false ? '#ef4444' : '#64748b' }} />
@@ -295,125 +426,106 @@ export default function FishHealthScreen() {
               </Text>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
-            {listening && <Waveform active />}
-            {!listening && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor }} />}
+          {/* Status line */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+            {(listening || speaking) && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                {[0, 1, 2, 3].map(i => (
+                  <View key={i} style={{ width: 2.5, height: 8 + i * 3, borderRadius: 2, backgroundColor: statusColor, opacity: 0.7 + i * 0.07 }} />
+                ))}
+              </View>
+            )}
+            {!listening && !speaking && (
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor }} />
+            )}
             <Text style={{ fontSize: 11, color: statusColor, fontWeight: '600' }}>{statusLabel}</Text>
           </View>
         </View>
 
-        {/* Mode toggle */}
-        <View style={{
-          flexDirection: 'row', backgroundColor: '#0f172a',
-          borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', overflow: 'hidden',
-        }}>
-          {(['chat', 'voice'] as const).map(m => (
-            <TouchableOpacity key={m} onPress={() => setMode(m)} activeOpacity={0.8}
-              style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: mode === m ? '#1e3a5f' : 'transparent' }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: mode === m ? '#38bdf8' : '#475569' }}>
-                {m === 'chat' ? '💬' : '🎙️'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* TTS toggle */}
+        <Pressable onPress={() => setTts(v => !v)}
+          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: ttsEnabled ? '#0891b218' : 'rgba(255,255,255,0.04)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: ttsEnabled ? '#0891b240' : 'rgba(255,255,255,0.08)' }}>
+          <Text style={{ fontSize: 16 }}>{ttsEnabled ? '🔊' : '🔇'}</Text>
+        </Pressable>
 
         {/* Call button */}
-        <TouchableOpacity onPress={toggleCall} activeOpacity={0.8} style={{
-          width: 40, height: 40, borderRadius: 20,
+        <Pressable onPress={toggleCall} style={{
+          width: 42, height: 42, borderRadius: 21,
           backgroundColor: callActive ? '#dc2626' : '#16a34a',
           alignItems: 'center', justifyContent: 'center',
+          shadowColor: callActive ? '#dc2626' : '#16a34a',
+          shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+          elevation: 6,
         }}>
           <Text style={{ fontSize: 18 }}>{callActive ? '📵' : '📞'}</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
-      {/* ── Voice orb (shown in voice mode or when call active) ── */}
-      {(mode === 'voice' || callActive) && (
-        <View style={{ alignItems: 'center', paddingVertical: 24, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
+      {/* ── Orb (voice mode) ── */}
+      {callActive && (
+        <View style={{
+          alignItems: 'center', paddingVertical: 24,
+          borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+        }}>
           <VoiceOrb state={orbState} />
-          <Text style={{ fontSize: 13, color: '#64748b', marginTop: 12 }}>
-            {callActive ? (listening ? 'Speak now' : speaking ? 'Veronica is speaking...' : 'Say something') : 'Tap 📞 to start'}
+          <Text style={{ fontSize: 13, color: statusColor, fontWeight: '600', marginTop: 4 }}>
+            {listening ? 'Speak now...' : speaking ? 'Veronica is speaking...' : loading ? 'Thinking...' : Platform.OS === 'web' ? 'Listening' : 'Type below or wait for response'}
           </Text>
-          {callActive && (
-            <TouchableOpacity onPress={forceListen} activeOpacity={0.8} style={{
-              marginTop: 12, paddingHorizontal: 16, paddingVertical: 7,
-              borderRadius: 20, borderWidth: 1,
-              borderColor: listening ? '#22c55e55' : 'rgba(255,255,255,0.1)',
-              backgroundColor: listening ? '#22c55e12' : 'rgba(255,255,255,0.04)',
-            }}>
-              <Text style={{ fontSize: 12, color: listening ? '#22c55e' : '#64748b', fontWeight: '600' }}>
-                {listening ? '🎙️ Listening' : '🎙️ Tap to speak'}
-              </Text>
-            </TouchableOpacity>
+          {Platform.OS !== 'web' && !sr.supported && (
+            <Text style={{ fontSize: 11, color: '#475569', marginTop: 6, textAlign: 'center', paddingHorizontal: 32 }}>
+              Voice input not available — type your question below. TTS will read responses aloud.
+            </Text>
           )}
         </View>
       )}
 
-      {/* ── Chat messages ── */}
+      {/* ── Messages ── */}
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, gap: 12 }}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 16, paddingBottom: 8 }}
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {msgs.map((m, i) => (
-          <View key={i} style={{
-            flexDirection: 'row',
-            justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
-            gap: 8, alignItems: 'flex-end',
-          }}>
-            {m.role === 'veronica' && (
-              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#0891b2', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Text style={{ fontSize: 13 }}>🧠</Text>
-              </View>
-            )}
-            <View style={{
-              maxWidth: '80%',
-              backgroundColor: m.role === 'user' ? '#1d4ed8' : '#0f172a',
-              borderRadius: 20,
-              borderTopRightRadius: m.role === 'user' ? 4 : 20,
-              borderTopLeftRadius: m.role === 'veronica' ? 4 : 20,
-              paddingHorizontal: 16, paddingVertical: 12,
-              borderWidth: 1,
-              borderColor: m.role === 'user' ? '#2563eb55' : 'rgba(255,255,255,0.07)',
-            }}>
-              <Text selectable style={{ fontSize: 14, color: '#e2e8f0', lineHeight: 20 }}>{m.text}</Text>
-              <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 5, textAlign: m.role === 'user' ? 'right' : 'left' }}>
-                {m.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </View>
-          </View>
-        ))}
+        {msgs.map((m, i) => <Bubble key={i} msg={m} />)}
 
         {loading && (
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
-            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#0891b2', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 13 }}>🧠</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginBottom: 10, paddingHorizontal: 4 }}>
+            <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#0891b2', alignItems: 'center', justifyContent: 'center', marginRight: 8, marginBottom: 2 }}>
+              <Text style={{ fontSize: 14 }}>🐟</Text>
             </View>
-            <View style={{ backgroundColor: '#0f172a', borderRadius: 20, borderTopLeftRadius: 4, paddingHorizontal: 18, paddingVertical: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' }}>
-              <ActivityIndicator size="small" color="#22d3ee" />
+            <View style={{ backgroundColor: '#0f172a', borderRadius: 20, borderTopLeftRadius: 5, paddingHorizontal: 16, paddingVertical: 13, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' }}>
+              <TypingDots />
             </View>
           </View>
         )}
       </ScrollView>
 
       {/* ── Input bar ── */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
         <View style={{
-          flexDirection: 'row', gap: 10, padding: 14,
+          flexDirection: 'row', alignItems: 'flex-end', gap: 10,
+          paddingHorizontal: 14, paddingTop: 10,
+          paddingBottom: insets.bottom > 0 ? insets.bottom + 4 : 16,
           borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
           backgroundColor: '#020617',
         }}>
           <TextInput
             style={{
-              flex: 1, backgroundColor: '#0f172a',
-              borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-              borderRadius: 24, paddingHorizontal: 18, paddingVertical: 12,
-              fontSize: 14, color: '#e2e8f0',
+              flex: 1, minHeight: 46, maxHeight: 120,
+              backgroundColor: '#0f172a',
+              borderWidth: 1,
+              borderColor: input ? 'rgba(56,189,248,0.3)' : 'rgba(255,255,255,0.08)',
+              borderRadius: 24, paddingHorizontal: 18,
+              paddingTop: Platform.OS === 'ios' ? 13 : 11,
+              paddingBottom: Platform.OS === 'ios' ? 13 : 11,
+              fontSize: 15, color: '#e2e8f0', lineHeight: 22,
             }}
-            placeholder="Ask about your tank..."
+            placeholder="Message Veronica..."
             placeholderTextColor="#334155"
             value={input}
             onChangeText={setInput}
@@ -422,19 +534,29 @@ export default function FishHealthScreen() {
             blurOnSubmit={false}
             multiline
           />
-          <TouchableOpacity
+
+          <Pressable
             onPress={sendText}
             disabled={!input.trim() || loading}
-            activeOpacity={0.8}
-            style={{
-              width: 48, height: 48, borderRadius: 24,
+            android_ripple={{ color: 'rgba(255,255,255,0.15)', radius: 22, borderless: true }}
+            style={({ pressed }) => ({
+              width: 46, height: 46, borderRadius: 23,
               backgroundColor: input.trim() && !loading ? '#0891b2' : '#0f172a',
               alignItems: 'center', justifyContent: 'center',
-              borderWidth: 1, borderColor: input.trim() && !loading ? '#0891b2' : 'rgba(255,255,255,0.06)',
-            }}
+              borderWidth: 1,
+              borderColor: input.trim() && !loading ? '#0891b240' : 'rgba(255,255,255,0.06)',
+              opacity: pressed ? 0.75 : 1,
+              shadowColor: '#0891b2',
+              shadowOpacity: input.trim() && !loading ? 0.4 : 0,
+              shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+              elevation: input.trim() && !loading ? 4 : 0,
+            })}
           >
-            <Text style={{ fontSize: 18 }}>{loading ? '⏳' : '➤'}</Text>
-          </TouchableOpacity>
+            {loading
+              ? <ActivityIndicator size="small" color="#64748b" />
+              : <Text style={{ fontSize: 18, transform: [{ rotate: '-30deg' }] }}>➤</Text>
+            }
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </View>

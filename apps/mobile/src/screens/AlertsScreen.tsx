@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
 
-interface Alert { alertId: string; message: string; severity: string; createdAt?: string; }
+interface Alert { alertId: number; message: string; severity: string; createdAt?: string; }
 
 const SEV: Record<string, { color: string; icon: string }> = {
   CRITICAL: { color: '#ef4444', icon: '\uD83D\uDED1' }, EMERGENCY: { color: '#dc2626', icon: '\u26A0\uFE0F' },
@@ -11,6 +12,7 @@ const SEV: Record<string, { color: string; icon: string }> = {
 };
 
 export default function AlertsScreen() {
+  const insets = useSafeAreaInsets();
   const { on } = useSocket();
   const api = useApi();
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -27,7 +29,7 @@ export default function AlertsScreen() {
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await loadAlerts(); setRefreshing(false); }, []);
 
-  const handleAck = (id: string) => {
+  const handleAck = (id: number) => {
     api.acknowledgeAlert(id).catch(() => null);
     setAlerts(p => p.filter(a => a.alertId !== id));
   };
@@ -36,7 +38,7 @@ export default function AlertsScreen() {
     <View style={{ flex: 1, backgroundColor: '#020617' }}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 20, paddingTop: 16 }}
+        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#38bdf8" colors={['#38bdf8']} />}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

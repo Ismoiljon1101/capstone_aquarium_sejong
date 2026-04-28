@@ -10,6 +10,11 @@ export class SensorsController {
     return await this.sensorsService.getLatest();
   }
 
+  @Get('history')
+  async getAllHistory(@Query('range') range: string) {
+    return await this.sensorsService.getAllHistory(range || '24h');
+  }
+
   @Get(':id/readings')
   async getHistory(
     @Param('id', ParseIntPipe) id: number,
