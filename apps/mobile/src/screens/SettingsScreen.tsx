@@ -6,7 +6,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   TextInput, Switch, Platform, ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSocket } from '../hooks/useSocket';
 
 // ── Persistent storage (localStorage on web, fallback to memory) ──────────────
@@ -140,6 +142,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const { connected } = useSocket();
 
   const [apiUrl, setApiUrl]     = useState(store.get(SETTINGS_KEYS.API_URL, 'http://localhost:3000'));
@@ -193,9 +196,12 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#020617' }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: '#020617' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <ScrollView
-        contentContainerStyle={{ padding: 18, paddingTop: 16, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 18, paddingTop: insets.top + 16, paddingBottom: Math.max(insets.bottom, 40) }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -265,6 +271,6 @@ export default function SettingsScreen() {
         </Section>
 
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

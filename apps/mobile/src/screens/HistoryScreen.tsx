@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApi } from '../hooks/useApi';
 
 type Range = '24h' | '1w' | '1m';
@@ -13,6 +14,7 @@ function statusColor(s: string) {
 }
 
 export default function HistoryScreen() {
+  const insets = useSafeAreaInsets();
   const api = useApi();
   const [range, setRange] = useState<Range>('24h');
   const [readings, setReadings] = useState<Reading[]>([]);
@@ -55,7 +57,7 @@ export default function HistoryScreen() {
     <View style={{ flex: 1, backgroundColor: '#020617' }}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: Math.max(insets.bottom, 40) }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#38bdf8" colors={['#38bdf8']} />}
       >
         <Text style={{ fontSize: 28, fontWeight: '900', color: '#f1f5f9', letterSpacing: -1, marginBottom: 16 }}>History</Text>

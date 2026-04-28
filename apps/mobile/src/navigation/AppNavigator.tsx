@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import AlertsScreen    from '../screens/AlertsScreen';
@@ -30,6 +31,13 @@ function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
 }
 
 export default function AppNavigator() {
+  const insets = useSafeAreaInsets();
+  const tabBar = {
+    ...styles.bar,
+    height: Platform.OS === 'web' ? 68 : 56 + insets.bottom,
+    paddingBottom: Platform.OS === 'web' ? 10 : insets.bottom + 4,
+  };
+
   return (
     <NavigationContainer>
       <Tab.Navigator
@@ -37,7 +45,7 @@ export default function AppNavigator() {
           const tab = TABS.find(t => t.name === route.name);
           return {
             headerShown: false,
-            tabBarStyle: styles.bar,
+            tabBarStyle: tabBar,
             tabBarActiveTintColor: '#38bdf8',
             tabBarInactiveTintColor: '#475569',
             tabBarLabelStyle: styles.label,
@@ -58,9 +66,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#080f1e',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.05)',
-    height: Platform.OS === 'web' ? 68 : 82,
     paddingTop: 6,
-    paddingBottom: Platform.OS === 'web' ? 10 : 26,
     elevation: 0,
     shadowOpacity: 0,
   },

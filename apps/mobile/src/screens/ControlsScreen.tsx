@@ -9,8 +9,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, ActivityIndicator,
-  TextInput, Switch, Alert,
+  TextInput, Switch, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
 
@@ -158,6 +159,7 @@ function FeedRow({ s, onUpdate, onDelete }: {
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function ControlsScreen() {
+  const insets = useSafeAreaInsets();
   const { connected, on } = useSocket();
   const api = useApi();
 
@@ -267,9 +269,12 @@ export default function ControlsScreen() {
     : false;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#020617' }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: '#020617' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <ScrollView contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: 60 }}
+        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: Math.max(insets.bottom, 60) }}
         keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
         {/* ── Header ── */}
@@ -478,6 +483,6 @@ export default function ControlsScreen() {
         )}
 
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

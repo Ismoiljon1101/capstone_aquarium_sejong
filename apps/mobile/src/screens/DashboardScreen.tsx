@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
 import { useSensors } from '../hooks/useSensors';
@@ -70,6 +71,7 @@ function AlertChip({ alert, onAck }: { alert: Alert; onAck: (id: number) => void
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
+  const insets = useSafeAreaInsets();
   const { connected, on } = useSocket();
   const api = useApi();
   const sensors = useSensors();
@@ -132,7 +134,7 @@ export default function DashboardScreen() {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 18, paddingTop: 14, paddingBottom: 32 }}
+        contentContainerStyle={{ padding: 18, paddingTop: insets.top + 14, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#38bdf8" colors={['#38bdf8']} />}
       >
         {/* ── Header ── */}
