@@ -6,10 +6,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useApi } from '../hooks/useApi';
 import { useSensors, sensorContext } from '../hooks/useSensors';
 import { useSocket } from '../hooks/useSocket';
 import AppHeader from '../components/AppHeader';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 declare const window: any;
 
@@ -182,9 +185,16 @@ function VoiceOrb({ state }: { state: keyof typeof ORB_STATES }) {
         {/* Inner gradient layers */}
         <View style={{ position: 'absolute', width: 70, height: 70, borderRadius: 35, backgroundColor: color, opacity: 0.06 }} />
         <View style={{ position: 'absolute', width: 50, height: 50, borderRadius: 25, backgroundColor: color, opacity: 0.10 }} />
-        <Text style={{ fontSize: 30 }}>
-          {state === 'listening' ? '🎙️' : state === 'thinking' ? '🧠' : state === 'speaking' ? '🔊' : '🐟'}
-        </Text>
+        <Ionicons
+          name={
+            state === 'listening' ? 'mic' :
+            state === 'thinking'  ? 'sparkles' :
+            state === 'speaking'  ? 'volume-high' :
+            'fish'
+          }
+          size={32}
+          color={color}
+        />
       </Animated.View>
     </View>
   );
@@ -233,12 +243,12 @@ function Bubble({ msg }: { msg: Msg }) {
     }}>
       {!isUser && (
         <View style={{
-          width: 30, height: 30, borderRadius: 15,
+          width: 32, height: 32, borderRadius: 16,
           backgroundColor: '#0891b2',
           alignItems: 'center', justifyContent: 'center',
           marginRight: 8, marginBottom: 2, flexShrink: 0,
         }}>
-          <Text style={{ fontSize: 14 }}>🐟</Text>
+          <Ionicons name="fish" size={16} color="#fff" />
         </View>
       )}
 
@@ -257,7 +267,7 @@ function Bubble({ msg }: { msg: Msg }) {
           </Text>
         </View>
         <Text style={{
-          fontSize: 10, color: '#334155', marginTop: 3,
+          fontSize: 11, color: '#64748b', marginTop: 4,
           textAlign: isUser ? 'right' : 'left',
           marginHorizontal: 4,
         }}>
@@ -267,12 +277,12 @@ function Bubble({ msg }: { msg: Msg }) {
 
       {isUser && (
         <View style={{
-          width: 30, height: 30, borderRadius: 15,
+          width: 32, height: 32, borderRadius: 16,
           backgroundColor: '#1e3a5f',
           alignItems: 'center', justifyContent: 'center',
           marginLeft: 8, marginBottom: 2, flexShrink: 0,
         }}>
-          <Text style={{ fontSize: 14 }}>👤</Text>
+          <Ionicons name="person" size={16} color="#cbd5e1" />
         </View>
       )}
     </View>
@@ -391,10 +401,10 @@ export default function FishHealthScreen() {
   const statusLabel = listening ? 'Listening...'
     : loading   ? 'Thinking...'
     : speaking  ? 'Speaking...'
-    : callActive ? (Platform.OS === 'web' ? 'Ready — speak or type' : 'Speak via text or tap 🔊')
-    : 'Tap 📞 for voice responses';
+    : callActive ? (Platform.OS === 'web' ? 'Ready — speak or type' : 'Voice mode active')
+    : 'Tap call to start voice';
 
-  const statusColor = listening ? '#22c55e' : loading ? '#38bdf8' : speaking ? '#f8fafc' : callActive ? '#34d399' : '#475569';
+  const statusColor = listening ? '#22c55e' : loading ? '#38bdf8' : speaking ? '#f8fafc' : callActive ? '#34d399' : '#94a3b8';
 
   return (
     <View style={{ flex: 1, backgroundColor: '#020617' }}>
@@ -410,26 +420,26 @@ export default function FishHealthScreen() {
         flexDirection: 'row', alignItems: 'center', gap: 12,
       }}>
         {/* Avatar */}
-        <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#0891b2', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 18 }}>🐟</Text>
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#0891b2', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="fish" size={20} color="#fff" />
         </View>
 
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: '#f1f5f9' }}>Veronica AI</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ fontSize: 17, fontWeight: '800', color: '#f1f5f9', letterSpacing: -0.2 }}>Veronica</Text>
             <View style={{
-              flexDirection: 'row', alignItems: 'center', gap: 4,
-              paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8,
-              backgroundColor: online === true ? '#16a34a18' : online === false ? '#dc262618' : '#33333318',
+              flexDirection: 'row', alignItems: 'center', gap: 5,
+              paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+              backgroundColor: online === true ? '#16a34a18' : online === false ? '#dc262618' : 'rgba(148,163,184,0.1)',
             }}>
-              <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: online === true ? '#22c55e' : online === false ? '#ef4444' : '#64748b' }} />
-              <Text style={{ fontSize: 9, fontWeight: '700', color: online === true ? '#22c55e' : online === false ? '#ef4444' : '#64748b', letterSpacing: 0.5 }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: online === true ? '#22c55e' : online === false ? '#ef4444' : '#94a3b8' }} />
+              <Text style={{ fontSize: 10, fontWeight: '800', color: online === true ? '#22c55e' : online === false ? '#ef4444' : '#94a3b8', letterSpacing: 0.5 }}>
                 {online === true ? 'ONLINE' : online === false ? 'OFFLINE' : '···'}
               </Text>
             </View>
           </View>
           {/* Status line */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
             {(listening || speaking) && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                 {[0, 1, 2, 3].map(i => (
@@ -440,26 +450,29 @@ export default function FishHealthScreen() {
             {!listening && !speaking && (
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor }} />
             )}
-            <Text style={{ fontSize: 11, color: statusColor, fontWeight: '600' }}>{statusLabel}</Text>
+            <Text style={{ fontSize: 12, color: statusColor, fontWeight: '600' }}>{statusLabel}</Text>
           </View>
         </View>
 
         {/* TTS toggle */}
         <Pressable onPress={() => setTts(v => !v)}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: ttsEnabled ? '#0891b218' : 'rgba(255,255,255,0.04)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: ttsEnabled ? '#0891b240' : 'rgba(255,255,255,0.08)' }}>
-          <Text style={{ fontSize: 16 }}>{ttsEnabled ? '🔊' : '🔇'}</Text>
+          accessibilityLabel={ttsEnabled ? 'Mute Veronica' : 'Unmute Veronica'} accessibilityRole="button"
+          style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: ttsEnabled ? '#0891b218' : 'rgba(255,255,255,0.04)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: ttsEnabled ? '#0891b240' : 'rgba(255,255,255,0.08)' }}>
+          <Ionicons name={ttsEnabled ? 'volume-high' : 'volume-mute'} size={18} color={ttsEnabled ? '#38bdf8' : '#94a3b8'} />
         </Pressable>
 
         {/* Call button */}
-        <Pressable onPress={toggleCall} style={{
-          width: 42, height: 42, borderRadius: 21,
-          backgroundColor: callActive ? '#dc2626' : '#16a34a',
-          alignItems: 'center', justifyContent: 'center',
-          shadowColor: callActive ? '#dc2626' : '#16a34a',
-          shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
-          elevation: 6,
-        }}>
-          <Text style={{ fontSize: 18 }}>{callActive ? '📵' : '📞'}</Text>
+        <Pressable onPress={toggleCall}
+          accessibilityLabel={callActive ? 'End voice call' : 'Start voice call'} accessibilityRole="button"
+          style={{
+            width: 44, height: 44, borderRadius: 22,
+            backgroundColor: callActive ? '#dc2626' : '#16a34a',
+            alignItems: 'center', justifyContent: 'center',
+            shadowColor: callActive ? '#dc2626' : '#16a34a',
+            shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+            elevation: 6,
+          }}>
+          <Ionicons name={callActive ? 'call' : 'call'} size={20} color="#fff" style={callActive ? { transform: [{ rotate: '135deg' }] } : undefined} />
         </Pressable>
       </View>
 
@@ -528,7 +541,7 @@ export default function FishHealthScreen() {
               fontSize: 15, color: '#e2e8f0', lineHeight: 22,
             }}
             placeholder="Message Veronica..."
-            placeholderTextColor="#334155"
+            placeholderTextColor="#64748b"
             value={input}
             onChangeText={setInput}
             onSubmitEditing={sendText}
@@ -555,8 +568,8 @@ export default function FishHealthScreen() {
             })}
           >
             {loading
-              ? <ActivityIndicator size="small" color="#64748b" />
-              : <Text style={{ fontSize: 18, transform: [{ rotate: '-30deg' }] }}>➤</Text>
+              ? <ActivityIndicator size="small" color="#94a3b8" />
+              : <Ionicons name="arrow-up" size={20} color={input.trim() ? '#fff' : '#475569'} />
             }
           </Pressable>
         </View>

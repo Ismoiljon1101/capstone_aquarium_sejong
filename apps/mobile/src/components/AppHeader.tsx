@@ -6,6 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
+import { useProfile, getInitials } from '../hooks/useProfile';
 
 interface Props {
   title: string;
@@ -19,6 +20,7 @@ export default function AppHeader({ title, subtitle, branded, back }: Props) {
   const nav = useNavigation<any>();
   const { connected, on } = useSocket();
   const api = useApi();
+  const { profile } = useProfile();
   const [alertCount, setAlertCount] = useState(0);
 
   useEffect(() => {
@@ -96,7 +98,7 @@ export default function AppHeader({ title, subtitle, branded, back }: Props) {
               accessibilityLabel="Settings and profile" accessibilityRole="button"
               style={styles.avatar}
             >
-              <Text style={styles.avatarText}>F</Text>
+              <Text style={styles.avatarText}>{getInitials(profile.name)}</Text>
             </TouchableOpacity>
           </View>
         )}
