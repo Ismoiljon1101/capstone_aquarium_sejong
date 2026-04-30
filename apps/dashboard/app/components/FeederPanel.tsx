@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useFeeder, FeederEvent } from "@/app/hooks/useFeeder";
 import { useAuth } from "@/app/hooks/useAuth";
-import { Wifi, WifiOff, AlertTriangle, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Wifi, WifiOff, AlertTriangle, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 
 // Only allow 1, 2, 3, 4, 5 for duration (number of feed cycles)
 const ALLOWED_DURATIONS = [1, 2, 3, 4, 5];
@@ -81,7 +81,7 @@ export function FeederPanel() {
   const userId = user?.id;
   
   // Pass userId to useFeeder to filter schedules by user
-  const { status, events, loading, error, addSchedule, deleteSchedule, feedNow, hardwareStatus } = useFeeder({ userId });
+  const { status, events, loading, error, feedResult, addSchedule, deleteSchedule, feedNow, hardwareStatus } = useFeeder({ userId });
   
   const [duration, setDuration] = useState<number>(2);
   const [name, setName] = useState<string>("");
@@ -185,12 +185,28 @@ export function FeederPanel() {
               </p>
             </div>
             <button
-              className={`btn ${isHardwareConnected && isValidDuration ? "btn-primary" : "btn-secondary"}`}
+              className={`btn min-w-[110px] transition-colors duration-200 flex items-center gap-1.5 ${
+                feedResult === 'ok'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-500 text-white'
+                  : feedResult === 'err'
+                  ? 'bg-red-600 hover:bg-red-700 border-red-500 text-white'
+                  : isHardwareConnected && isValidDuration
+                  ? 'btn-primary'
+                  : 'btn-secondary'
+              }`}
               disabled={disabled || !isHardwareConnected || !isValidDuration}
               onClick={() => feedNow(duration)}
               title={!isHardwareConnected ? "Connect feeder hardware first" : !isValidDuration ? "Invalid duration" : "Feed fish now"}
             >
-              {loading ? "Feeding..." : "Feed Now"}
+              {loading ? (
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" />Feeding…</>
+              ) : feedResult === 'ok' ? (
+                <><CheckCircle className="w-3.5 h-3.5" />Dispensed!</>
+              ) : feedResult === 'err' ? (
+                <><XCircle className="w-3.5 h-3.5" />Failed</>
+              ) : (
+                'Feed Now'
+              )}
             </button>
           </div>
           {inputError && (

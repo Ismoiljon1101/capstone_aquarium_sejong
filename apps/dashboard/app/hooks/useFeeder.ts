@@ -48,6 +48,7 @@ export function useFeeder(options?: UseFeederOptions) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<FeederEvent[]>([]);
+  const [feedResult, setFeedResult] = useState<'idle' | 'ok' | 'err'>('idle');
   const socketRef = useRef<Socket | null>(null);
 
   // Build URL with userId query param if provided
@@ -147,28 +148,25 @@ export function useFeeder(options?: UseFeederOptions) {
   const feedNow = useCallback(async (durationSec: number, source = "dashboard") => {
     setLoading(true);
     setError(null);
+    setFeedResult('idle');
     try {
       const res = await fetch(`${baseUrl()}/feed`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ duration: durationSec, source, userId })
       });
-      
       const data = await res.json();
-      
       if (!res.ok) {
-        // Handle specific error for hardware not connected
-        if (res.status === 503) {
-          throw new Error(data.error || "Feeder hardware not connected");
-        }
-        throw new Error(data.error || "Feed failed");
+        throw new Error(data.error || (res.status === 503 ? "Feeder hardware not connected" : "Feed failed"));
       }
-      
+      setFeedResult('ok');
       await loadStatus();
     } catch (e) {
       setError((e as Error).message);
+      setFeedResult('err');
     } finally {
       setLoading(false);
+      setTimeout(() => setFeedResult('idle'), 3000);
     }
   }, [loadStatus, userId]);
 
@@ -229,11 +227,12 @@ export function useFeeder(options?: UseFeederOptions) {
     events,
     loading,
     error,
+    feedResult,
     addSchedule,
     deleteSchedule,
     feedNow,
     reload: loadStatus,
-  }), [status, hardwareStatus, events, loading, error, addSchedule, deleteSchedule, feedNow, loadStatus]);
+  }), [status, hardwareStatus, events, loading, error, feedResult, addSchedule, deleteSchedule, feedNow, loadStatus]);
 
   return value;
 }
