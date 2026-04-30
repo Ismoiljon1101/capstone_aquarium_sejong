@@ -27,8 +27,8 @@ function useSpeechRecognition() {
 
   const start = useCallback((
     onResult:   (t: string) => void,
-    onEnd:      (got: boolean) => void,
-    onInterim?: (t: string) => void,   // live transcription feed
+    onEnd:      (got: boolean, err?: string) => void,
+    onInterim?: (t: string) => void,
   ) => {
     if (!supported) return false;
     try { recRef.current?.abort(); } catch {}
@@ -36,6 +36,7 @@ function useSpeechRecognition() {
     const rec = new SR();
     rec.lang = 'en-US'; rec.continuous = false; rec.interimResults = true;
     let got = false;
+    let errCode = '';
     rec.onresult = (e: any) => {
       let interim = '', final = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -46,8 +47,8 @@ function useSpeechRecognition() {
       if (interim.trim()) onInterim?.(interim.trim());
       if (final.trim()) onResult(final.trim());
     };
-    rec.onend   = () => onEnd(got);
-    rec.onerror = (e: any) => { if (e.error !== 'no-speech') console.warn('STT:', e.error); onEnd(got); };
+    rec.onerror = (e: any) => { errCode = e.error; if (e.error !== 'no-speech') console.warn('STT:', e.error); };
+    rec.onend   = () => onEnd(got, errCode || undefined);
     rec.start();
     recRef.current = rec;
     return true;
@@ -314,7 +315,8 @@ export default function FishHealthScreen() {
   const [fishCount, setFishCount] = useState(0);
   const [ttsEnabled, setTts]      = useState(true);
   const [llmOffline, setLlmOffline] = useState(false);
-  const [interimText, setInterim] = useState('');  // live STT transcription
+  const [interimText, setInterim] = useState('');
+  const [micDenied, setMicDenied] = useState(false);
 
   const scrollRef    = useRef<ScrollView>(null);
   const callRef      = useRef(callActive);
@@ -396,6 +398,7 @@ export default function FishHealthScreen() {
 
   const startListening = useCallback(() => {
     if (!callRef.current || !sr.supported) return;
+    setMicDenied(false);
     setListen(true);
     const ok = sr.start(
       (t) => {
@@ -403,15 +406,16 @@ export default function FishHealthScreen() {
         setInterim('');
         setListen(false); stopSpeaking(); setSpeaking(false); askVeronica(t);
       },
-      (got) => {
+      (got, err) => {
         setInterim('');
         setListen(false);
+        if (err === 'not-allowed') { setMicDenied(true); return; }
         if (got) { listenRetryRef.current = 0; return; }
         listenRetryRef.current += 1;
         if (listenRetryRef.current <= 4 && callRef.current && !loadingRef.current)
           setTimeout(() => { if (callRef.current) startListening(); }, 600);
       },
-      (interim) => setInterim(interim),  // live ghost bubble
+      (interim) => setInterim(interim),
     );
     if (!ok) setListen(false);
   }, [sr, askVeronica]);
@@ -419,14 +423,16 @@ export default function FishHealthScreen() {
   const toggleCall = useCallback(() => {
     if (callActive) {
       sr.abort(); stopSpeaking();
+      callRef.current = false;           // update ref immediately
       setCall(false); setListen(false); setSpeaking(false);
-      setInterim('');
+      setInterim(''); setMicDenied(false);
       listenRetryRef.current = 0;
     } else {
       listenRetryRef.current = 0;
-      setInterim('');
+      setInterim(''); setMicDenied(false);
+      callRef.current = true;            // update ref before timeout fires
       setCall(true);
-      if (sr.supported) setTimeout(() => startListening(), 200);
+      if (sr.supported) setTimeout(startListening, 300);
     }
   }, [callActive, sr, startListening]);
 
@@ -647,13 +653,38 @@ export default function FishHealthScreen() {
             </Pressable>
           </View>
 
-          {/* Centered orb */}
+          {/* Centered orb — tappable to manually restart listening */}
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-            <VoiceOrb state={orbState} size={200} />
+            <Pressable
+              onPress={() => {
+                if (!listening && !loading && !speaking) {
+                  listenRetryRef.current = 0;
+                  startListening();
+                }
+              }}
+              style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+              accessibilityLabel="Tap to speak"
+            >
+              <VoiceOrb state={orbState} size={200} />
+            </Pressable>
 
             <Text style={{ fontSize: 18, color: statusColor, fontWeight: '600', letterSpacing: -0.3 }}>
-              {listening ? 'Listening…' : speaking ? 'Speaking…' : loading ? 'Thinking…' : 'Ready'}
+              {listening ? 'Listening…' : speaking ? 'Speaking…' : loading ? 'Thinking…' : 'Tap orb to speak'}
             </Text>
+
+            {micDenied && (
+              <View style={{
+                marginHorizontal: 32, paddingHorizontal: 16, paddingVertical: 10,
+                borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.10)',
+                borderWidth: 1, borderColor: 'rgba(239,68,68,0.28)',
+                flexDirection: 'row', alignItems: 'center', gap: 8,
+              }}>
+                <Ionicons name="mic-off-outline" size={15} color="#f87171" />
+                <Text style={{ flex: 1, fontSize: 12, color: '#fca5a5', lineHeight: 18 }}>
+                  Microphone access denied. Allow mic in browser settings, then tap the orb.
+                </Text>
+              </View>
+            )}
 
             {/* Transcript / last message preview */}
             <View style={{ marginHorizontal: 40, minHeight: 52, alignItems: 'center', justifyContent: 'center' }}>
