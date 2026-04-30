@@ -25,14 +25,27 @@ function useSpeechRecognition() {
   const supported = Platform.OS === 'web' && typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
-  const start = useCallback((onResult: (t: string) => void, onEnd: (got: boolean) => void) => {
+  const start = useCallback((
+    onResult:   (t: string) => void,
+    onEnd:      (got: boolean) => void,
+    onInterim?: (t: string) => void,   // live transcription feed
+  ) => {
     if (!supported) return false;
     try { recRef.current?.abort(); } catch {}
     const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     const rec = new SR();
-    rec.lang = 'en-US'; rec.continuous = false; rec.interimResults = false;
+    rec.lang = 'en-US'; rec.continuous = false; rec.interimResults = true;
     let got = false;
-    rec.onresult = (e: any) => { const t = e.results[0]?.[0]?.transcript?.trim() ?? ''; if (t) { got = true; onResult(t); } };
+    rec.onresult = (e: any) => {
+      let interim = '', final = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0]?.transcript ?? '';
+        if (e.results[i].isFinal) { final += t; got = true; }
+        else interim += t;
+      }
+      if (interim.trim()) onInterim?.(interim.trim());
+      if (final.trim()) onResult(final.trim());
+    };
     rec.onend   = () => onEnd(got);
     rec.onerror = (e: any) => { if (e.error !== 'no-speech') console.warn('STT:', e.error); onEnd(got); };
     rec.start();
@@ -310,8 +323,9 @@ export default function FishHealthScreen() {
   const [loading, setLoading]   = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [fishCount, setFishCount] = useState(0);
-  const [ttsEnabled, setTts]    = useState(true);
+  const [ttsEnabled, setTts]      = useState(true);
   const [llmOffline, setLlmOffline] = useState(false);
+  const [interimText, setInterim] = useState('');  // live STT transcription
 
   const scrollRef    = useRef<ScrollView>(null);
   const callRef      = useRef(callActive);
@@ -396,17 +410,19 @@ export default function FishHealthScreen() {
     setListen(true);
     const ok = sr.start(
       (t) => {
-        listenRetryRef.current = 0;                              // reset on success
+        listenRetryRef.current = 0;
+        setInterim('');
         setListen(false); stopSpeaking(); setSpeaking(false); askVeronica(t);
       },
       (got) => {
+        setInterim('');
         setListen(false);
         if (got) { listenRetryRef.current = 0; return; }
         listenRetryRef.current += 1;
-        // After 4 silent ends in a row stop auto-retrying (prevents blink loop)
         if (listenRetryRef.current <= 4 && callRef.current && !loadingRef.current)
           setTimeout(() => { if (callRef.current) startListening(); }, 600);
       },
+      (interim) => setInterim(interim),  // live ghost bubble
     );
     if (!ok) setListen(false);
   }, [sr, askVeronica]);
@@ -415,9 +431,11 @@ export default function FishHealthScreen() {
     if (callActive) {
       sr.abort(); stopSpeaking();
       setCall(false); setListen(false); setSpeaking(false);
+      setInterim('');
       listenRetryRef.current = 0;
     } else {
       listenRetryRef.current = 0;
+      setInterim('');
       setCall(true);
       if (sr.supported) setTimeout(() => startListening(), 200);
     }
@@ -459,8 +477,8 @@ export default function FishHealthScreen() {
         </View>
       )}
 
-      {/* Status pill (shown only when active) */}
-      {(listening || loading || speaking) && (
+      {/* Status pill — only shown outside call mode (loading/speaking from text input) */}
+      {(loading || speaking) && !callActive && (
         <View style={{
           alignItems: 'center', paddingTop: 8, paddingBottom: 6,
           backgroundColor: '#020617',
@@ -477,21 +495,25 @@ export default function FishHealthScreen() {
         </View>
       )}
 
-      {/* ── Orb (voice mode) ── */}
+      {/* ── Compact orb bar (voice mode) — stays small so chat stays visible ── */}
       {callActive && (
         <View style={{
-          alignItems: 'center', paddingTop: 18, paddingBottom: 22,
+          flexDirection: 'row', alignItems: 'center', gap: 14,
+          paddingHorizontal: 16, paddingVertical: 10,
           borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+          backgroundColor: '#020617',
         }}>
-          <VoiceOrb state={orbState} size={200} />
-          <Text style={{ fontSize: 14, color: statusColor, fontWeight: '700', marginTop: 12, letterSpacing: -0.2 }}>
-            {listening ? 'Listening — speak now' : speaking ? 'Veronica speaking…' : loading ? 'Thinking…' : Platform.OS === 'web' ? 'Tap and speak' : 'Type below or wait'}
-          </Text>
-          {Platform.OS !== 'web' && !sr.supported && (
-            <Text style={{ fontSize: 11, color: '#475569', marginTop: 6, textAlign: 'center', paddingHorizontal: 32 }}>
-              Voice input not available on this device — type your question. TTS will read replies aloud.
+          <VoiceOrb state={orbState} size={72} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ fontSize: 14, color: statusColor, fontWeight: '700', letterSpacing: -0.2 }}>
+              {listening ? 'Listening — speak now' : speaking ? 'Veronica speaking…' : loading ? 'Thinking…' : 'Voice mode on — speak or type'}
             </Text>
-          )}
+            <Text style={{ fontSize: 11, color: '#475569' }}>
+              {Platform.OS !== 'web' && !sr.supported
+                ? 'Voice input unavailable — type below'
+                : 'Chat history stays visible below'}
+            </Text>
+          </View>
         </View>
       )}
 
@@ -506,6 +528,45 @@ export default function FishHealthScreen() {
       >
         {msgs.map((m, i) => <Bubble key={i} msg={m} />)}
 
+        {/* ── Live transcription ghost bubble ── */}
+        {listening && (
+          <View style={{
+            flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'flex-end',
+            marginBottom: 10, paddingHorizontal: 4,
+          }}>
+            <View style={{ maxWidth: '75%' }}>
+              <View style={{
+                backgroundColor: interimText ? '#1e3a5f' : '#0f172a',
+                borderRadius: 20, borderTopRightRadius: 5,
+                paddingHorizontal: 15, paddingVertical: 11,
+                borderWidth: 1,
+                borderColor: interimText ? '#2563eb50' : 'rgba(56,189,248,0.15)',
+                opacity: 0.80,
+              }}>
+                {interimText ? (
+                  <Text style={{ fontSize: 15, color: '#94a3b8', lineHeight: 22, fontStyle: 'italic' }}>
+                    {interimText}
+                  </Text>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="mic" size={13} color="#22c55e" />
+                    <Text style={{ fontSize: 13, color: '#64748b', fontStyle: 'italic' }}>listening…</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            <View style={{
+              width: 32, height: 32, borderRadius: 16,
+              backgroundColor: '#1e3a5f',
+              alignItems: 'center', justifyContent: 'center',
+              marginLeft: 8, marginBottom: 2, flexShrink: 0, opacity: 0.6,
+            }}>
+              <Ionicons name="mic" size={14} color="#38bdf8" />
+            </View>
+          </View>
+        )}
+
+        {/* ── Veronica typing indicator ── */}
         {loading && (
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginBottom: 10, paddingHorizontal: 4 }}>
             <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#0891b2', alignItems: 'center', justifyContent: 'center', marginRight: 8, marginBottom: 2 }}>
