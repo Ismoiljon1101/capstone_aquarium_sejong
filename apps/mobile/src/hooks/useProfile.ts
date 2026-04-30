@@ -1,14 +1,31 @@
 import { useEffect, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+export type SubscriptionTier = 'free' | 'pro' | 'premium';
+
 export interface Profile {
   name: string;
   email: string;
   tankName: string;
+  // Subscription
+  tier: SubscriptionTier;
+  trialEndsAt: string | null;
+  // Remote-server pairing (the app talks to a cloud-hosted bridge,
+  // hardware sits behind the bridge — see CLAUDE.md "remote server" note).
+  deviceId: string;          // physical tank serial / pairing code
+  cloudSync: boolean;        // sync schedules + alerts to cloud
 }
 
 const KEY = 'fishlinic_profile';
-const DEFAULT: Profile = { name: 'Aquarist', email: '', tankName: 'My Tank' };
+const DEFAULT: Profile = {
+  name: 'Aquarist',
+  email: '',
+  tankName: 'My Tank',
+  tier: 'free',
+  trialEndsAt: null,
+  deviceId: '',
+  cloudSync: true,
+};
 
 let cache: Profile = DEFAULT;
 const listeners = new Set<(p: Profile) => void>();
@@ -50,3 +67,13 @@ export function getInitials(name: string): string {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
+
+// ── Tier metadata for display ────────────────────────────────────────────────
+export const TIER_META: Record<SubscriptionTier, {
+  label: string; color: string; icon: 'star-outline' | 'star' | 'diamond';
+  tagline: string;
+}> = {
+  free:    { label: 'Free',    color: '#94a3b8', icon: 'star-outline', tagline: 'Basic monitoring' },
+  pro:     { label: 'Pro',     color: '#38bdf8', icon: 'star',         tagline: 'Smart automations & cloud sync' },
+  premium: { label: 'Premium', color: '#a78bfa', icon: 'diamond',      tagline: 'Multi-tank, AI insights, priority support' },
+};

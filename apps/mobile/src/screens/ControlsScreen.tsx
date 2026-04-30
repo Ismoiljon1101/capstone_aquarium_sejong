@@ -1,12 +1,14 @@
 /**
  * Controls Screen
- * - Quick manual actuator triggers (feed, pump, LED)
- * - Tank Management: feeding schedules, smart lighting, cleaning reminder,
- *   emergency safety thresholds.
- * All schedule/threshold edits persist to the backend so once the serial
- * bridge connects to real hardware everything Just Works.
+ *
+ * Section A — Quick Actions   (manual relay triggers)
+ * Section B — Tank Management (cron-driven schedules expressed in plain English)
+ *
+ * The management section is designed for end users, not engineers. Each
+ * schedule reads like a sentence: "Every weekday at 8:00 AM · 3 sec portion".
+ * Tap to expand an inline editor; everything persists server-side.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, ActivityIndicator,
   TextInput, Switch, Alert, KeyboardAvoidingView, Platform,
@@ -15,10 +17,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AppHeader from '../components/AppHeader';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 import { useSocket } from '../hooks/useSocket';
 import { useApi } from '../hooks/useApi';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface FeedSchedule {
@@ -36,80 +38,53 @@ interface TankConfig {
   pushEnabled: boolean;
 }
 
-const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_LABELS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const COLORS = ['#ffffff', '#fef3c7', '#bae6fd', '#a5f3fc', '#bbf7d0', '#fbcfe8', '#c4b5fd'];
+const ALL_DAYS = 0b1111111;
+const WEEKDAYS = 0b0111110; // M-F (bit 0 Sun … bit 6 Sat)
+const WEEKENDS = 0b1000001;
 
+// ─── Schedule → English ──────────────────────────────────────────────────────
+function describeDays(mask: number): string {
+  if (mask === ALL_DAYS) return 'Every day';
+  if (mask === WEEKDAYS) return 'Weekdays';
+  if (mask === WEEKENDS) return 'Weekends';
+  if (mask === 0) return 'Never';
+  const days: string[] = [];
+  for (let i = 0; i < 7; i++) if (mask & (1 << i)) days.push(DAY_NAMES[i]);
+  return days.join(', ');
+}
+
+function formatTime12(t: string): string {
+  // t = "HH:MM"
+  const [hStr, mStr] = (t || '00:00').split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (isNaN(h) || isNaN(m)) return t;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = ((h + 11) % 12) + 1;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+function describeFeed(s: FeedSchedule): string {
+  return `${describeDays(s.daysMask)} · ${formatTime12(s.time)} · ${s.portionSec}s portion`;
+}
+
+// ─── Small UI primitives ─────────────────────────────────────────────────────
 const sectionTitleStyle = {
   fontSize: 12, fontWeight: '800' as const, color: '#94a3b8',
   textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 12,
 };
 
-// ─── Small UI primitives ─────────────────────────────────────────────────────
-function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+function Card({ children, style }: { children: React.ReactNode; style?: any }) {
   return (
-    <View style={{ marginTop: 8, marginBottom: 8 }}>
-      <Text style={{ fontSize: 12, fontWeight: '800', color: '#94a3b8', letterSpacing: 1, textTransform: 'uppercase' }}>{title}</Text>
-      {subtitle && <Text style={{ fontSize: 13, color: '#94a3b8', marginTop: 3, lineHeight: 18 }}>{subtitle}</Text>}
-    </View>
-  );
-}
-
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <View style={{
+    <View style={[{
       backgroundColor: '#0f172a', borderRadius: 16,
       borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
       overflow: 'hidden', marginBottom: 14,
-    }}>
+    }, style]}>
       {children}
-    </View>
-  );
-}
-
-function Collapsible({ icon, title, subtitle, defaultOpen, badge, children }: {
-  icon: IoniconName; title: string; subtitle?: string;
-  defaultOpen?: boolean; badge?: string;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen ?? false);
-  return (
-    <View style={{
-      backgroundColor: '#0f172a', borderRadius: 16,
-      borderWidth: 1, borderColor: open ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.06)',
-      overflow: 'hidden', marginBottom: 14,
-    }}>
-      <TouchableOpacity
-        onPress={() => { Haptics.selectionAsync(); setOpen(o => !o); }}
-        accessibilityLabel={`${open ? 'Collapse' : 'Expand'} ${title}`}
-        accessibilityRole="button"
-        activeOpacity={0.85}
-        style={{
-          flexDirection: 'row', alignItems: 'center', gap: 12,
-          paddingHorizontal: 16, paddingVertical: 14, minHeight: 60,
-        }}>
-        <View style={{
-          width: 36, height: 36, borderRadius: 10,
-          backgroundColor: open ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.04)',
-          alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Ionicons name={icon} size={18} color={open ? '#38bdf8' : '#94a3b8'} />
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: '#e2e8f0' }}>{title}</Text>
-          {subtitle && <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }} numberOfLines={1}>{subtitle}</Text>}
-        </View>
-        {badge && (
-          <View style={{ backgroundColor: 'rgba(56,189,248,0.15)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-            <Text style={{ fontSize: 11, fontWeight: '700', color: '#38bdf8' }}>{badge}</Text>
-          </View>
-        )}
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color="#94a3b8" />
-      </TouchableOpacity>
-      {open && (
-        <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)' }}>
-          {children}
-        </View>
-      )}
     </View>
   );
 }
@@ -148,8 +123,8 @@ function TimeField({ value, onCommit }: { value: string; onCommit: (v: string) =
       onEndEditing={() => onCommit(local)}
       placeholder="08:00" placeholderTextColor="#475569"
       style={{
-        width: 72, backgroundColor: '#1e293b', borderRadius: 8,
-        paddingHorizontal: 10, paddingVertical: 6,
+        width: 84, backgroundColor: '#1e293b', borderRadius: 8,
+        paddingHorizontal: 10, paddingVertical: 8,
         fontSize: 14, fontWeight: '700', color: '#e2e8f0', textAlign: 'center',
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
       }}
@@ -157,68 +132,189 @@ function TimeField({ value, onCommit }: { value: string; onCommit: (v: string) =
   );
 }
 
-function Btn({ label, onPress, color = '#0891b2', disabled }: {
-  label: string; onPress: () => void; color?: string; disabled?: boolean;
+function Btn({ label, onPress, color = '#0891b2', icon, disabled, ghost }: {
+  label: string; onPress: () => void; color?: string; icon?: IoniconName;
+  disabled?: boolean; ghost?: boolean;
 }) {
   return (
-    <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.8}
-      accessibilityRole="button"
+    <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.85}
+      accessibilityRole="button" accessibilityLabel={label}
       style={{
-        paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8,
-        backgroundColor: disabled ? '#1e293b' : color,
-        minHeight: 44, justifyContent: 'center',
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+        paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10,
+        backgroundColor: disabled ? '#1e293b' : (ghost ? 'transparent' : color),
+        borderWidth: ghost ? 1 : 0, borderColor: ghost ? color + '40' : 'transparent',
+        minHeight: 40,
       }}>
-      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{label}</Text>
+      {icon && <Ionicons name={icon} size={14} color={ghost ? color : '#fff'} />}
+      <Text style={{ color: ghost ? color : '#fff', fontWeight: '700', fontSize: 13 }}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
-// ─── Feeding row ─────────────────────────────────────────────────────────────
-function FeedRow({ s, onUpdate, onDelete }: {
-  s: FeedSchedule;
-  onUpdate: (patch: Partial<FeedSchedule>) => void;
-  onDelete: () => void;
+function ManagementCard({ icon, title, badge, badgeColor, summary, defaultOpen, children, persistKey }: {
+  icon: IoniconName; title: string; summary: string;
+  badge?: string; badgeColor?: string;
+  defaultOpen?: boolean; persistKey?: string;
+  children: React.ReactNode;
 }) {
-  const toggleDay = (i: number) => onUpdate({ daysMask: s.daysMask ^ (1 << i) });
+  const [open, setOpen] = useState(!!defaultOpen);
   return (
     <View style={{
-      paddingVertical: 12, paddingHorizontal: 16, gap: 10,
-      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+      backgroundColor: '#0f172a', borderRadius: 16,
+      borderWidth: 1, borderColor: open ? 'rgba(56,189,248,0.18)' : 'rgba(255,255,255,0.06)',
+      marginBottom: 12, overflow: 'hidden',
     }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Text style={{ fontSize: 18 }}>🍽️</Text>
-        <TimeField value={s.time} onCommit={t => onUpdate({ time: t })} />
-        <View style={{ flex: 1 }} />
-        <NumField value={s.portionSec} onChange={v => onUpdate({ portionSec: v })} suffix="s" width={48} />
-        <Switch value={s.enabled} onValueChange={v => onUpdate({ enabled: v })}
-          trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
-        <TouchableOpacity onPress={onDelete} activeOpacity={0.7}
-          accessibilityLabel="Delete feeding schedule" accessibilityRole="button"
-          style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#7f1d1d22', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 16, color: '#ef4444' }}>✕</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={{ flexDirection: 'row', gap: 6 }}>
-        {DAY_LABELS.map((d, i) => {
-          const active = (s.daysMask & (1 << i)) !== 0;
-          return (
-            <TouchableOpacity key={i} onPress={() => toggleDay(i)} activeOpacity={0.7}
-              accessibilityLabel={`Toggle ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][i]}`}
-              accessibilityRole="button"
-              style={{
-                width: 40, height: 40, borderRadius: 12,
-                alignItems: 'center', justifyContent: 'center',
-                backgroundColor: active ? '#0891b2' : '#1e293b',
-                borderWidth: 1, borderColor: active ? '#0891b2' : 'rgba(255,255,255,0.06)',
-              }}>
-              <Text style={{ fontSize: 12, fontWeight: '800', color: active ? '#fff' : '#94a3b8' }}>{d}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <TouchableOpacity
+        onPress={() => { Haptics.selectionAsync(); setOpen(o => !o); }}
+        accessibilityRole="button" accessibilityLabel={`${open ? 'Collapse' : 'Expand'} ${title}`}
+        activeOpacity={0.85}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, minHeight: 64 }}>
+        <View style={{
+          width: 40, height: 40, borderRadius: 12,
+          backgroundColor: open ? 'rgba(56,189,248,0.18)' : 'rgba(255,255,255,0.04)',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ionicons name={icon} size={20} color={open ? '#38bdf8' : '#94a3b8'} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#f1f5f9' }} numberOfLines={1}>{title}</Text>
+          <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 3, lineHeight: 16 }} numberOfLines={2}>{summary}</Text>
+        </View>
+        {badge && (
+          <View style={{
+            paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+            backgroundColor: (badgeColor ?? '#38bdf8') + '20',
+          }}>
+            <Text style={{ fontSize: 10, fontWeight: '800', color: badgeColor ?? '#38bdf8', letterSpacing: 0.3 }}>{badge}</Text>
+          </View>
+        )}
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color="#94a3b8" />
+      </TouchableOpacity>
+      {open && (
+        <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)' }}>
+          {children}
+        </View>
+      )}
     </View>
   );
 }
+
+// ─── Feeding row ─────────────────────────────────────────────────────────────
+function FeedRow({ s, onUpdate, onDelete, last }: {
+  s: FeedSchedule;
+  onUpdate: (patch: Partial<FeedSchedule>) => void;
+  onDelete: () => void;
+  last?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const toggleDay = (i: number) => onUpdate({ daysMask: s.daysMask ^ (1 << i) });
+
+  return (
+    <View style={{
+      borderBottomWidth: last ? 0 : 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+    }}>
+      {/* Summary row */}
+      <TouchableOpacity onPress={() => setEditing(e => !e)} activeOpacity={0.7}
+        accessibilityRole="button" accessibilityLabel={`${editing ? 'Collapse' : 'Edit'} feeding schedule`}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, minHeight: 64 }}>
+        <View style={{
+          width: 40, height: 40, borderRadius: 12,
+          backgroundColor: s.enabled ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.04)',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ionicons name="restaurant-outline" size={18} color={s.enabled ? '#38bdf8' : '#475569'} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: s.enabled ? '#f1f5f9' : '#64748b', letterSpacing: -0.2 }}>
+            {formatTime12(s.time)}
+          </Text>
+          <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }} numberOfLines={1}>
+            {describeDays(s.daysMask)} · {s.portionSec}s portion
+          </Text>
+        </View>
+        <Switch value={s.enabled} onValueChange={v => onUpdate({ enabled: v })}
+          trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
+        <Ionicons name={editing ? 'chevron-up' : 'chevron-down'} size={18} color="#94a3b8" />
+      </TouchableOpacity>
+
+      {/* Inline editor */}
+      {editing && (
+        <View style={{
+          paddingHorizontal: 16, paddingTop: 6, paddingBottom: 14, gap: 12,
+          borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)',
+          backgroundColor: 'rgba(56,189,248,0.03)',
+        }}>
+          {/* Time + portion */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={editorLabelStyle}>Time</Text>
+              <TimeField value={s.time} onCommit={t => onUpdate({ time: t })} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={editorLabelStyle}>Portion</Text>
+              <NumField value={s.portionSec} onChange={v => onUpdate({ portionSec: Math.max(1, Math.round(v)) })} suffix="seconds" width={56} />
+            </View>
+          </View>
+
+          {/* Day picker */}
+          <View>
+            <Text style={editorLabelStyle}>Days</Text>
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+              {DAY_LABELS_SHORT.map((d, i) => {
+                const active = (s.daysMask & (1 << i)) !== 0;
+                return (
+                  <TouchableOpacity key={i} onPress={() => toggleDay(i)} activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Toggle ${DAY_NAMES[i]}`}
+                    style={{
+                      flex: 1, height: 40, borderRadius: 10,
+                      alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: active ? '#0891b2' : '#1e293b',
+                      borderWidth: 1, borderColor: active ? '#0891b2' : 'rgba(255,255,255,0.06)',
+                    }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: active ? '#fff' : '#94a3b8' }}>{d}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Btn ghost label="Every day"  color="#38bdf8" onPress={() => onUpdate({ daysMask: ALL_DAYS  })} />
+              <Btn ghost label="Weekdays"   color="#38bdf8" onPress={() => onUpdate({ daysMask: WEEKDAYS })} />
+              <Btn ghost label="Weekends"   color="#38bdf8" onPress={() => onUpdate({ daysMask: WEEKENDS })} />
+            </View>
+          </View>
+
+          {/* Delete */}
+          <TouchableOpacity onPress={() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              Alert.alert('Delete schedule?', 'This feeding time will be removed.', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: onDelete },
+              ]);
+            }}
+            activeOpacity={0.8}
+            accessibilityRole="button" accessibilityLabel="Delete schedule"
+            style={{
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+              paddingVertical: 10, borderRadius: 10,
+              backgroundColor: 'rgba(239,68,68,0.08)',
+              borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)',
+              marginTop: 4,
+            }}>
+            <Ionicons name="trash-outline" size={14} color="#f87171" />
+            <Text style={{ color: '#f87171', fontWeight: '700', fontSize: 13 }}>Delete schedule</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const editorLabelStyle = {
+  fontSize: 11, fontWeight: '700' as const, color: '#94a3b8',
+  textTransform: 'uppercase' as const, letterSpacing: 0.5, marginBottom: 6,
+};
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function ControlsScreen() {
@@ -239,7 +335,6 @@ export default function ControlsScreen() {
   const [light, setLight] = useState<LightSchedule | null>(null);
   const [config, setConfig] = useState<TankConfig | null>(null);
 
-  // ── Initial load + sockets ─────────────────────────────────────────────────
   useEffect(() => {
     api.getActuatorState()
       .then(r => { if (r.data) { setPump(!!r.data.pump); setLed(!!r.data.led); } })
@@ -270,7 +365,7 @@ export default function ControlsScreen() {
 
   useEffect(() => { reloadMgmt(); }, [reloadMgmt]);
 
-  // ── Quick actions ──────────────────────────────────────────────────────────
+  // ── Quick actions ──
   const feed = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setFeeding(true);
@@ -294,10 +389,10 @@ export default function ControlsScreen() {
     setLedL(false);
   };
 
-  // ── Feed CRUD ──────────────────────────────────────────────────────────────
+  // ── Feed CRUD ──
   const addFeed = async () => {
     try {
-      const r = await api.createFeedSchedule({ time: '08:00', daysMask: 127, portionSec: 3, enabled: true });
+      const r = await api.createFeedSchedule({ time: '08:00', daysMask: ALL_DAYS, portionSec: 3, enabled: true });
       setFeeds(p => [...p, r.data]);
     } catch (e: any) { Alert.alert('Add failed', e?.message ?? 'unknown'); }
   };
@@ -312,7 +407,7 @@ export default function ControlsScreen() {
     catch (e: any) { Alert.alert('Delete failed', e?.message ?? 'unknown'); reloadMgmt(); }
   };
 
-  // ── Light/Config patches ───────────────────────────────────────────────────
+  // ── Light/Config patches ──
   const patchLight = async (patch: Partial<LightSchedule>) => {
     if (!light) return;
     setLight({ ...light, ...patch });
@@ -330,9 +425,41 @@ export default function ControlsScreen() {
     catch (e: any) { Alert.alert('Mark cleaned failed', e?.message ?? 'unknown'); }
   };
 
-  const cleaningOverdue = config?.lastCleanedAt
-    ? (Date.now() - new Date(config.lastCleanedAt).getTime()) / 86400000 > config.cleaningIntervalDays
-    : false;
+  // ── Derived summaries (for plain-English headers) ──
+  const feedSummary = useMemo(() => {
+    if (!feeds.length) return 'No feeding times yet';
+    const enabled = feeds.filter(f => f.enabled);
+    if (!enabled.length) return `${feeds.length} schedules · all paused`;
+    const next = enabled[0];
+    return `${enabled.length} active · next ${formatTime12(next.time)}, ${describeDays(next.daysMask).toLowerCase()}`;
+  }, [feeds]);
+
+  const lightSummary = useMemo(() => {
+    if (!light) return '';
+    if (!light.enabled) return `Schedule paused · ${formatTime12(light.onTime)} → ${formatTime12(light.offTime)}`;
+    return `On ${formatTime12(light.onTime)} → off ${formatTime12(light.offTime)} · ${light.brightness}%`;
+  }, [light]);
+
+  const cleaningInfo = useMemo(() => {
+    if (!config) return { summary: '', overdue: false, daysSince: 0 };
+    if (!config.lastCleanedAt) {
+      return { summary: `Every ${config.cleaningIntervalDays} days · never recorded`, overdue: false, daysSince: 0 };
+    }
+    const daysSince = Math.floor((Date.now() - new Date(config.lastCleanedAt).getTime()) / 86400000);
+    const overdue = daysSince > config.cleaningIntervalDays;
+    const overdueDays = daysSince - config.cleaningIntervalDays;
+    return {
+      summary: overdue
+        ? `Overdue by ${overdueDays} day${overdueDays === 1 ? '' : 's'} · cleaned ${daysSince}d ago`
+        : `Cleaned ${daysSince}d ago · next in ${config.cleaningIntervalDays - daysSince}d`,
+      overdue, daysSince,
+    };
+  }, [config]);
+
+  const safetySummary = useMemo(() => {
+    if (!config) return '';
+    return `Temp ${config.emergencyTempMin}–${config.emergencyTempMax}°C · pH ${config.emergencyPhMin}–${config.emergencyPhMax}`;
+  }, [config]);
 
   return (
     <KeyboardAvoidingView
@@ -341,11 +468,13 @@ export default function ControlsScreen() {
     >
       <AppHeader title="Controls" subtitle="Manual triggers & schedules" />
       <ScrollView contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 60) }}
+        contentContainerStyle={{ padding: 18, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 60) }}
         keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-        {/* ── Quick: Feed button ── */}
+        {/* ═══ Quick Actions ═══ */}
         <Text style={sectionTitleStyle}>Quick Actions</Text>
+
+        {/* Feed Now */}
         <TouchableOpacity onPress={feed} disabled={feeding} activeOpacity={0.85}
           accessibilityLabel="Feed fish now" accessibilityRole="button"
           style={{
@@ -406,40 +535,16 @@ export default function ControlsScreen() {
           </TouchableOpacity>
         ))}
 
-        {/* ── Relay status summary ── */}
-        <View style={{
-          backgroundColor: '#0f172a', borderRadius: 16, padding: 16,
-          borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', marginTop: 8, marginBottom: 24,
-        }}>
-          <Text style={{ fontSize: 12, fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Relay Status</Text>
-          {[
-            { label: 'Feeder',    active: feeding, color: '#3b82f6' },
-            { label: 'Air Pump',  active: pump,    color: '#06b6d4' },
-            { label: 'LED Strip', active: led,     color: '#f59e0b' },
-          ].map((s, i, arr) => (
-            <View key={s.label} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.04)' }}>
-              <Text style={{ fontSize: 14, color: '#e2e8f0', fontWeight: '500' }}>{s.label}</Text>
-              <View style={{
-                flexDirection: 'row', alignItems: 'center', gap: 6,
-                paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
-                backgroundColor: s.active ? s.color + '20' : 'rgba(148,163,184,0.1)',
-              }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: s.active ? s.color : '#64748b' }} />
-                <Text selectable style={{ fontSize: 12, fontWeight: '700', color: s.active ? s.color : '#94a3b8' }}>{s.active ? 'ON' : 'OFF'}</Text>
-              </View>
-            </View>
-          ))}
+        {/* ═══ Tank Management ═══ */}
+        <View style={{ marginTop: 26, marginBottom: 16 }}>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: '#f1f5f9', letterSpacing: -0.5, marginBottom: 4 }}>
+            Tank Management
+          </Text>
+          <Text style={{ fontSize: 14, color: '#94a3b8', lineHeight: 20 }}>
+            Schedules run automatically on the cloud — your tank stays on routine
+            even when the app is closed.
+          </Text>
         </View>
-
-        {/* ═════════════════════════════════════════════════════════════════ */}
-        {/*                          MANAGEMENT                               */}
-        {/* ═════════════════════════════════════════════════════════════════ */}
-        <Text style={{ fontSize: 22, fontWeight: '800', color: '#f1f5f9', letterSpacing: -0.5, marginBottom: 4 }}>
-          Tank Management
-        </Text>
-        <Text style={{ fontSize: 14, color: '#94a3b8', marginBottom: 18, lineHeight: 20 }}>
-          Tap to expand. Schedules and thresholds run server-side.
-        </Text>
 
         {mgmtLoading || !light || !config ? (
           <View style={{ paddingVertical: 30, alignItems: 'center' }}>
@@ -447,54 +552,77 @@ export default function ControlsScreen() {
           </View>
         ) : (
           <>
-            {/* Feeding schedules */}
-            <Collapsible icon="time-outline" title="Feeding schedules"
-              subtitle={feeds.length > 0 ? `${feeds.length} configured` : 'No times configured'}
-              badge={feeds.length > 0 ? String(feeds.length) : undefined}>
+            {/* ── Feeding ── */}
+            <ManagementCard
+              icon="restaurant-outline"
+              title="Feeding schedules"
+              summary={feedSummary}
+              badge={feeds.filter(f => f.enabled).length > 0 ? `${feeds.filter(f => f.enabled).length} ON` : undefined}
+              badgeColor="#22c55e"
+            >
               {feeds.length === 0 && (
-                <View style={{ padding: 20, alignItems: 'center' }}>
-                  <Text style={{ color: '#94a3b8', fontSize: 13 }}>No feeding times configured.</Text>
+                <View style={{ padding: 24, alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="time-outline" size={28} color="#475569" />
+                  <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center' }}>
+                    No feeding times yet. Add one to start an automatic feed routine.
+                  </Text>
                 </View>
               )}
-              {feeds.map(f => (
+              {feeds.map((f, i) => (
                 <FeedRow key={f.id} s={f}
                   onUpdate={patch => patchFeed(f.id, patch)}
-                  onDelete={() => deleteFeed(f.id)} />
+                  onDelete={() => deleteFeed(f.id)}
+                  last={i === feeds.length - 1} />
               ))}
-              <View style={{ padding: 12 }}>
-                <Btn label="+ Add feed time" onPress={addFeed} />
+              <View style={{ padding: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)' }}>
+                <Btn label="Add feeding time" icon="add-circle-outline" onPress={addFeed} />
               </View>
-            </Collapsible>
+            </ManagementCard>
 
-            {/* Smart lighting */}
-            <Collapsible icon="bulb-outline" title="Smart lighting"
-              subtitle={`${light.onTime} – ${light.offTime} · ${light.brightness}%`}
-              badge={light.enabled ? 'ON' : 'OFF'}>
-              <View style={{ paddingHorizontal: 16, paddingVertical: 14, gap: 14 }}>
+            {/* ── Lighting ── */}
+            <ManagementCard
+              icon="bulb-outline"
+              title="Smart lighting"
+              summary={lightSummary}
+              badge={light.enabled ? 'ON' : 'PAUSED'}
+              badgeColor={light.enabled ? '#22c55e' : '#94a3b8'}
+            >
+              <View style={{ padding: 16, gap: 14 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={{ color: '#cbd5e1', fontSize: 13, fontWeight: '600' }}>Schedule enabled</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#f1f5f9', fontSize: 14, fontWeight: '700' }}>Run schedule</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>Lights follow the on/off times below</Text>
+                  </View>
                   <Switch value={light.enabled} onValueChange={v => patchLight({ enabled: v })}
                     trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text style={{ color: '#cbd5e1', fontSize: 13, fontWeight: '600', flex: 1 }}>On at</Text>
-                  <TimeField value={light.onTime} onCommit={v => patchLight({ onTime: v })} />
-                  <Text style={{ color: '#cbd5e1', fontSize: 13, fontWeight: '600' }}>Off at</Text>
-                  <TimeField value={light.offTime} onCommit={v => patchLight({ offTime: v })} />
+
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={editorLabelStyle}>Turn on at</Text>
+                    <TimeField value={light.onTime} onCommit={v => patchLight({ onTime: v })} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={editorLabelStyle}>Turn off at</Text>
+                    <TimeField value={light.offTime} onCommit={v => patchLight({ offTime: v })} />
+                  </View>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ color: '#cbd5e1', fontSize: 13, fontWeight: '600', flex: 1 }}>Brightness</Text>
-                  <NumField value={light.brightness} onChange={v => patchLight({ brightness: Math.max(0, Math.min(100, v)) })} suffix="%" />
+
+                <View>
+                  <Text style={editorLabelStyle}>Brightness</Text>
+                  <NumField value={light.brightness} onChange={v => patchLight({ brightness: Math.max(0, Math.min(100, Math.round(v))) })} suffix="%" />
                 </View>
-                <View style={{ gap: 8 }}>
-                  <Text style={{ color: '#cbd5e1', fontSize: 13, fontWeight: '600' }}>Color</Text>
+
+                <View>
+                  <Text style={editorLabelStyle}>Colour</Text>
                   <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
                     {COLORS.map(c => {
                       const active = c.toLowerCase() === light.color.toLowerCase();
                       return (
                         <TouchableOpacity key={c} onPress={() => patchLight({ color: c })} activeOpacity={0.7}
+                          accessibilityRole="button" accessibilityLabel={`Pick colour ${c}`}
                           style={{
-                            width: 34, height: 34, borderRadius: 17,
+                            width: 36, height: 36, borderRadius: 18,
                             backgroundColor: c,
                             borderWidth: active ? 3 : 1,
                             borderColor: active ? '#38bdf8' : 'rgba(255,255,255,0.15)',
@@ -504,63 +632,103 @@ export default function ControlsScreen() {
                   </View>
                 </View>
               </View>
-            </Collapsible>
+            </ManagementCard>
 
-            {/* Cleaning reminder */}
-            <Collapsible icon="sparkles-outline" title="Cleaning reminder"
-              subtitle={config.lastCleanedAt ? `Last: ${new Date(config.lastCleanedAt).toLocaleDateString()}` : 'Never recorded'}
-              badge={cleaningOverdue ? 'OVERDUE' : undefined}>
-              <View style={{ padding: 16, gap: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ color: '#e2e8f0', fontSize: 14, fontWeight: '500', flex: 1 }}>Interval</Text>
+            {/* ── Cleaning ── */}
+            <ManagementCard
+              icon="sparkles-outline"
+              title="Cleaning reminder"
+              summary={cleaningInfo.summary}
+              badge={cleaningInfo.overdue ? 'OVERDUE' : undefined}
+              badgeColor="#ef4444"
+            >
+              <View style={{ padding: 16, gap: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#f1f5f9', fontSize: 14, fontWeight: '700' }}>Remind me every</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>How often the tank should be cleaned</Text>
+                  </View>
                   <NumField value={config.cleaningIntervalDays}
                     onChange={v => patchConfig({ cleaningIntervalDays: Math.max(1, Math.round(v)) })}
                     suffix="days" />
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <View>
-                    <Text style={{ color: '#e2e8f0', fontSize: 14, fontWeight: '500' }}>Last cleaned</Text>
-                    <Text style={{ color: cleaningOverdue ? '#ef4444' : '#94a3b8', fontSize: 12, marginTop: 2 }}>
-                      {config.lastCleanedAt ? new Date(config.lastCleanedAt).toLocaleDateString() : 'Never recorded'}
-                      {cleaningOverdue ? '  •  OVERDUE' : ''}
+
+                <View style={{
+                  backgroundColor: cleaningInfo.overdue ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.02)',
+                  borderRadius: 10, padding: 12,
+                  borderWidth: 1, borderColor: cleaningInfo.overdue ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.04)',
+                  flexDirection: 'row', alignItems: 'center', gap: 10,
+                }}>
+                  <Ionicons
+                    name={cleaningInfo.overdue ? 'alert-circle' : 'checkmark-circle'}
+                    size={20}
+                    color={cleaningInfo.overdue ? '#ef4444' : '#22c55e'} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: cleaningInfo.overdue ? '#fca5a5' : '#e2e8f0', fontSize: 13, fontWeight: '700' }}>
+                      {config.lastCleanedAt
+                        ? `Last cleaned ${new Date(config.lastCleanedAt).toLocaleDateString()}`
+                        : 'Never recorded'}
+                    </Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 2 }}>
+                      {cleaningInfo.summary}
                     </Text>
                   </View>
-                  <Btn label="Mark cleaned" onPress={markCleaned} color="#16a34a" />
                 </View>
-              </View>
-            </Collapsible>
 
-            {/* Emergency safety */}
-            <Collapsible icon="shield-checkmark-outline" title="Emergency safety"
-              subtitle="Critical alert thresholds">
+                <Btn label="Mark as cleaned today" icon="checkmark-done-outline"
+                  onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); markCleaned(); }}
+                  color="#16a34a" />
+              </View>
+            </ManagementCard>
+
+            {/* ── Emergency safety ── */}
+            <ManagementCard
+              icon="shield-checkmark-outline"
+              title="Emergency safety"
+              summary={safetySummary}
+              badge={config.pushEnabled ? 'NOTIFY' : 'SILENT'}
+              badgeColor={config.pushEnabled ? '#38bdf8' : '#94a3b8'}
+            >
               <View style={{ padding: 16, gap: 14 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ flex: 1, color: '#e2e8f0', fontSize: 14, fontWeight: '500' }}>Temperature</Text>
-                  <NumField value={config.emergencyTempMin} onChange={v => patchConfig({ emergencyTempMin: v })} suffix="°C" />
-                  <Text style={{ color: '#475569', marginHorizontal: 6 }}>–</Text>
-                  <NumField value={config.emergencyTempMax} onChange={v => patchConfig({ emergencyTempMax: v })} suffix="°C" />
+                <Text style={{ color: '#94a3b8', fontSize: 12, lineHeight: 17 }}>
+                  When sensors leave these limits, an alert fires and (if enabled) a
+                  push notification is sent to your phone — even if the app is closed.
+                </Text>
+
+                <View style={{ gap: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ flex: 1, color: '#e2e8f0', fontSize: 14, fontWeight: '600' }}>Temperature</Text>
+                    <NumField value={config.emergencyTempMin} onChange={v => patchConfig({ emergencyTempMin: v })} suffix="°C" />
+                    <Text style={{ color: '#475569', marginHorizontal: 6 }}>–</Text>
+                    <NumField value={config.emergencyTempMax} onChange={v => patchConfig({ emergencyTempMax: v })} suffix="°C" />
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ flex: 1, color: '#e2e8f0', fontSize: 14, fontWeight: '600' }}>pH</Text>
+                    <NumField value={config.emergencyPhMin} onChange={v => patchConfig({ emergencyPhMin: v })} />
+                    <Text style={{ color: '#475569', marginHorizontal: 6 }}>–</Text>
+                    <NumField value={config.emergencyPhMax} onChange={v => patchConfig({ emergencyPhMax: v })} />
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ flex: 1, color: '#e2e8f0', fontSize: 14, fontWeight: '600' }}>Min O₂</Text>
+                    <NumField value={config.emergencyDoMin} onChange={v => patchConfig({ emergencyDoMin: v })} suffix="mg/L" />
+                  </View>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ flex: 1, color: '#e2e8f0', fontSize: 14, fontWeight: '500' }}>pH</Text>
-                  <NumField value={config.emergencyPhMin} onChange={v => patchConfig({ emergencyPhMin: v })} />
-                  <Text style={{ color: '#475569', marginHorizontal: 6 }}>–</Text>
-                  <NumField value={config.emergencyPhMax} onChange={v => patchConfig({ emergencyPhMax: v })} />
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ flex: 1, color: '#e2e8f0', fontSize: 14, fontWeight: '500' }}>Min O₂</Text>
-                  <NumField value={config.emergencyDoMin} onChange={v => patchConfig({ emergencyDoMin: v })} suffix="mg/L" />
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                  <Text style={{ color: '#e2e8f0', fontSize: 14, fontWeight: '500' }}>Push notifications</Text>
+
+                <View style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)',
+                }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#f1f5f9', fontSize: 14, fontWeight: '700' }}>Push notifications</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>Get alerts on your phone anywhere</Text>
+                  </View>
                   <Switch value={config.pushEnabled} onValueChange={v => { Haptics.selectionAsync(); patchConfig({ pushEnabled: v }); }}
                     trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
                 </View>
               </View>
-            </Collapsible>
+            </ManagementCard>
           </>
         )}
-
-        {/* Section title style helper */}
 
       </ScrollView>
     </KeyboardAvoidingView>

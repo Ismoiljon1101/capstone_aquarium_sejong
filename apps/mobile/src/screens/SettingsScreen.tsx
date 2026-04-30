@@ -1,5 +1,19 @@
 /**
- * Settings Screen — profile, services, persistent config, tank ranges, danger zone.
+ * Settings Screen — redesigned for the cloud/remote model.
+ *
+ * Information architecture (top → bottom, by frequency of use):
+ *   1. Profile + subscription tier (identity & plan)
+ *   2. Tank — name, device pairing, cloud sync   (the "remote app" essentials)
+ *   3. Notifications — push, sounds, TTS
+ *   4. Tank Safe Ranges (collapsible — most users won't tweak)
+ *   5. Advanced (collapsible — backend URL, service health) — hidden by default
+ *   6. About + Danger zone
+ *
+ * Marketing/UX principles applied:
+ *   • Subscription card up top with clear value tagline + upgrade CTA (not nag).
+ *   • Big tappable rows with vector icons, no walls of text.
+ *   • Sane defaults, low cognitive load — advanced toggles hidden behind a row.
+ *   • Cloud sync is *opt-out* (default ON) so the remote use-case Just Works.
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -12,9 +26,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import AppHeader from '../components/AppHeader';
 import { useSocket } from '../hooks/useSocket';
-import { useProfile, getInitials } from '../hooks/useProfile';
+import { useProfile, getInitials, TIER_META, SubscriptionTier } from '../hooks/useProfile';
 
-// ── Persistent storage (localStorage on web, fallback to memory) ──────────────
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+// ── Persistent storage (web localStorage / fallback memory) ──────────────────
 const store = {
   get: (key: string, def: string) => {
     if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
@@ -33,6 +49,7 @@ export const SETTINGS_KEYS = {
   API_URL:     'fishlinic_api_url',
   TTS_ENABLED: 'fishlinic_tts',
   ALERTS:      'fishlinic_alerts',
+  PUSH:        'fishlinic_push',
   PH_MIN:      'fishlinic_ph_min',
   PH_MAX:      'fishlinic_ph_max',
   TEMP_MIN:    'fishlinic_temp_min',
@@ -40,9 +57,10 @@ export const SETTINGS_KEYS = {
   DO2_MIN:     'fishlinic_do2_min',
   DO2_MAX:     'fishlinic_do2_max',
   CO2_MAX:     'fishlinic_co2_max',
+  ADVANCED_OPEN: 'fishlinic_advanced_open',
 };
 
-// ── Status badge ──────────────────────────────────────────────────────────────
+// ── Status badge ─────────────────────────────────────────────────────────────
 type Status = 'checking' | 'online' | 'offline';
 function StatusBadge({ status, label }: { status: Status; label?: string }) {
   if (status === 'checking') return <ActivityIndicator size="small" color="#94a3b8" />;
@@ -56,9 +74,109 @@ function StatusBadge({ status, label }: { status: Status; label?: string }) {
   );
 }
 
-// ── Range editor row ──────────────────────────────────────────────────────────
+// ── Common row ───────────────────────────────────────────────────────────────
+function Row({ icon, iconColor, label, sub, right, onPress, last, danger }: {
+  icon: IoniconName; iconColor?: string; label: string; sub?: string;
+  right?: React.ReactNode; onPress?: () => void; last?: boolean; danger?: boolean;
+}) {
+  const inner = (
+    <View style={{
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      paddingVertical: 14, paddingHorizontal: 16,
+      borderBottomWidth: last ? 0 : 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+      minHeight: 56,
+    }}>
+      <View style={[iconBoxStyle, danger && { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
+        <Ionicons name={icon} size={18} color={iconColor ?? (danger ? '#ef4444' : '#38bdf8')} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ fontSize: 14, color: danger ? '#ef4444' : '#e2e8f0', fontWeight: '600' }} numberOfLines={1}>{label}</Text>
+        {sub && <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }} numberOfLines={1}>{sub}</Text>}
+      </View>
+      {right}
+    </View>
+  );
+  return onPress
+    ? <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={label}>{inner}</TouchableOpacity>
+    : inner;
+}
+
+function Section({ title, footer, children }: { title?: string; footer?: string; children: React.ReactNode }) {
+  return (
+    <View style={{ marginBottom: 22 }}>
+      {title && (
+        <Text style={{
+          fontSize: 12, fontWeight: '800', color: '#94a3b8',
+          letterSpacing: 1, textTransform: 'uppercase',
+          marginBottom: 8, marginLeft: 4,
+        }}>{title}</Text>
+      )}
+      <View style={{
+        backgroundColor: '#0f172a', borderRadius: 16,
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+        overflow: 'hidden',
+      }}>
+        {children}
+      </View>
+      {footer && (
+        <Text style={{ fontSize: 12, color: '#64748b', marginTop: 8, marginLeft: 4, lineHeight: 17 }}>
+          {footer}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+// ── Collapsible group (used for Ranges + Advanced) ───────────────────────────
+function CollapseGroup({ icon, title, sub, defaultOpen, persistKey, children }: {
+  icon: IoniconName; title: string; sub?: string;
+  defaultOpen?: boolean; persistKey?: string;
+  children: React.ReactNode;
+}) {
+  const init = persistKey
+    ? store.get(persistKey, defaultOpen ? '1' : '0') === '1'
+    : !!defaultOpen;
+  const [open, setOpen] = useState(init);
+  return (
+    <View style={{
+      backgroundColor: '#0f172a', borderRadius: 16,
+      borderWidth: 1, borderColor: open ? 'rgba(56,189,248,0.18)' : 'rgba(255,255,255,0.06)',
+      marginBottom: 22, overflow: 'hidden',
+    }}>
+      <TouchableOpacity
+        onPress={() => {
+          Haptics.selectionAsync();
+          const next = !open;
+          setOpen(next);
+          if (persistKey) store.set(persistKey, next ? '1' : '0');
+        }}
+        activeOpacity={0.85}
+        accessibilityRole="button" accessibilityLabel={`${open ? 'Collapse' : 'Expand'} ${title}`}
+        style={{
+          flexDirection: 'row', alignItems: 'center', gap: 12,
+          paddingHorizontal: 16, paddingVertical: 14, minHeight: 60,
+        }}>
+        <View style={[iconBoxStyle, open && { backgroundColor: 'rgba(56,189,248,0.18)' }]}>
+          <Ionicons name={icon} size={18} color={open ? '#38bdf8' : '#94a3b8'} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#e2e8f0' }}>{title}</Text>
+          {sub && <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }} numberOfLines={1}>{sub}</Text>}
+        </View>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color="#94a3b8" />
+      </TouchableOpacity>
+      {open && (
+        <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)' }}>
+          {children}
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ── Range editor row ─────────────────────────────────────────────────────────
 function RangeRow({ icon, label, unit, minKey, maxKey, last }: {
-  icon: keyof typeof IONICON_MAP; label: string; unit: string; minKey: string; maxKey: string; last?: boolean;
+  icon: IoniconName; label: string; unit: string; minKey: string; maxKey: string; last?: boolean;
 }) {
   const [min, setMin] = useState(store.get(minKey, ''));
   const [max, setMax] = useState(store.get(maxKey, ''));
@@ -69,7 +187,7 @@ function RangeRow({ icon, label, unit, minKey, maxKey, last }: {
       borderBottomWidth: last ? 0 : 1, borderBottomColor: 'rgba(255,255,255,0.04)',
     }}>
       <View style={iconBoxStyle}>
-        <Ionicons name={IONICON_MAP[icon]} size={18} color="#38bdf8" />
+        <Ionicons name={icon} size={18} color="#38bdf8" />
       </View>
       <Text style={{ flex: 1, fontSize: 14, color: '#e2e8f0', fontWeight: '500' }}>{label}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -90,17 +208,18 @@ function RangeRow({ icon, label, unit, minKey, maxKey, last }: {
   );
 }
 
-function SingleRangeRow({ icon, label, unit, maxKey }: {
-  icon: keyof typeof IONICON_MAP; label: string; unit: string; maxKey: string;
+function SingleRangeRow({ icon, label, unit, maxKey, last }: {
+  icon: IoniconName; label: string; unit: string; maxKey: string; last?: boolean;
 }) {
   const [val, setVal] = useState(store.get(maxKey, ''));
   return (
     <View style={{
       flexDirection: 'row', alignItems: 'center', gap: 12,
       paddingVertical: 14, paddingHorizontal: 16,
+      borderBottomWidth: last ? 0 : 1, borderBottomColor: 'rgba(255,255,255,0.04)',
     }}>
       <View style={iconBoxStyle}>
-        <Ionicons name={IONICON_MAP[icon]} size={18} color="#38bdf8" />
+        <Ionicons name={icon} size={18} color="#38bdf8" />
       </View>
       <Text style={{ flex: 1, fontSize: 14, color: '#e2e8f0', fontWeight: '500' }}>{label}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -116,80 +235,7 @@ function SingleRangeRow({ icon, label, unit, maxKey }: {
   );
 }
 
-// ── Row helpers ───────────────────────────────────────────────────────────────
-function Row({ icon, iconColor, label, sub, right, onPress, last, danger }: {
-  icon: keyof typeof IONICON_MAP; iconColor?: string; label: string; sub?: string;
-  right?: React.ReactNode; onPress?: () => void; last?: boolean; danger?: boolean;
-}) {
-  const inner = (
-    <View style={{
-      flexDirection: 'row', alignItems: 'center', gap: 12,
-      paddingVertical: 14, paddingHorizontal: 16,
-      borderBottomWidth: last ? 0 : 1, borderBottomColor: 'rgba(255,255,255,0.04)',
-      minHeight: 56,
-    }}>
-      <View style={[iconBoxStyle, danger && { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
-        <Ionicons name={IONICON_MAP[icon]} size={18} color={iconColor ?? (danger ? '#ef4444' : '#38bdf8')} />
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 14, color: danger ? '#ef4444' : '#e2e8f0', fontWeight: '600' }} numberOfLines={1}>{label}</Text>
-        {sub && <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }} numberOfLines={1}>{sub}</Text>}
-      </View>
-      {right}
-    </View>
-  );
-  return onPress
-    ? <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={label}>{inner}</TouchableOpacity>
-    : inner;
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={{ marginBottom: 22 }}>
-      <Text style={{
-        fontSize: 12, fontWeight: '800', color: '#94a3b8',
-        letterSpacing: 1, textTransform: 'uppercase',
-        marginBottom: 8, marginLeft: 4,
-      }}>{title}</Text>
-      <View style={{
-        backgroundColor: '#0f172a', borderRadius: 16,
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-        overflow: 'hidden',
-      }}>
-        {children}
-      </View>
-    </View>
-  );
-}
-
-// ── Ionicons map (vector icons replace emoji) ─────────────────────────────────
-const IONICON_MAP = {
-  plug:        'flash-outline',
-  signal:      'wifi-outline',
-  bot:         'sparkles-outline',
-  brain:       'analytics-outline',
-  refresh:     'refresh-outline',
-  speaker:     'volume-high-outline',
-  bell:        'notifications-outline',
-  globe:       'globe-outline',
-  bolt:        'flash-outline',
-  flask:       'flask-outline',
-  thermo:      'thermometer-outline',
-  bubbles:     'water-outline',
-  cloud:       'cloud-outline',
-  fish:        'fish-outline',
-  school:      'school-outline',
-  cpu:         'hardware-chip-outline',
-  chart:       'bar-chart-outline',
-  trash:       'trash-outline',
-  edit:        'create-outline',
-  user:        'person-outline',
-  mail:        'mail-outline',
-  tank:        'cube-outline',
-  info:        'information-circle-outline',
-} as const;
-
-// ── Shared styles ─────────────────────────────────────────────────────────────
+// ── Shared styles ────────────────────────────────────────────────────────────
 const iconBoxStyle = {
   width: 36, height: 36, borderRadius: 10,
   backgroundColor: 'rgba(56,189,248,0.1)',
@@ -201,26 +247,36 @@ const inputStyle = {
   color: '#e2e8f0', textAlign: 'center' as const,
   borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
 };
+const fieldLabel = {
+  fontSize: 12, fontWeight: '700' as const, color: '#94a3b8',
+  textTransform: 'uppercase' as const, letterSpacing: 0.5, marginBottom: 6,
+};
+const fieldInput = {
+  backgroundColor: '#1e293b', borderRadius: 10,
+  paddingHorizontal: 14, paddingVertical: 12, fontSize: 15,
+  color: '#e2e8f0',
+  borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+};
 
-// ── Profile card (top of screen) ──────────────────────────────────────────────
-function ProfileCard() {
+// ── Profile + Subscription card (top) ────────────────────────────────────────
+function ProfileSubscriptionCard() {
   const { profile, update } = useProfile();
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(profile.name);
+  const [name, setName]   = useState(profile.name);
   const [email, setEmail] = useState(profile.email);
-  const [tankName, setTankName] = useState(profile.tankName);
 
   useEffect(() => {
     setName(profile.name);
     setEmail(profile.email);
-    setTankName(profile.tankName);
   }, [profile]);
 
-  const handleSave = () => {
+  const save = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    update({ name: name.trim() || 'Aquarist', email: email.trim(), tankName: tankName.trim() || 'My Tank' });
+    update({ name: name.trim() || 'Aquarist', email: email.trim() });
     setEditing(false);
   };
+
+  const tier = TIER_META[profile.tier];
 
   if (editing) {
     return (
@@ -241,20 +297,14 @@ function ProfileCard() {
             style={fieldInput} placeholder="you@example.com" placeholderTextColor="#475569"
             autoCapitalize="none" autoCorrect={false} keyboardType="email-address" />
         </View>
-        <View>
-          <Text style={fieldLabel}>Tank Name</Text>
-          <TextInput value={tankName} onChangeText={setTankName}
-            style={fieldInput} placeholder="e.g. Living Room Reef" placeholderTextColor="#475569"
-            autoCapitalize="words" />
-        </View>
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
           <TouchableOpacity onPress={() => setEditing(false)} activeOpacity={0.8}
-            accessibilityLabel="Cancel" accessibilityRole="button"
+            accessibilityRole="button" accessibilityLabel="Cancel"
             style={{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.04)', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
             <Text style={{ fontSize: 14, fontWeight: '700', color: '#94a3b8' }}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSave} activeOpacity={0.8}
-            accessibilityLabel="Save profile" accessibilityRole="button"
+          <TouchableOpacity onPress={save} activeOpacity={0.8}
+            accessibilityRole="button" accessibilityLabel="Save profile"
             style={{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#0891b2', alignItems: 'center' }}>
             <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>Save</Text>
           </TouchableOpacity>
@@ -264,48 +314,161 @@ function ProfileCard() {
   }
 
   return (
-    <TouchableOpacity onPress={() => setEditing(true)} activeOpacity={0.85}
-      accessibilityLabel="Edit profile" accessibilityRole="button"
-      style={{
-        backgroundColor: '#0f172a', borderRadius: 16,
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-        padding: 18, marginBottom: 22,
-        flexDirection: 'row', alignItems: 'center', gap: 14,
-      }}>
-      <View style={{
-        width: 56, height: 56, borderRadius: 28,
-        backgroundColor: '#0891b2',
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff' }}>{getInitials(profile.name)}</Text>
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 17, fontWeight: '700', color: '#f1f5f9' }} numberOfLines={1}>{profile.name}</Text>
-        <Text style={{ fontSize: 13, color: '#94a3b8', marginTop: 2 }} numberOfLines={1}>
-          {profile.email || 'Tap to add email'}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
-          <Ionicons name="cube-outline" size={12} color="#64748b" />
-          <Text style={{ fontSize: 12, color: '#64748b' }} numberOfLines={1}>{profile.tankName}</Text>
+    <View style={{
+      backgroundColor: '#0f172a', borderRadius: 16,
+      borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+      marginBottom: 22, overflow: 'hidden',
+    }}>
+      {/* Profile row */}
+      <TouchableOpacity onPress={() => setEditing(true)} activeOpacity={0.85}
+        accessibilityRole="button" accessibilityLabel="Edit profile"
+        style={{
+          padding: 18,
+          flexDirection: 'row', alignItems: 'center', gap: 14,
+        }}>
+        <View style={{
+          width: 56, height: 56, borderRadius: 28,
+          backgroundColor: '#0891b2',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff' }}>{getInitials(profile.name)}</Text>
         </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ fontSize: 17, fontWeight: '700', color: '#f1f5f9' }} numberOfLines={1}>{profile.name}</Text>
+          <Text style={{ fontSize: 13, color: '#94a3b8', marginTop: 2 }} numberOfLines={1}>
+            {profile.email || 'Tap to add email'}
+          </Text>
+        </View>
+        <Ionicons name="create-outline" size={20} color="#64748b" />
+      </TouchableOpacity>
+
+      {/* Plan strip */}
+      <View style={{
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        paddingHorizontal: 18, paddingVertical: 14,
+        borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)',
+        backgroundColor: 'rgba(56,189,248,0.04)',
+      }}>
+        <View style={{
+          width: 36, height: 36, borderRadius: 10,
+          backgroundColor: tier.color + '20',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ionicons name={tier.icon} size={18} color={tier.color} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: tier.color, letterSpacing: 0.3 }}>
+              {tier.label.toUpperCase()} PLAN
+            </Text>
+            {profile.trialEndsAt && (
+              <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(251,191,36,0.18)' }}>
+                <Text style={{ fontSize: 9, fontWeight: '800', color: '#fbbf24', letterSpacing: 0.3 }}>TRIAL</Text>
+              </View>
+            )}
+          </View>
+          <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }} numberOfLines={1}>{tier.tagline}</Text>
+        </View>
+        {profile.tier !== 'premium' && (
+          <TouchableOpacity onPress={() => Alert.alert('Upgrade', 'Plans & billing will open here.')}
+            activeOpacity={0.85}
+            accessibilityRole="button" accessibilityLabel="Upgrade plan"
+            style={{
+              paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+              backgroundColor: '#38bdf8',
+              minHeight: 36, justifyContent: 'center',
+            }}>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#0f172a', letterSpacing: 0.3 }}>UPGRADE</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <Ionicons name="create-outline" size={20} color="#64748b" />
-    </TouchableOpacity>
+    </View>
   );
 }
 
-const fieldLabel = {
-  fontSize: 12, fontWeight: '700' as const, color: '#94a3b8',
-  textTransform: 'uppercase' as const, letterSpacing: 0.5, marginBottom: 6,
-};
-const fieldInput = {
-  backgroundColor: '#1e293b', borderRadius: 10,
-  paddingHorizontal: 14, paddingVertical: 12, fontSize: 15,
-  color: '#e2e8f0',
-  borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
-};
+// ── Tank pairing editor ──────────────────────────────────────────────────────
+function TankCard() {
+  const { profile, update } = useProfile();
+  const [editing, setEditing] = useState(false);
+  const [tankName, setTankName] = useState(profile.tankName);
+  const [deviceId, setDeviceId] = useState(profile.deviceId);
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    setTankName(profile.tankName);
+    setDeviceId(profile.deviceId);
+  }, [profile]);
+
+  const save = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    update({
+      tankName: tankName.trim() || 'My Tank',
+      deviceId: deviceId.trim().toUpperCase(),
+    });
+    setEditing(false);
+  };
+
+  const paired = !!profile.deviceId;
+
+  if (editing) {
+    return (
+      <Section title="Tank">
+        <View style={{ padding: 16, gap: 14 }}>
+          <View>
+            <Text style={fieldLabel}>Tank Name</Text>
+            <TextInput value={tankName} onChangeText={setTankName}
+              style={fieldInput} placeholder="e.g. Living Room Reef" placeholderTextColor="#475569"
+              autoCapitalize="words" />
+          </View>
+          <View>
+            <Text style={fieldLabel}>Device Pairing Code</Text>
+            <TextInput value={deviceId} onChangeText={setDeviceId}
+              style={[fieldInput, { fontVariant: ['tabular-nums'], letterSpacing: 2 }]}
+              placeholder="FL-XXXXXX" placeholderTextColor="#475569"
+              autoCapitalize="characters" autoCorrect={false} />
+            <Text style={{ fontSize: 11, color: '#64748b', marginTop: 6, lineHeight: 16 }}>
+              Found on the bottom of the Fishlinic gateway box. Required to receive
+              live data from your tank's hardware.
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity onPress={() => setEditing(false)} activeOpacity={0.8}
+              accessibilityRole="button" accessibilityLabel="Cancel"
+              style={{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.04)', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#94a3b8' }}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={save} activeOpacity={0.8}
+              accessibilityRole="button" accessibilityLabel="Save tank"
+              style={{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#0891b2', alignItems: 'center' }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Section>
+    );
+  }
+
+  return (
+    <Section title="Tank">
+      <Row icon="cube-outline" label={profile.tankName || 'My Tank'} sub="Tap to rename" onPress={() => setEditing(true)}
+        right={<Ionicons name="chevron-forward" size={18} color="#64748b" />} />
+      <Row icon="hardware-chip-outline"
+        label={paired ? `Paired · ${profile.deviceId}` : 'Pair Fishlinic gateway'}
+        sub={paired ? 'Hardware is linked to this account' : 'Required to control hardware remotely'}
+        iconColor={paired ? '#22c55e' : '#fbbf24'}
+        onPress={() => setEditing(true)}
+        right={<Ionicons name="chevron-forward" size={18} color="#64748b" />} />
+      <Row icon="cloud-upload-outline" label="Cloud sync"
+        sub="Schedules + alerts available from anywhere" last
+        right={
+          <Switch value={profile.cloudSync}
+            onValueChange={v => { Haptics.selectionAsync(); update({ cloudSync: v }); }}
+            trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
+        } />
+    </Section>
+  );
+}
+
+// ── Main ─────────────────────────────────────────────────────────────────────
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { connected } = useSocket();
@@ -314,6 +477,7 @@ export default function SettingsScreen() {
   const [urlDirty, setUrlDirty] = useState(false);
   const [tts, setTts]           = useState(store.get(SETTINGS_KEYS.TTS_ENABLED, 'true') === 'true');
   const [alertSnd, setAlertSnd] = useState(store.get(SETTINGS_KEYS.ALERTS, 'true') === 'true');
+  const [push, setPush]         = useState(store.get(SETTINGS_KEYS.PUSH, 'true') === 'true');
 
   const [backendStatus,   setBackend]   = useState<Status>('checking');
   const [ollamaStatus,    setOllama]    = useState<Status>('checking');
@@ -386,12 +550,58 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* 1. Profile + plan */}
+        <ProfileSubscriptionCard />
 
-        {/* Profile card */}
-        <ProfileCard />
+        {/* 2. Tank pairing + cloud sync */}
+        <TankCard />
 
-        {/* Connection */}
-        <Section title="Connection">
+        {/* 3. Notifications */}
+        <Section title="Notifications">
+          <Row icon="notifications-outline" label="Push notifications"
+            sub="Critical alerts on your phone, anywhere"
+            right={
+              <Switch value={push}
+                onValueChange={v => { Haptics.selectionAsync(); setPush(v); store.set(SETTINGS_KEYS.PUSH, String(v)); }}
+                trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
+            } />
+          <Row icon="notifications-circle-outline" label="Alert sound"
+            sub="Audible chime when an alert arrives"
+            right={
+              <Switch value={alertSnd}
+                onValueChange={v => { Haptics.selectionAsync(); setAlertSnd(v); store.set(SETTINGS_KEYS.ALERTS, String(v)); }}
+                trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
+            } />
+          <Row icon="volume-high-outline" label="Veronica voice"
+            sub="AI assistant speaks her replies aloud" last
+            right={
+              <Switch value={tts}
+                onValueChange={v => { Haptics.selectionAsync(); setTts(v); store.set(SETTINGS_KEYS.TTS_ENABLED, String(v)); }}
+                trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
+            } />
+        </Section>
+
+        {/* 4. Tank Safe Ranges (collapsible) */}
+        <CollapseGroup icon="speedometer-outline" title="Tank safe ranges"
+          sub="Trigger alerts outside these limits"
+          persistKey="fishlinic_ranges_open">
+          <RangeRow icon="flask-outline"        label="pH"           unit="pH"   minKey={SETTINGS_KEYS.PH_MIN}   maxKey={SETTINGS_KEYS.PH_MAX}   />
+          <RangeRow icon="thermometer-outline"  label="Temperature"  unit="°C"   minKey={SETTINGS_KEYS.TEMP_MIN} maxKey={SETTINGS_KEYS.TEMP_MAX} />
+          <RangeRow icon="water-outline"        label="Dissolved O₂" unit="mg/L" minKey={SETTINGS_KEYS.DO2_MIN}  maxKey={SETTINGS_KEYS.DO2_MAX}  />
+          <SingleRangeRow icon="cloud-outline"  label="CO₂"          unit="ppm"  maxKey={SETTINGS_KEYS.CO2_MAX} last />
+          <View style={{ padding: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)' }}>
+            <TouchableOpacity onPress={handleResetRanges} activeOpacity={0.8}
+              accessibilityRole="button" accessibilityLabel="Reset ranges"
+              style={{ paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#f87171' }}>Reset to defaults</Text>
+            </TouchableOpacity>
+          </View>
+        </CollapseGroup>
+
+        {/* 5. Advanced (collapsible — backend, services) */}
+        <CollapseGroup icon="construct-outline" title="Advanced"
+          sub="Backend URL, service status, AI predictor"
+          persistKey={SETTINGS_KEYS.ADVANCED_OPEN}>
           <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' }}>
             <Text style={{ fontSize: 13, color: '#94a3b8', fontWeight: '600', marginBottom: 8 }}>Backend URL</Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -405,59 +615,30 @@ export default function SettingsScreen() {
               />
               {urlDirty && (
                 <TouchableOpacity onPress={saveUrl} activeOpacity={0.8}
-                  accessibilityLabel="Save backend URL" accessibilityRole="button"
+                  accessibilityRole="button" accessibilityLabel="Save backend URL"
                   style={{ paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#0891b2', justifyContent: 'center', minHeight: 44 }}>
                   <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>Save</Text>
                 </TouchableOpacity>
               )}
             </View>
           </View>
-          <Row icon="plug" label="Backend" sub="NestJS · port 3000" right={<StatusBadge status={backendStatus} />} />
-          <Row icon="signal" label="Socket.IO" sub="Real-time telemetry" right={
-            <StatusBadge status={connected ? 'online' : 'offline'} label={connected ? 'Connected' : 'Disconnected'} />
-          } />
-          <Row icon="bot" label="Ollama LLM" sub={ollamaModel || 'Local language model'} right={<StatusBadge status={ollamaStatus} />} />
-          <Row icon="brain" label="AI Predictor" sub="RF · YOLO · ConvLSTM-VAE" right={<StatusBadge status={predictorStatus} />} />
-          <Row icon="refresh" label="Refresh status" last
+          <Row icon="cloud-outline" label="Backend" sub="NestJS · port 3000" right={<StatusBadge status={backendStatus} />} />
+          <Row icon="wifi-outline"  label="Realtime socket" sub="Live telemetry"
+            right={<StatusBadge status={connected ? 'online' : 'offline'} label={connected ? 'Connected' : 'Disconnected'} />} />
+          <Row icon="sparkles-outline" label="Veronica LLM" sub={ollamaModel || 'Local language model'} right={<StatusBadge status={ollamaStatus} />} />
+          <Row icon="analytics-outline" label="AI Predictor" sub="RF · YOLO · ConvLSTM-VAE" right={<StatusBadge status={predictorStatus} />} />
+          <Row icon="refresh-outline" label="Refresh status" last
             onPress={() => { Haptics.selectionAsync(); setBackend('checking'); setOllama('checking'); setPredictor('checking'); checkServices(); }}
             right={<Ionicons name="chevron-forward" size={18} color="#64748b" />} />
-        </Section>
+        </CollapseGroup>
 
-        {/* Veronica AI */}
-        <Section title="Veronica AI">
-          <Row icon="speaker" label="Text-to-Speech" sub="Veronica speaks her replies" right={
-            <Switch value={tts} onValueChange={v => { Haptics.selectionAsync(); setTts(v); store.set(SETTINGS_KEYS.TTS_ENABLED, String(v)); }}
-              trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
-          } />
-          <Row icon="bell" label="Alert sound" sub="Audible chime on critical alerts" right={
-            <Switch value={alertSnd} onValueChange={v => { Haptics.selectionAsync(); setAlertSnd(v); store.set(SETTINGS_KEYS.ALERTS, String(v)); }}
-              trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
-          } />
-          <Row icon="globe" label="STT Language" right={<Text style={{ fontSize: 13, color: '#94a3b8' }}>English (US)</Text>} />
-          <Row icon="bolt" label="LLM Model" last right={<Text style={{ fontSize: 13, color: '#94a3b8' }}>{ollamaModel || 'qwen2.5:3b'}</Text>} />
-        </Section>
-
-        {/* Tank Safe Ranges */}
-        <Section title="Tank Safe Ranges">
-          <RangeRow icon="flask" label="pH"           unit="pH"   minKey={SETTINGS_KEYS.PH_MIN}   maxKey={SETTINGS_KEYS.PH_MAX}   />
-          <RangeRow icon="thermo" label="Temperature" unit="°C"   minKey={SETTINGS_KEYS.TEMP_MIN} maxKey={SETTINGS_KEYS.TEMP_MAX} />
-          <RangeRow icon="bubbles" label="Dissolved O₂" unit="mg/L" minKey={SETTINGS_KEYS.DO2_MIN}  maxKey={SETTINGS_KEYS.DO2_MAX}  />
-          <SingleRangeRow icon="cloud" label="CO₂" unit="ppm" maxKey={SETTINGS_KEYS.CO2_MAX} />
-        </Section>
-
-        {/* About */}
+        {/* 6. About */}
         <Section title="About">
-          <Row icon="fish"   label="Fishlinic Mobile" right={<Text style={{ fontSize: 13, color: '#94a3b8' }}>v1.0.0</Text>} />
-          <Row icon="school" label="Sejong University" right={<Text style={{ fontSize: 13, color: '#94a3b8' }}>Capstone 2026</Text>} />
-          <Row icon="cpu"    label="AI Models" sub="RF · YOLO · ConvLSTM-VAE" />
-          <Row icon="chart"  label="Sensors" sub="pH · Temp · DO₂ · CO₂" last />
-        </Section>
-
-        {/* Danger zone */}
-        <Section title="Danger Zone">
-          <Row icon="trash" danger label="Reset tank safe ranges" sub="Restore defaults" last
-            onPress={handleResetRanges}
-            right={<Ionicons name="chevron-forward" size={18} color="#ef4444" />} />
+          <Row icon="fish-outline"   label="Fishlinic Mobile" right={<Text style={{ fontSize: 13, color: '#94a3b8' }}>v1.0.0</Text>} />
+          <Row icon="school-outline" label="Sejong University" right={<Text style={{ fontSize: 13, color: '#94a3b8' }}>Capstone 2026</Text>} />
+          <Row icon="document-text-outline" label="Privacy & Terms"
+            onPress={() => Alert.alert('Privacy & Terms', 'Coming soon.')}
+            right={<Ionicons name="chevron-forward" size={18} color="#64748b" />} last />
         </Section>
 
       </ScrollView>

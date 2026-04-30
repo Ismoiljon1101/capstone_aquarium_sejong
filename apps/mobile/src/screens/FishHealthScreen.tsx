@@ -77,124 +77,137 @@ async function stopSpeaking() {
   }
 }
 
-// ─── ChatGPT-style orb ───────────────────────────────────────────────────────
+// ─── Siri/ChatGPT-style morphing voice orb ───────────────────────────────────
+// Multiple semi-transparent blobs translate + scale on offset sine cycles to
+// create an organic "breathing/thinking" gradient — no Skia needed.
+//
+// Color palettes per state shift dominant hue:
+//   idle      → faint cyan-grey (low amplitude, slow)
+//   listening → emerald + cyan, sharp pulse
+//   thinking  → cyan + violet, smooth morph (the "AI is reasoning" look)
+//   speaking  → cyan + white highlight, fast bouncy pulse
 const ORB_STATES = {
-  idle:      { color: '#94a3b8', speed: 2400, intensity: 0.08 },
-  listening: { color: '#22c55e', speed: 700,  intensity: 0.55 },
-  thinking:  { color: '#38bdf8', speed: 1100, intensity: 0.35 },
-  speaking:  { color: '#ffffff', speed: 500,  intensity: 0.65 },
+  idle:      { palette: ['#1e293b', '#334155', '#475569'], speed: 5000, amp: 0.05, glow: 0.10 },
+  listening: { palette: ['#22c55e', '#10b981', '#06b6d4'], speed: 1400, amp: 0.18, glow: 0.55 },
+  thinking:  { palette: ['#38bdf8', '#8b5cf6', '#0ea5e9'], speed: 2200, amp: 0.14, glow: 0.45 },
+  speaking:  { palette: ['#e0f2fe', '#38bdf8', '#0ea5e9'], speed: 1100, amp: 0.20, glow: 0.65 },
 };
 
-function VoiceOrb({ state }: { state: keyof typeof ORB_STATES }) {
-  const rings = useRef(
-    [0, 1, 2, 3].map(() => ({
-      scale:   new Animated.Value(1),
-      opacity: new Animated.Value(0),
+function VoiceOrb({ state, size = 200 }: { state: keyof typeof ORB_STATES; size?: number }) {
+  // Three morphing blobs, each animated on its own phase
+  const blobs = useRef(
+    [0, 1, 2].map(() => ({
+      t: new Animated.Value(0),       // 0..1 phase
     }))
   ).current;
-  const coreScale = useRef(new Animated.Value(1)).current;
-  const coreGlow  = useRef(new Animated.Value(0)).current;
+  const breath = useRef(new Animated.Value(0)).current;
+  const haloOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const cfg = ORB_STATES[state];
 
-    // Stop previous
-    rings.forEach(r => { r.scale.stopAnimation(); r.opacity.stopAnimation(); });
-    coreScale.stopAnimation(); coreGlow.stopAnimation();
+    // stop previous
+    blobs.forEach(b => b.t.stopAnimation());
+    breath.stopAnimation();
+    haloOpacity.stopAnimation();
 
-    if (state === 'idle') {
-      rings.forEach(r => { r.scale.setValue(1); r.opacity.setValue(0); });
-      Animated.loop(Animated.sequence([
-        Animated.timing(coreScale, { toValue: 1.04, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(coreScale, { toValue: 1,    duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ])).start();
-      return;
-    }
+    // Each blob loops 0→1→0 at slightly different speeds for organic motion
+    const blobAnims = blobs.map((b, i) => {
+      const dur = cfg.speed * (0.85 + i * 0.18);
+      return Animated.loop(Animated.sequence([
+        Animated.timing(b.t, { toValue: 1, duration: dur,        easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(b.t, { toValue: 0, duration: dur * 1.05, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]));
+    });
 
-    // Animate each ring with stagger
-    const anims = rings.map((r, i) =>
-      Animated.loop(Animated.sequence([
-        Animated.delay(i * (cfg.speed / 4)),
-        Animated.parallel([
-          Animated.timing(r.scale,   { toValue: 1 + 0.35 + i * 0.18, duration: cfg.speed * 0.7, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-          Animated.timing(r.opacity, { toValue: cfg.intensity - i * 0.06, duration: cfg.speed * 0.25, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        ]),
-        Animated.timing(r.opacity,   { toValue: 0, duration: cfg.speed * 0.45, easing: Easing.in(Easing.ease), useNativeDriver: true }),
-        Animated.timing(r.scale,     { toValue: 1, duration: 0, useNativeDriver: true }),
-      ]))
-    );
-
-    // Core pulse
-    const corePulse = Animated.loop(Animated.sequence([
-      Animated.timing(coreScale, { toValue: 1.08, duration: cfg.speed * 0.5, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      Animated.timing(coreScale, { toValue: 1,    duration: cfg.speed * 0.5, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-    ]));
-    const glowPulse = Animated.loop(Animated.sequence([
-      Animated.timing(coreGlow, { toValue: 1, duration: cfg.speed * 0.5, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      Animated.timing(coreGlow, { toValue: 0, duration: cfg.speed * 0.5, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+    // Breath = global scale pulse
+    const breathAnim = Animated.loop(Animated.sequence([
+      Animated.timing(breath, { toValue: 1, duration: cfg.speed * 0.55, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(breath, { toValue: 0, duration: cfg.speed * 0.55, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
     ]));
 
-    anims.forEach(a => a.start());
-    corePulse.start();
-    glowPulse.start();
+    // Halo opacity = state intensity
+    const haloAnim = Animated.timing(haloOpacity, {
+      toValue: cfg.glow, duration: 600,
+      easing: Easing.out(Easing.ease), useNativeDriver: true,
+    });
 
-    return () => { anims.forEach(a => a.stop()); corePulse.stop(); glowPulse.stop(); };
+    blobAnims.forEach(a => a.start());
+    breathAnim.start();
+    haloAnim.start();
+
+    return () => {
+      blobAnims.forEach(a => a.stop());
+      breathAnim.stop();
+      haloAnim.stop();
+    };
   }, [state]);
 
-  const cfg   = ORB_STATES[state];
-  const color = cfg.color;
+  const cfg = ORB_STATES[state];
+
+  // Master scale
+  const scale = breath.interpolate({ inputRange: [0, 1], outputRange: [1 - cfg.amp / 2, 1 + cfg.amp / 2] });
+
+  // Each blob: translate on small ellipse, scale slightly, color cycles via opacity
+  const blobStyles = blobs.map((b, i) => {
+    const a = (i / 3) * Math.PI * 2; // base angle
+    const r = size * 0.12;
+    const tx = b.t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [Math.cos(a) * r, Math.cos(a + Math.PI) * r, Math.cos(a) * r] });
+    const ty = b.t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [Math.sin(a) * r, Math.sin(a + Math.PI) * r, Math.sin(a) * r] });
+    const blobScale = b.t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.85, 1.15, 0.85] });
+    return { transform: [{ translateX: tx }, { translateY: ty }, { scale: blobScale }] };
+  });
+
+  const blobSize = size * 0.62;
+  const haloSize = size * 1.05;
 
   return (
-    <View style={{ width: 220, height: 220, alignItems: 'center', justifyContent: 'center' }}>
-      {/* Expanding rings */}
-      {rings.map((r, i) => (
-        <Animated.View key={i} style={{
-          position: 'absolute',
-          width: 100 + i * 8, height: 100 + i * 8,
-          borderRadius: 60 + i * 4,
-          borderWidth: 1.5,
-          borderColor: color,
-          opacity: r.opacity,
-          transform: [{ scale: r.scale }],
-        }} />
-      ))}
-
-      {/* Glow halo */}
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Outer glow halo */}
       <Animated.View style={{
         position: 'absolute',
-        width: 110, height: 110, borderRadius: 55,
-        backgroundColor: color,
-        opacity: Animated.multiply(coreGlow, new Animated.Value(0.12)),
-        transform: [{ scale: coreScale }],
+        width: haloSize, height: haloSize, borderRadius: haloSize / 2,
+        backgroundColor: cfg.palette[0],
+        opacity: haloOpacity,
+        transform: [{ scale }],
       }} />
 
-      {/* Core orb */}
+      {/* Inner clipped orb (rounded square so blobs blend like a gradient ball) */}
       <Animated.View style={{
-        width: 88, height: 88, borderRadius: 44,
-        backgroundColor: '#0f172a',
-        borderWidth: 2,
-        borderColor: color,
+        width: size * 0.78, height: size * 0.78, borderRadius: size * 0.39,
+        backgroundColor: '#0a1426',
+        borderWidth: 1, borderColor: cfg.palette[0] + '60',
         alignItems: 'center', justifyContent: 'center',
-        transform: [{ scale: coreScale }],
-        shadowColor: color,
-        shadowOpacity: 0.6,
-        shadowRadius: 18,
+        overflow: 'hidden',
+        transform: [{ scale }],
+        shadowColor: cfg.palette[0],
+        shadowOpacity: 0.55,
+        shadowRadius: 22,
         shadowOffset: { width: 0, height: 0 },
-        elevation: 12,
+        elevation: 16,
       }}>
-        {/* Inner gradient layers */}
-        <View style={{ position: 'absolute', width: 70, height: 70, borderRadius: 35, backgroundColor: color, opacity: 0.06 }} />
-        <View style={{ position: 'absolute', width: 50, height: 50, borderRadius: 25, backgroundColor: color, opacity: 0.10 }} />
-        <Ionicons
-          name={
-            state === 'listening' ? 'mic' :
-            state === 'thinking'  ? 'sparkles' :
-            state === 'speaking'  ? 'volume-high' :
-            'fish'
-          }
-          size={32}
-          color={color}
-        />
+        {/* Three morphing colored blobs */}
+        {blobs.map((_, i) => (
+          <Animated.View key={i} style={[{
+            position: 'absolute',
+            width: blobSize, height: blobSize, borderRadius: blobSize / 2,
+            backgroundColor: cfg.palette[i % cfg.palette.length],
+            opacity: 0.55,
+          }, blobStyles[i]]} />
+        ))}
+
+        {/* Soft white center highlight */}
+        <View style={{
+          position: 'absolute',
+          width: size * 0.22, height: size * 0.22, borderRadius: size * 0.11,
+          backgroundColor: '#ffffff', opacity: 0.10,
+          top: size * 0.18, left: size * 0.20,
+        }} />
+
+        {/* State icon (subtle, only shown idle) */}
+        {state === 'idle' && (
+          <Ionicons name="fish" size={size * 0.18} color="#94a3b8" style={{ opacity: 0.45 }} />
+        )}
       </Animated.View>
     </View>
   );
@@ -305,10 +318,12 @@ export default function FishHealthScreen() {
   const [speaking, setSpeaking] = useState(false);
   const [fishCount, setFishCount] = useState(0);
   const [ttsEnabled, setTts]    = useState(true);
+  const [llmOffline, setLlmOffline] = useState(false);
 
   const scrollRef    = useRef<ScrollView>(null);
   const callRef      = useRef(callActive);
   const loadingRef   = useRef(loading);
+  const errorStreak  = useRef(0);
   callRef.current    = callActive;
   loadingRef.current = loading;
 
@@ -338,23 +353,39 @@ export default function FishHealthScreen() {
 
     const ctx = sensorContext(sensors, fishCount);
     let reply = '';
+    let errored = false;
     try {
       const r = await api.voiceQuery(`[Live tank: ${ctx}] User: ${text}`);
       reply = String(r?.data?.response ?? r?.data ?? 'Connection error.');
+      errorStreak.current = 0;
+      setLlmOffline(false);
     } catch {
-      reply = 'Could not reach Veronica. Make sure backend and Ollama are running.';
+      reply = "I can't reach my brain right now. The AI service may be offline — try again in a moment, or keep typing and I'll catch up.";
+      errored = true;
+      errorStreak.current += 1;
+      if (errorStreak.current >= 2) setLlmOffline(true);
     }
 
     setMsgs(p => [...p, { role: 'veronica', text: reply, ts: new Date() }]);
     setLoading(false);
     scrollBottom();
 
-    if (ttsEnabled && (callRef.current || Platform.OS !== 'web')) {
+    // Speak only when in call mode (or always on native if TTS enabled).
+    // After speech ends, if call is still active and STT is available, resume
+    // listening so the conversation keeps flowing — even if the request errored.
+    const shouldSpeak = ttsEnabled && (callRef.current || Platform.OS !== 'web');
+    if (shouldSpeak) {
       setSpeaking(true);
       await speakText(reply, () => {
         setSpeaking(false);
-        if (callRef.current && sr.supported) startListening();
+        if (callRef.current && sr.supported) {
+          // small debounce so the mic doesn't pick up the tail of TTS
+          setTimeout(() => { if (callRef.current && !loadingRef.current) startListening(); }, 250);
+        }
       });
+    } else if (callRef.current && sr.supported && !errored) {
+      // No TTS but still in call — resume listening anyway.
+      setTimeout(() => { if (callRef.current && !loadingRef.current) startListening(); }, 200);
     }
   }, [sensors, fishCount, ttsEnabled]);
 
@@ -402,6 +433,22 @@ export default function FishHealthScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#020617" />
       <AppHeader title="Fish AI" subtitle="Veronica — your aquarium assistant" />
 
+      {/* LLM offline banner */}
+      {llmOffline && (
+        <View style={{
+          marginHorizontal: 14, marginTop: 8,
+          flexDirection: 'row', alignItems: 'center', gap: 10,
+          paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10,
+          backgroundColor: 'rgba(251,191,36,0.10)',
+          borderWidth: 1, borderColor: 'rgba(251,191,36,0.30)',
+        }}>
+          <Ionicons name="warning-outline" size={16} color="#fbbf24" />
+          <Text style={{ flex: 1, fontSize: 12, color: '#fde68a', lineHeight: 16 }}>
+            AI service unreachable. Check Ollama / backend. You can keep typing.
+          </Text>
+        </View>
+      )}
+
       {/* Status pill (shown only when active) */}
       {(listening || loading || speaking) && (
         <View style={{
@@ -423,16 +470,16 @@ export default function FishHealthScreen() {
       {/* ── Orb (voice mode) ── */}
       {callActive && (
         <View style={{
-          alignItems: 'center', paddingVertical: 24,
+          alignItems: 'center', paddingTop: 18, paddingBottom: 22,
           borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
         }}>
-          <VoiceOrb state={orbState} />
-          <Text style={{ fontSize: 13, color: statusColor, fontWeight: '600', marginTop: 4 }}>
-            {listening ? 'Speak now...' : speaking ? 'Veronica is speaking...' : loading ? 'Thinking...' : Platform.OS === 'web' ? 'Listening' : 'Type below or wait for response'}
+          <VoiceOrb state={orbState} size={200} />
+          <Text style={{ fontSize: 14, color: statusColor, fontWeight: '700', marginTop: 12, letterSpacing: -0.2 }}>
+            {listening ? 'Listening — speak now' : speaking ? 'Veronica speaking…' : loading ? 'Thinking…' : Platform.OS === 'web' ? 'Tap and speak' : 'Type below or wait'}
           </Text>
           {Platform.OS !== 'web' && !sr.supported && (
             <Text style={{ fontSize: 11, color: '#475569', marginTop: 6, textAlign: 'center', paddingHorizontal: 32 }}>
-              Voice input not available — type your question below. TTS will read responses aloud.
+              Voice input not available on this device — type your question. TTS will read replies aloud.
             </Text>
           )}
         </View>
