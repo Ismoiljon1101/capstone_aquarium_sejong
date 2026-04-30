@@ -326,6 +326,7 @@ export default function ControlsScreen() {
   const [pump, setPump] = useState(false);
   const [led, setLed] = useState(false);
   const [feeding, setFeeding] = useState(false);
+  const [feedResult, setFeedResult] = useState<'idle' | 'ok' | 'err'>('idle');
   const [pumpL, setPumpL] = useState(false);
   const [ledL, setLedL] = useState(false);
 
@@ -367,10 +368,20 @@ export default function ControlsScreen() {
 
   // ── Quick actions ──
   const feed = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (feeding) return;
     setFeeding(true);
-    await api.triggerFeed().catch(() => null);
-    setTimeout(() => setFeeding(false), 3000);
+    setFeedResult('idle');
+    try {
+      await api.triggerFeed();
+      setFeedResult('ok');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      setFeedResult('err');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setFeeding(false);
+      setTimeout(() => setFeedResult('idle'), 3000);
+    }
   };
   const pumpToggle = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -475,33 +486,50 @@ export default function ControlsScreen() {
         <Text style={sectionTitleStyle}>Quick Actions</Text>
 
         {/* Feed Now */}
-        <TouchableOpacity onPress={feed} disabled={feeding} activeOpacity={0.85}
-          accessibilityLabel="Feed fish now" accessibilityRole="button"
-          style={{
-            flexDirection: 'row', alignItems: 'center',
-            backgroundColor: feeding ? 'rgba(56,189,248,0.12)' : '#0f172a',
-            borderRadius: 16, padding: 18,
-            borderWidth: 1, borderColor: feeding ? '#38bdf8' : 'rgba(56,189,248,0.2)',
-            marginBottom: 12, gap: 14,
-          }}>
-          <View style={{
-            width: 56, height: 56, borderRadius: 16,
-            backgroundColor: feeding ? '#38bdf8' : 'rgba(56,189,248,0.15)',
-            alignItems: 'center', justifyContent: 'center',
-          }}>
-            {feeding
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Ionicons name="restaurant" size={26} color="#38bdf8" />
-            }
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 17, fontWeight: '800', color: feeding ? '#38bdf8' : '#f1f5f9', marginBottom: 3, letterSpacing: -0.3 }}>
-              {feeding ? 'Dispensing Feed…' : 'Feed Fish Now'}
-            </Text>
-            <Text style={{ fontSize: 13, color: '#94a3b8' }}>Activates feeder relay for one cycle</Text>
-          </View>
-          {!feeding && <Ionicons name="chevron-forward" size={20} color="#64748b" />}
-        </TouchableOpacity>
+        {(() => {
+          const isOk  = feedResult === 'ok';
+          const isErr = feedResult === 'err';
+          const accent = isErr ? '#ef4444' : '#38bdf8';
+          const bgActive = isErr ? 'rgba(239,68,68,0.12)' : 'rgba(56,189,248,0.12)';
+          const borderActive = isErr ? '#ef444460' : '#38bdf8';
+          const active = feeding || isOk || isErr;
+          return (
+            <TouchableOpacity onPress={feed} disabled={feeding} activeOpacity={0.85}
+              accessibilityLabel="Feed fish now" accessibilityRole="button"
+              style={{
+                flexDirection: 'row', alignItems: 'center',
+                backgroundColor: active ? bgActive : '#0f172a',
+                borderRadius: 16, padding: 18,
+                borderWidth: 1, borderColor: active ? borderActive : 'rgba(56,189,248,0.2)',
+                marginBottom: 12, gap: 14,
+              }}>
+              <View style={{
+                width: 56, height: 56, borderRadius: 16,
+                backgroundColor: active ? accent + '30' : 'rgba(56,189,248,0.15)',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                {feeding
+                  ? <ActivityIndicator color={accent} size="small" />
+                  : isOk
+                  ? <Ionicons name="checkmark-circle" size={28} color="#22c55e" />
+                  : isErr
+                  ? <Ionicons name="close-circle" size={28} color="#ef4444" />
+                  : <Ionicons name="restaurant" size={26} color="#38bdf8" />
+                }
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 17, fontWeight: '800', letterSpacing: -0.3, marginBottom: 3,
+                  color: isOk ? '#22c55e' : isErr ? '#ef4444' : feeding ? '#38bdf8' : '#f1f5f9' }}>
+                  {feeding ? 'Dispensing…' : isOk ? 'Feed dispensed!' : isErr ? 'Failed — check device' : 'Feed Fish Now'}
+                </Text>
+                <Text style={{ fontSize: 13, color: '#94a3b8' }}>
+                  {isOk ? 'Feeder relay triggered successfully' : isErr ? 'Backend unreachable or relay error' : 'Activates feeder relay for one cycle'}
+                </Text>
+              </View>
+              {!active && <Ionicons name="chevron-forward" size={20} color="#64748b" />}
+            </TouchableOpacity>
+          );
+        })()}
 
         <Text style={[sectionTitleStyle, { marginTop: 14 }]}>Toggle Devices</Text>
 
