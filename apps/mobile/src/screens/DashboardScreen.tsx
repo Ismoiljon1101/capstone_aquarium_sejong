@@ -62,25 +62,36 @@ function SensorCard({ icon, label, value, unit, color, status }: {
 }
 
 // ── Quick action chip ────────────────────────────────────────────────────────
-function QuickAction({ icon, label, color, onPress }: {
+function QuickAction({ icon, label, color, onPress, result }: {
   icon: IoniconName; label: string; color: string; onPress: () => void;
+  result?: 'idle' | 'ok' | 'err';
 }) {
+  const isOk  = result === 'ok';
+  const isErr = result === 'err';
+  const activeColor = isOk ? '#34d399' : isErr ? '#ef4444' : color;
+  const activeIcon: IoniconName = isOk ? 'checkmark-circle' : isErr ? 'close-circle' : icon;
+  const activeLabel = isOk ? 'Dispensed!' : isErr ? 'Failed!' : label;
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}
       accessibilityLabel={label} accessibilityRole="button"
       style={{
-        flex: 1, backgroundColor: '#0f172a', borderRadius: 14,
-        padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+        flex: 1, borderRadius: 14,
+        padding: 14, borderWidth: 1,
+        borderColor: isOk ? '#34d39940' : isErr ? '#ef444440' : 'rgba(255,255,255,0.06)',
+        backgroundColor: isOk ? '#052e1a' : isErr ? '#1f0a0a' : '#0f172a',
         alignItems: 'center', gap: 8, minHeight: 88, justifyContent: 'center',
       }}>
       <View style={{
         width: 36, height: 36, borderRadius: 10,
-        backgroundColor: color + '20',
+        backgroundColor: activeColor + '20',
         alignItems: 'center', justifyContent: 'center',
       }}>
-        <Ionicons name={icon} size={18} color={color} />
+        <Ionicons name={activeIcon} size={18} color={activeColor} />
       </View>
-      <Text style={{ fontSize: 12, fontWeight: '700', color: '#e2e8f0' }}>{label}</Text>
+      <Text style={{ fontSize: 12, fontWeight: '700', color: isOk ? '#34d399' : isErr ? '#ef4444' : '#e2e8f0' }}>
+        {activeLabel}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -99,6 +110,8 @@ export default function DashboardScreen() {
   const [fishStatus, setFishStatus] = useState('ok');
   const [healthScore, setHealthScore] = useState(98);
   const [fade] = useState(new Animated.Value(0));
+  const [feedResult, setFeedResult] = useState<'idle' | 'ok' | 'err'>('idle');
+  const [feeding, setFeeding] = useState(false);
 
   useEffect(() => {
     Animated.timing(fade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
@@ -140,8 +153,20 @@ export default function DashboardScreen() {
   };
 
   const triggerFeed = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await api.triggerFeed().catch(() => null);
+    if (feeding) return;
+    setFeeding(true);
+    setFeedResult('idle');
+    try {
+      await api.triggerFeed();
+      setFeedResult('ok');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      setFeedResult('err');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setFeeding(false);
+      setTimeout(() => setFeedResult('idle'), 3000);
+    }
   };
 
   const s = (k: string) => sensors[k];
@@ -204,7 +229,7 @@ export default function DashboardScreen() {
         {/* ── Quick Actions ── */}
         <Text style={sectionTitleStyle}>Quick Actions</Text>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22 }}>
-          <QuickAction icon="restaurant-outline" label="Feed Now" color="#38bdf8" onPress={triggerFeed} />
+          <QuickAction icon="restaurant-outline" label="Feed Now" color="#38bdf8" onPress={triggerFeed} result={feedResult} />
           <QuickAction icon="flash-outline" label="Controls" color="#fbbf24" onPress={() => { Haptics.selectionAsync(); nav.navigate('Controls'); }} />
           <QuickAction icon="chatbubble-ellipses-outline" label="Ask AI" color="#a78bfa" onPress={() => { Haptics.selectionAsync(); nav.navigate('Fish AI'); }} />
         </View>
