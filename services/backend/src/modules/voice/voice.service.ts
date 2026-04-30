@@ -26,14 +26,17 @@ export class VoiceService {
     this.predictorUrl = this.config.get('PREDICTOR_URL') ?? 'http://localhost:8001';
   }
 
-  async handleQuery(text: string, snapshotId?: number) {
+  async handleQuery(
+    text: string,
+    snapshotId?: number,
+  ): Promise<{ response: string; aiOffline: boolean }> {
     this.logger.log(`Processing voice query: "${text}"`);
 
     // 1. Get real-time sensor readings
     const latestReadings = await this.sensors.getLatest();
 
     // 2. Strip mobile-injected context prefix (backend re-fetches live)
-    const cleanText = text.replace(/^\[Live tank data[^\]]*\]\s*User:\s*/i, '').trim();
+    const cleanText = text.replace(/^\[Live tank[^\]]*\]\s*User:\s*/i, '').trim();
 
     // 3. Build rich sensor context (all readings)
     const sensorContext = this.buildSensorContext(latestReadings);
@@ -70,10 +73,15 @@ export class VoiceService {
       });
       await this.sessionRepo.save(session);
 
-      return aiResponse;
+      return { response: aiResponse, aiOffline: false };
     } catch (error) {
+      // Ollama unreachable — return sensor-only fallback so the app stays useful,
+      // but flag aiOffline=true so the client can surface the offline banner.
       this.logger.error(`Ollama error: ${error.message}`);
-      return this.sensorFallback(cleanText, latestReadings, qualityResult);
+      return {
+        response: this.sensorFallback(cleanText, latestReadings, qualityResult),
+        aiOffline: true,
+      };
     }
   }
 

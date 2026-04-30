@@ -10,8 +10,8 @@ export class VoiceController {
     @Body('text') text: string,
     @Body('snapshotId') snapshotId?: number,
   ) {
-    const response = await this.voiceService.handleQuery(text, snapshotId);
-    return { response };
+    // Returns { response: string; aiOffline: boolean }
+    return await this.voiceService.handleQuery(text, snapshotId);
   }
 
   @Get('sessions')

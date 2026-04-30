@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -94,24 +94,36 @@ const ORB_STATES = {
 };
 
 function VoiceOrb({ state, size = 200 }: { state: keyof typeof ORB_STATES; size?: number }) {
-  // Three morphing blobs, each animated on its own phase
   const blobs = useRef(
-    [0, 1, 2].map(() => ({
-      t: new Animated.Value(0),       // 0..1 phase
-    }))
+    [0, 1, 2].map(() => ({ t: new Animated.Value(0) }))
   ).current;
-  const breath = useRef(new Animated.Value(0)).current;
+  const breath      = useRef(new Animated.Value(0)).current;
   const haloOpacity = useRef(new Animated.Value(0)).current;
+
+  // Stable interpolations — created once from stable refs, no new nodes on re-render
+  const blobStyles = useMemo(() => blobs.map((b, i) => {
+    const a  = (i / 3) * Math.PI * 2;
+    const r  = size * 0.12;
+    const tx = b.t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [Math.cos(a) * r, Math.cos(a + Math.PI) * r, Math.cos(a) * r] });
+    const ty = b.t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [Math.sin(a) * r, Math.sin(a + Math.PI) * r, Math.sin(a) * r] });
+    const sc = b.t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.85, 1.15, 0.85] });
+    return { transform: [{ translateX: tx }, { translateY: ty }, { scale: sc }] } as const;
+  }), [size]);
+
+  // Fixed-range master scale; state speed/color communicate urgency, amplitude is subtle
+  const masterScale = useMemo(
+    () => breath.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.06] }),
+    [],
+  );
 
   useEffect(() => {
     const cfg = ORB_STATES[state];
 
-    // stop previous
-    blobs.forEach(b => b.t.stopAnimation());
-    breath.stopAnimation();
+    // Hard-reset before starting new cycle — prevents mid-cycle visual jump
+    blobs.forEach(b => { b.t.stopAnimation(); b.t.setValue(0); });
+    breath.stopAnimation(); breath.setValue(0);
     haloOpacity.stopAnimation();
 
-    // Each blob loops 0→1→0 at slightly different speeds for organic motion
     const blobAnims = blobs.map((b, i) => {
       const dur = cfg.speed * (0.85 + i * 0.18);
       return Animated.loop(Animated.sequence([
@@ -120,13 +132,11 @@ function VoiceOrb({ state, size = 200 }: { state: keyof typeof ORB_STATES; size?
       ]));
     });
 
-    // Breath = global scale pulse
     const breathAnim = Animated.loop(Animated.sequence([
       Animated.timing(breath, { toValue: 1, duration: cfg.speed * 0.55, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       Animated.timing(breath, { toValue: 0, duration: cfg.speed * 0.55, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
     ]));
 
-    // Halo opacity = state intensity
     const haloAnim = Animated.timing(haloOpacity, {
       toValue: cfg.glow, duration: 600,
       easing: Easing.out(Easing.ease), useNativeDriver: true,
@@ -143,21 +153,7 @@ function VoiceOrb({ state, size = 200 }: { state: keyof typeof ORB_STATES; size?
     };
   }, [state]);
 
-  const cfg = ORB_STATES[state];
-
-  // Master scale
-  const scale = breath.interpolate({ inputRange: [0, 1], outputRange: [1 - cfg.amp / 2, 1 + cfg.amp / 2] });
-
-  // Each blob: translate on small ellipse, scale slightly, color cycles via opacity
-  const blobStyles = blobs.map((b, i) => {
-    const a = (i / 3) * Math.PI * 2; // base angle
-    const r = size * 0.12;
-    const tx = b.t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [Math.cos(a) * r, Math.cos(a + Math.PI) * r, Math.cos(a) * r] });
-    const ty = b.t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [Math.sin(a) * r, Math.sin(a + Math.PI) * r, Math.sin(a) * r] });
-    const blobScale = b.t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.85, 1.15, 0.85] });
-    return { transform: [{ translateX: tx }, { translateY: ty }, { scale: blobScale }] };
-  });
-
+  const cfg      = ORB_STATES[state];
   const blobSize = size * 0.62;
   const haloSize = size * 1.05;
 
@@ -169,24 +165,23 @@ function VoiceOrb({ state, size = 200 }: { state: keyof typeof ORB_STATES; size?
         width: haloSize, height: haloSize, borderRadius: haloSize / 2,
         backgroundColor: cfg.palette[0],
         opacity: haloOpacity,
-        transform: [{ scale }],
+        transform: [{ scale: masterScale }],
       }} />
 
-      {/* Inner clipped orb (rounded square so blobs blend like a gradient ball) */}
+      {/* Inner orb */}
       <Animated.View style={{
         width: size * 0.78, height: size * 0.78, borderRadius: size * 0.39,
         backgroundColor: '#0a1426',
         borderWidth: 1, borderColor: cfg.palette[0] + '60',
         alignItems: 'center', justifyContent: 'center',
         overflow: 'hidden',
-        transform: [{ scale }],
+        transform: [{ scale: masterScale }],
         shadowColor: cfg.palette[0],
         shadowOpacity: 0.55,
         shadowRadius: 22,
         shadowOffset: { width: 0, height: 0 },
         elevation: 16,
       }}>
-        {/* Three morphing colored blobs */}
         {blobs.map((_, i) => (
           <Animated.View key={i} style={[{
             position: 'absolute',
@@ -196,7 +191,6 @@ function VoiceOrb({ state, size = 200 }: { state: keyof typeof ORB_STATES; size?
           }, blobStyles[i]]} />
         ))}
 
-        {/* Soft white center highlight */}
         <View style={{
           position: 'absolute',
           width: size * 0.22, height: size * 0.22, borderRadius: size * 0.11,
@@ -204,7 +198,6 @@ function VoiceOrb({ state, size = 200 }: { state: keyof typeof ORB_STATES; size?
           top: size * 0.18, left: size * 0.20,
         }} />
 
-        {/* State icon (subtle, only shown idle) */}
         {state === 'idle' && (
           <Ionicons name="fish" size={size * 0.18} color="#94a3b8" style={{ opacity: 0.45 }} />
         )}
@@ -323,7 +316,8 @@ export default function FishHealthScreen() {
   const scrollRef    = useRef<ScrollView>(null);
   const callRef      = useRef(callActive);
   const loadingRef   = useRef(loading);
-  const errorStreak  = useRef(0);
+  const errorStreak    = useRef(0);
+  const listenRetryRef = useRef(0);   // cap rapid blink when STT fires onend with no result
   callRef.current    = callActive;
   loadingRef.current = loading;
 
@@ -356,9 +350,17 @@ export default function FishHealthScreen() {
     let errored = false;
     try {
       const r = await api.voiceQuery(`[Live tank: ${ctx}] User: ${text}`);
+      // Backend returns { response, aiOffline } — aiOffline=true when Ollama is unreachable
+      const aiOffline = r?.data?.aiOffline === true;
       reply = String(r?.data?.response ?? r?.data ?? 'Connection error.');
-      errorStreak.current = 0;
-      setLlmOffline(false);
+      if (aiOffline) {
+        errored = true;
+        errorStreak.current += 1;
+        if (errorStreak.current >= 2) setLlmOffline(true);
+      } else {
+        errorStreak.current = 0;
+        setLlmOffline(false);
+      }
     } catch {
       reply = "I can't reach my brain right now. The AI service may be offline — try again in a moment, or keep typing and I'll catch up.";
       errored = true;
@@ -393,11 +395,17 @@ export default function FishHealthScreen() {
     if (!callRef.current || !sr.supported) return;
     setListen(true);
     const ok = sr.start(
-      (t) => { setListen(false); stopSpeaking(); setSpeaking(false); askVeronica(t); },
+      (t) => {
+        listenRetryRef.current = 0;                              // reset on success
+        setListen(false); stopSpeaking(); setSpeaking(false); askVeronica(t);
+      },
       (got) => {
         setListen(false);
-        if (!got && callRef.current && !loadingRef.current)
-          setTimeout(() => { if (callRef.current) startListening(); }, 500);
+        if (got) { listenRetryRef.current = 0; return; }
+        listenRetryRef.current += 1;
+        // After 4 silent ends in a row stop auto-retrying (prevents blink loop)
+        if (listenRetryRef.current <= 4 && callRef.current && !loadingRef.current)
+          setTimeout(() => { if (callRef.current) startListening(); }, 600);
       },
     );
     if (!ok) setListen(false);
@@ -407,7 +415,9 @@ export default function FishHealthScreen() {
     if (callActive) {
       sr.abort(); stopSpeaking();
       setCall(false); setListen(false); setSpeaking(false);
+      listenRetryRef.current = 0;
     } else {
+      listenRetryRef.current = 0;
       setCall(true);
       if (sr.supported) setTimeout(() => startListening(), 200);
     }
