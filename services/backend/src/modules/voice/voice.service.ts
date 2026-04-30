@@ -22,7 +22,7 @@ export class VoiceService {
     private sessionRepo: Repository<VoiceSessionEntity>,
   ) {
     this.ollamaUrl    = this.config.get('OLLAMA_URL')    ?? 'http://localhost:11434';
-    this.model        = this.config.get('OLLAMA_MODEL')  ?? 'gemma3:4b';
+    this.model        = this.config.get('OLLAMA_MODEL')  ?? 'gemma4:e2b';
     this.predictorUrl = this.config.get('PREDICTOR_URL') ?? 'http://localhost:8001';
   }
 
