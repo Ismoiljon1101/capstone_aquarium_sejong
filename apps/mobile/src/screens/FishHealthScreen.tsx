@@ -10,7 +10,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useApi } from '../hooks/useApi';
 import { useSensors, sensorContext } from '../hooks/useSensors';
 import { useSocket } from '../hooks/useSocket';
-import AppHeader from '../components/AppHeader';
+// AppHeader not used — custom minimal header below
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -249,61 +249,50 @@ function TypingDots() {
   );
 }
 
-// ─── Message bubble ───────────────────────────────────────────────────────────
+// ─── Message bubble — Claude.ai/ChatGPT style ─────────────────────────────────
+// User: right-aligned with subtle blue tint, no avatar
+// Veronica: full-width, no hard bubble, small avatar + name header
 function Bubble({ msg }: { msg: Msg }) {
   const isUser = msg.role === 'user';
-  return (
-    <View style={{
-      flexDirection: 'row',
-      justifyContent: isUser ? 'flex-end' : 'flex-start',
-      alignItems: 'flex-end',
-      marginBottom: 10,
-      paddingHorizontal: 4,
-    }}>
-      {!isUser && (
-        <View style={{
-          width: 32, height: 32, borderRadius: 16,
-          backgroundColor: '#0891b2',
-          alignItems: 'center', justifyContent: 'center',
-          marginRight: 8, marginBottom: 2, flexShrink: 0,
-        }}>
-          <Ionicons name="fish" size={16} color="#fff" />
-        </View>
-      )}
+  const time = msg.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      <View style={{ maxWidth: '75%' }}>
+  if (isUser) {
+    return (
+      <View style={{ paddingHorizontal: 16, marginBottom: 16, alignItems: 'flex-end' }}>
         <View style={{
-          backgroundColor: isUser ? '#1d4ed8' : '#0f172a',
-          borderRadius: 20,
-          borderTopRightRadius: isUser ? 5 : 20,
-          borderTopLeftRadius:  isUser ? 20 : 5,
-          paddingHorizontal: 15, paddingVertical: 11,
-          borderWidth: 1,
-          borderColor: isUser ? '#2563eb40' : 'rgba(255,255,255,0.07)',
+          maxWidth: '80%',
+          backgroundColor: 'rgba(29,78,216,0.20)',
+          borderRadius: 18, borderTopRightRadius: 4,
+          paddingHorizontal: 16, paddingVertical: 10,
+          borderWidth: 1, borderColor: 'rgba(37,99,235,0.28)',
         }}>
-          <Text selectable style={{ fontSize: 15, color: '#e2e8f0', lineHeight: 22 }}>
+          <Text selectable style={{ fontSize: 15, color: '#e2e8f0', lineHeight: 23 }}>
             {msg.text}
           </Text>
         </View>
-        <Text style={{
-          fontSize: 11, color: '#64748b', marginTop: 4,
-          textAlign: isUser ? 'right' : 'left',
-          marginHorizontal: 4,
-        }}>
-          {msg.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+        <Text style={{ fontSize: 11, color: '#334155', marginTop: 4 }}>{time}</Text>
       </View>
+    );
+  }
 
-      {isUser && (
+  return (
+    <View style={{ paddingHorizontal: 16, marginBottom: 20 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 7 }}>
         <View style={{
-          width: 32, height: 32, borderRadius: 16,
-          backgroundColor: '#1e3a5f',
+          width: 22, height: 22, borderRadius: 11,
+          backgroundColor: '#0c4a6e',
           alignItems: 'center', justifyContent: 'center',
-          marginLeft: 8, marginBottom: 2, flexShrink: 0,
         }}>
-          <Ionicons name="person" size={16} color="#cbd5e1" />
+          <Ionicons name="fish" size={11} color="#38bdf8" />
         </View>
-      )}
+        <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600', letterSpacing: 0.2 }}>
+          Veronica
+        </Text>
+        <Text style={{ fontSize: 11, color: '#1e293b' }}>{time}</Text>
+      </View>
+      <Text selectable style={{ fontSize: 15, color: '#cbd5e1', lineHeight: 26 }}>
+        {msg.text}
+      </Text>
     </View>
   );
 }
@@ -459,61 +448,57 @@ export default function FishHealthScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#020617' }}>
       <StatusBar barStyle="light-content" backgroundColor="#020617" />
-      <AppHeader title="Fish AI" subtitle="Veronica — your aquarium assistant" />
 
-      {/* LLM offline banner */}
+      {/* ── Minimal header ── */}
+      <View style={{
+        paddingTop: insets.top + 8,
+        paddingBottom: 12,
+        paddingHorizontal: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.05)',
+      }}>
+        <View style={{
+          width: 36, height: 36, borderRadius: 18,
+          backgroundColor: '#0c4a6e',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ionicons name="fish" size={18} color="#38bdf8" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: '#f1f5f9', letterSpacing: -0.3 }}>
+            Veronica
+          </Text>
+          <Text style={{ fontSize: 11, color: '#475569' }}>AI aquarium assistant</Text>
+        </View>
+        {fishCount > 0 && (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 4,
+            paddingHorizontal: 8, paddingVertical: 4,
+            borderRadius: 8, backgroundColor: 'rgba(16,185,129,0.08)',
+            borderWidth: 1, borderColor: 'rgba(16,185,129,0.18)',
+          }}>
+            <Ionicons name="fish-outline" size={11} color="#10b981" />
+            <Text style={{ fontSize: 11, color: '#10b981', fontWeight: '600' }}>{fishCount} fish</Text>
+          </View>
+        )}
+      </View>
+
+      {/* ── Offline banner ── */}
       {llmOffline && (
         <View style={{
           marginHorizontal: 14, marginTop: 8,
           flexDirection: 'row', alignItems: 'center', gap: 10,
           paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10,
-          backgroundColor: 'rgba(251,191,36,0.10)',
-          borderWidth: 1, borderColor: 'rgba(251,191,36,0.30)',
+          backgroundColor: 'rgba(251,191,36,0.08)',
+          borderWidth: 1, borderColor: 'rgba(251,191,36,0.25)',
         }}>
           <Ionicons name="warning-outline" size={16} color="#fbbf24" />
           <Text style={{ flex: 1, fontSize: 12, color: '#fde68a', lineHeight: 16 }}>
-            AI service unreachable. Check Ollama / backend. You can keep typing.
+            AI (Ollama) unreachable — sensor-only responses until it's back.
           </Text>
-        </View>
-      )}
-
-      {/* Status pill — only shown outside call mode (loading/speaking from text input) */}
-      {(loading || speaking) && !callActive && (
-        <View style={{
-          alignItems: 'center', paddingTop: 8, paddingBottom: 6,
-          backgroundColor: '#020617',
-        }}>
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', gap: 6,
-            paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10,
-            backgroundColor: statusColor + '15',
-            borderWidth: 1, borderColor: statusColor + '30',
-          }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor }} />
-            <Text style={{ fontSize: 11, color: statusColor, fontWeight: '700', letterSpacing: 0.3 }}>{statusLabel}</Text>
-          </View>
-        </View>
-      )}
-
-      {/* ── Compact orb bar (voice mode) — stays small so chat stays visible ── */}
-      {callActive && (
-        <View style={{
-          flexDirection: 'row', alignItems: 'center', gap: 14,
-          paddingHorizontal: 16, paddingVertical: 10,
-          borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
-          backgroundColor: '#020617',
-        }}>
-          <VoiceOrb state={orbState} size={72} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={{ fontSize: 14, color: statusColor, fontWeight: '700', letterSpacing: -0.2 }}>
-              {listening ? 'Listening — speak now' : speaking ? 'Veronica speaking…' : loading ? 'Thinking…' : 'Voice mode on — speak or type'}
-            </Text>
-            <Text style={{ fontSize: 11, color: '#475569' }}>
-              {Platform.OS !== 'web' && !sr.supported
-                ? 'Voice input unavailable — type below'
-                : 'Chat history stays visible below'}
-            </Text>
-          </View>
         </View>
       )}
 
@@ -521,115 +506,74 @@ export default function FishHealthScreen() {
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 16, paddingBottom: 8 }}
+        contentContainerStyle={{ paddingTop: 20, paddingBottom: 12 }}
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {msgs.map((m, i) => <Bubble key={i} msg={m} />)}
 
-        {/* ── Live transcription ghost bubble ── */}
+        {/* Live transcription ghost — right-aligned, italic */}
         {listening && (
-          <View style={{
-            flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'flex-end',
-            marginBottom: 10, paddingHorizontal: 4,
-          }}>
-            <View style={{ maxWidth: '75%' }}>
-              <View style={{
-                backgroundColor: interimText ? '#1e3a5f' : '#0f172a',
-                borderRadius: 20, borderTopRightRadius: 5,
-                paddingHorizontal: 15, paddingVertical: 11,
-                borderWidth: 1,
-                borderColor: interimText ? '#2563eb50' : 'rgba(56,189,248,0.15)',
-                opacity: 0.80,
-              }}>
-                {interimText ? (
-                  <Text style={{ fontSize: 15, color: '#94a3b8', lineHeight: 22, fontStyle: 'italic' }}>
-                    {interimText}
-                  </Text>
-                ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="mic" size={13} color="#22c55e" />
-                    <Text style={{ fontSize: 13, color: '#64748b', fontStyle: 'italic' }}>listening…</Text>
-                  </View>
-                )}
-              </View>
-            </View>
+          <View style={{ paddingHorizontal: 16, marginBottom: 16, alignItems: 'flex-end' }}>
             <View style={{
-              width: 32, height: 32, borderRadius: 16,
-              backgroundColor: '#1e3a5f',
-              alignItems: 'center', justifyContent: 'center',
-              marginLeft: 8, marginBottom: 2, flexShrink: 0, opacity: 0.6,
+              maxWidth: '80%',
+              backgroundColor: 'rgba(29,78,216,0.15)',
+              borderRadius: 18, borderTopRightRadius: 4,
+              paddingHorizontal: 16, paddingVertical: 10,
+              borderWidth: 1, borderColor: 'rgba(37,99,235,0.22)',
+              opacity: 0.85,
             }}>
-              <Ionicons name="mic" size={14} color="#38bdf8" />
+              {interimText ? (
+                <Text style={{ fontSize: 15, color: '#94a3b8', fontStyle: 'italic', lineHeight: 22 }}>
+                  {interimText}
+                </Text>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="mic" size={12} color="#22c55e" />
+                  <Text style={{ fontSize: 13, color: '#475569', fontStyle: 'italic' }}>listening…</Text>
+                </View>
+              )}
             </View>
           </View>
         )}
 
-        {/* ── Veronica typing indicator ── */}
+        {/* Veronica typing */}
         {loading && (
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginBottom: 10, paddingHorizontal: 4 }}>
-            <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#0891b2', alignItems: 'center', justifyContent: 'center', marginRight: 8, marginBottom: 2 }}>
-              <Text style={{ fontSize: 14 }}>🐟</Text>
+          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#0c4a6e', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="fish" size={11} color="#38bdf8" />
+              </View>
+              <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600' }}>Veronica</Text>
             </View>
-            <View style={{ backgroundColor: '#0f172a', borderRadius: 20, borderTopLeftRadius: 5, paddingHorizontal: 16, paddingVertical: 13, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' }}>
-              <TypingDots />
-            </View>
+            <TypingDots />
           </View>
         )}
       </ScrollView>
 
       {/* ── Input bar ── */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{
           flexDirection: 'row', alignItems: 'flex-end', gap: 8,
           paddingHorizontal: 14, paddingTop: 10,
           paddingBottom: insets.bottom > 0 ? insets.bottom + 4 : 16,
-          borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
+          borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)',
           backgroundColor: '#020617',
         }}>
-          {/* TTS toggle */}
-          <Pressable onPress={() => setTts(v => !v)}
-            accessibilityLabel={ttsEnabled ? 'Mute Veronica' : 'Unmute Veronica'} accessibilityRole="button"
-            style={{
-              width: 46, height: 46, borderRadius: 23,
-              backgroundColor: ttsEnabled ? 'rgba(8,145,178,0.12)' : '#0f172a',
-              alignItems: 'center', justifyContent: 'center',
-              borderWidth: 1, borderColor: ttsEnabled ? '#0891b240' : 'rgba(255,255,255,0.08)',
-            }}>
-            <Ionicons name={ttsEnabled ? 'volume-high' : 'volume-mute'} size={18} color={ttsEnabled ? '#38bdf8' : '#94a3b8'} />
-          </Pressable>
-
-          {/* Call button */}
-          <Pressable onPress={toggleCall}
-            accessibilityLabel={callActive ? 'End voice call' : 'Start voice call'} accessibilityRole="button"
-            style={{
-              width: 46, height: 46, borderRadius: 23,
-              backgroundColor: callActive ? '#dc2626' : '#16a34a',
-              alignItems: 'center', justifyContent: 'center',
-              shadowColor: callActive ? '#dc2626' : '#16a34a',
-              shadowOpacity: 0.4, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
-              elevation: 4,
-            }}>
-            <Ionicons name="call" size={18} color="#fff" style={callActive ? { transform: [{ rotate: '135deg' }] } : undefined} />
-          </Pressable>
-
           <TextInput
             style={{
               flex: 1, minHeight: 46, maxHeight: 120,
               backgroundColor: '#0f172a',
               borderWidth: 1,
-              borderColor: input ? 'rgba(56,189,248,0.3)' : 'rgba(255,255,255,0.08)',
+              borderColor: input ? 'rgba(56,189,248,0.22)' : 'rgba(255,255,255,0.07)',
               borderRadius: 24, paddingHorizontal: 18,
               paddingTop: Platform.OS === 'ios' ? 13 : 11,
               paddingBottom: Platform.OS === 'ios' ? 13 : 11,
               fontSize: 15, color: '#e2e8f0', lineHeight: 22,
             }}
-            placeholder="Message Veronica..."
-            placeholderTextColor="#64748b"
+            placeholder="Message Veronica…"
+            placeholderTextColor="#475569"
             value={input}
             onChangeText={setInput}
             onSubmitEditing={sendText}
@@ -638,30 +582,153 @@ export default function FishHealthScreen() {
             multiline
           />
 
-          <Pressable
-            onPress={sendText}
-            disabled={!input.trim() || loading}
-            android_ripple={{ color: 'rgba(255,255,255,0.15)', radius: 22, borderless: true }}
-            style={({ pressed }) => ({
-              width: 46, height: 46, borderRadius: 23,
-              backgroundColor: input.trim() && !loading ? '#0891b2' : '#0f172a',
-              alignItems: 'center', justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: input.trim() && !loading ? '#0891b240' : 'rgba(255,255,255,0.06)',
-              opacity: pressed ? 0.75 : 1,
-              shadowColor: '#0891b2',
-              shadowOpacity: input.trim() && !loading ? 0.4 : 0,
-              shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
-              elevation: input.trim() && !loading ? 4 : 0,
-            })}
-          >
-            {loading
-              ? <ActivityIndicator size="small" color="#94a3b8" />
-              : <Ionicons name="arrow-up" size={20} color={input.trim() ? '#fff' : '#475569'} />
-            }
-          </Pressable>
+          {/* Mic — opens full-screen voice */}
+          {!input.trim() && (
+            <Pressable
+              onPress={toggleCall}
+              style={({ pressed }) => ({
+                width: 46, height: 46, borderRadius: 23,
+                backgroundColor: '#0f172a',
+                alignItems: 'center', justifyContent: 'center',
+                borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Ionicons name="mic-outline" size={20} color="#64748b" />
+            </Pressable>
+          )}
+
+          {/* Send */}
+          {(input.trim() || loading) && (
+            <Pressable
+              onPress={sendText}
+              disabled={!input.trim() || loading}
+              style={({ pressed }) => ({
+                width: 46, height: 46, borderRadius: 23,
+                backgroundColor: input.trim() && !loading ? '#0891b2' : '#0f172a',
+                alignItems: 'center', justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: input.trim() && !loading ? 'rgba(8,145,178,0.35)' : 'rgba(255,255,255,0.06)',
+                opacity: pressed ? 0.75 : 1,
+              })}
+            >
+              {loading
+                ? <ActivityIndicator size="small" color="#94a3b8" />
+                : <Ionicons name="arrow-up" size={20} color={input.trim() ? '#fff' : '#475569'} />
+              }
+            </Pressable>
+          )}
         </View>
       </KeyboardAvoidingView>
+
+      {/* ── Full-screen voice overlay — ChatGPT Advanced Voice style ── */}
+      {callActive && (
+        <View style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: '#020617',
+          zIndex: 50,
+        }}>
+          {/* Top row */}
+          <View style={{
+            paddingTop: insets.top + 16,
+            paddingHorizontal: 20,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <Text style={{ fontSize: 11, color: '#334155', fontWeight: '700', letterSpacing: 1.2 }}>
+              VOICE MODE
+            </Text>
+            <Pressable
+              onPress={toggleCall}
+              style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Ionicons name="close" size={18} color="#64748b" />
+            </Pressable>
+          </View>
+
+          {/* Centered orb */}
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24 }}>
+            <VoiceOrb state={orbState} size={200} />
+
+            <Text style={{ fontSize: 18, color: statusColor, fontWeight: '600', letterSpacing: -0.3 }}>
+              {listening ? 'Listening…' : speaking ? 'Speaking…' : loading ? 'Thinking…' : 'Ready'}
+            </Text>
+
+            {/* Transcript / last message preview */}
+            <View style={{ marginHorizontal: 40, minHeight: 52, alignItems: 'center', justifyContent: 'center' }}>
+              {(interimText || msgs.length > 0) && (
+                <Text
+                  numberOfLines={3}
+                  style={{
+                    fontSize: 14, color: '#475569', textAlign: 'center', lineHeight: 22,
+                    fontStyle: interimText ? 'italic' : 'normal',
+                  }}
+                >
+                  {interimText
+                    ? interimText
+                    : (msgs[msgs.length - 1]?.text ?? '').slice(0, 130) +
+                      ((msgs[msgs.length - 1]?.text?.length ?? 0) > 130 ? '…' : '')}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* Bottom controls */}
+          <View style={{
+            paddingBottom: insets.bottom + 32,
+            paddingHorizontal: 48,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            {/* TTS mute */}
+            <Pressable
+              onPress={() => setTts(v => !v)}
+              style={{
+                width: 58, height: 58, borderRadius: 29,
+                backgroundColor: ttsEnabled ? 'rgba(8,145,178,0.10)' : 'rgba(255,255,255,0.05)',
+                alignItems: 'center', justifyContent: 'center',
+                borderWidth: 1, borderColor: ttsEnabled ? 'rgba(8,145,178,0.28)' : 'rgba(255,255,255,0.08)',
+              }}
+            >
+              <Ionicons
+                name={ttsEnabled ? 'volume-high' : 'volume-mute'}
+                size={22}
+                color={ttsEnabled ? '#38bdf8' : '#475569'}
+              />
+            </Pressable>
+
+            {/* End call */}
+            <Pressable
+              onPress={toggleCall}
+              style={{
+                width: 72, height: 72, borderRadius: 36,
+                backgroundColor: '#dc2626',
+                alignItems: 'center', justifyContent: 'center',
+                shadowColor: '#dc2626', shadowOpacity: 0.45,
+                shadowRadius: 20, shadowOffset: { width: 0, height: 4 },
+                elevation: 10,
+              }}
+            >
+              <Ionicons name="call" size={28} color="#fff" style={{ transform: [{ rotate: '135deg' }] }} />
+            </Pressable>
+
+            {/* Back to chat */}
+            <Pressable
+              onPress={toggleCall}
+              style={{
+                width: 58, height: 58, borderRadius: 29,
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                alignItems: 'center', justifyContent: 'center',
+                borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+              }}
+            >
+              <Ionicons name="chatbubble-outline" size={22} color="#475569" />
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
