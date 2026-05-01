@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserCommandEntity } from '../database/entities/user-command.entity';
 import { ActuatorEventEntity } from '../database/entities/actuator-event.entity';
 import { ActuatorCommand, ActuatorType } from '@fishlinic/types';
 import { ConfigService } from '@nestjs/config';
+import { GatewayGateway } from '../gateway/gateway.gateway';
 import axios from 'axios';
 
 @Injectable()
@@ -18,6 +19,8 @@ export class ActuatorsService {
     @InjectRepository(ActuatorEventEntity)
     private readonly eventRepository: Repository<ActuatorEventEntity>,
     private readonly configService: ConfigService,
+    @Optional() @Inject(forwardRef(() => GatewayGateway))
+    private readonly gateway: GatewayGateway,
   ) {
     this.bridgeUrl = this.configService.get<string>('SERIAL_BRIDGE_URL') || 'http://localhost:3001';
   }
@@ -49,6 +52,9 @@ export class ActuatorsService {
       // Update execution timestamp
       savedCommand.executedAt = new Date();
       await this.commandRepository.save(savedCommand);
+
+      // Broadcast state change so all connected clients update immediately
+      this.gateway?.emitActuatorState({ type: command.type, state: command.state });
 
       return { success: true, data: response.data };
     } catch (error) {

@@ -74,7 +74,6 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
       state: data.state,
       source: 'APP',
     });
-    this.emitActuatorState({ type: 'FEEDER', state: data.state });
   }
 
   @SubscribeMessage('command:pump')
@@ -87,7 +86,6 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
       state: data.state,
       source: 'APP',
     });
-    this.emitActuatorState({ type: 'AIR_PUMP', state: data.state });
   }
 
   @SubscribeMessage('command:led')
@@ -100,6 +98,5 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
       state: data.state,
       source: 'APP',
     });
-    this.emitActuatorState({ type: 'LED_STRIP', state: data.state });
   }
 }
