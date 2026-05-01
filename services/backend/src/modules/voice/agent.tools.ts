@@ -30,6 +30,14 @@ export const AGENT_TOOLS: ToolDefinition[] = [
   {
     type: 'function',
     function: {
+      name: 'readDiagnoses',
+      description: 'Read the latest fish disease diagnoses from the ML vision model. Use this when the user asks about fish health, disease, or appearance.',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'readThresholds',
       description: 'Read the safe parameter ranges configured for this tank (pH, temperature, DO, CO2 min/max).',
       parameters: { type: 'object', properties: {}, required: [] },
@@ -93,6 +101,7 @@ export type ToolExecutorDeps = {
   getSensorHistory: () => Promise<Array<{ type: string; value: number; unit: string; timestamp: string }>>;
   getActuatorState: () => Promise<Record<string, unknown>>;
   getThresholds: () => Promise<Record<string, unknown>>;
+  getDiagnoses: () => Promise<Array<{ diseaseClass: string; mlConfidence: number; severity: string; timestamp: Date }>>;
 };
 
 export async function executeTool(
@@ -131,6 +140,15 @@ export async function executeTool(
       case 'getActuatorState': {
         const state = await deps.getActuatorState();
         return JSON.stringify(state);
+      }
+
+      case 'readDiagnoses': {
+        const diagnoses = await deps.getDiagnoses();
+        if (!diagnoses.length) return 'No fish diagnoses on record yet.';
+        return diagnoses
+          .slice(0, 5)
+          .map(d => `${d.diseaseClass} (${d.severity}, ${(d.mlConfidence * 100).toFixed(1)}% confidence) — ${new Date(d.timestamp).toLocaleString()}`)
+          .join(' | ');
       }
 
       case 'readThresholds': {

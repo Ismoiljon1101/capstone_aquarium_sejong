@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { SensorsService } from '../sensors/sensors.service';
 import { ManagementService } from '../management/management.service';
+import { PushService } from '../push/push.service';
 import { AgentService } from './agent.service';
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -21,6 +22,7 @@ export class AgentMonitorService implements OnModuleInit, OnModuleDestroy {
     private readonly sensors: SensorsService,
     private readonly management: ManagementService,
     private readonly agent: AgentService,
+    private readonly push: PushService,
   ) {}
 
   onModuleInit() {
@@ -62,14 +64,16 @@ export class AgentMonitorService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(`Agent proposes: ${pendingAction.tool} — ${pendingAction.reason}`);
 
       if (config.agentMode === 'auto') {
-        // Auto mode: execute immediately, log result
         const exec = await this.agent.executeConfirmedAction(pendingAction.tool, pendingAction.args);
         this.logger.log(`Auto-executed ${pendingAction.tool}: ${exec.message}`);
-        // TODO: send push notification with execution result
+        if (config.pushEnabled) {
+          await this.push.send(config.pushToken, '🤖 Veronica acted', exec.message);
+        }
       } else {
-        // Confirm mode: log proposal for push notification
-        // TODO: send push notification with confirm/cancel deep link
-        this.logger.log(`Confirm mode — push notification pending: "${result.response}"`);
+        this.logger.log(`Confirm mode — proposing: "${result.response}"`);
+        if (config.pushEnabled) {
+          await this.push.send(config.pushToken, '🐟 Veronica suggests', result.response);
+        }
       }
     } catch (err) {
       this.logger.error(`Monitor check failed: ${(err as Error).message}`);

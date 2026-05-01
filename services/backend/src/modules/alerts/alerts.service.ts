@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AlertEntity } from '../database/entities/alert.entity';
+import { GatewayGateway } from '../gateway/gateway.gateway';
 import { AlertSeverity } from '@fishlinic/types';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class AlertsService {
   constructor(
     @InjectRepository(AlertEntity)
     private readonly alertRepository: Repository<AlertEntity>,
+    private readonly gateway: GatewayGateway,
   ) {}
 
   async createAlert(data: {
@@ -27,7 +29,9 @@ export class AlertsService {
       acknowledged: false,
     });
 
-    return await this.alertRepository.save(alert);
+    const saved = await this.alertRepository.save(alert);
+    this.gateway.emitAlertNew(saved as any);
+    return saved;
   }
 
   async listAlerts(activeOnly: boolean = false) {

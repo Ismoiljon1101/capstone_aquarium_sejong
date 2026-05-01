@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { SensorsService } from '../sensors/sensors.service';
 import { ActuatorsService } from '../actuators/actuators.service';
 import { ManagementService } from '../management/management.service';
+import { FishService } from '../fish/fish.service';
 import { AGENT_TOOLS, CONFIRMATION_TOOLS, executeTool } from './agent.tools';
 import {
   AgentResult,
@@ -40,6 +41,7 @@ export class AgentService {
     private readonly sensors: SensorsService,
     private readonly actuators: ActuatorsService,
     private readonly management: ManagementService,
+    private readonly fish: FishService,
   ) {
     this.ollamaUrl = this.config.get('OLLAMA_URL') ?? 'http://localhost:11434';
     this.model = this.config.get('OLLAMA_MODEL') ?? 'gemma4:e2b';
@@ -198,6 +200,9 @@ export class AgentService {
         do_mg_l: { min: 6, max: 9 },
         CO2_ppm: { max: 40 },
       }),
+      getDiagnoses: async () => {
+        return await this.fish.getLatestDiagnoses(5);
+      },
     };
   }
 }

@@ -11,6 +11,7 @@ import { SensorsModule } from '../sensors/sensors.module';
 import { VisionModule } from '../vision/vision.module';
 import { ActuatorsModule } from '../actuators/actuators.module';
 import { ManagementModule } from '../management/management.module';
+import { FishModule } from '../fish/fish.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ManagementModule } from '../management/management.module';
     VisionModule,
     ActuatorsModule,
     ManagementModule,
+    FishModule,
   ],
   controllers: [VoiceController],
   providers: [VoiceService, AgentService, AgentMonitorService],

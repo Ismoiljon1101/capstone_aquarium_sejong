@@ -17,17 +17,33 @@ export class HealthReport {
   @Column({ default: 'ok' })
   doStatus: string;
 
-  @Column()
+  @Column({ default: 'ok' })
   visualStatus: string;
 
-  @Column()
+  @Column({ default: 'ok' })
   behaviorStatus: string;
 
   @Column('float', { default: 1.0 })
   overallScore: number;
 
-  @Column('text')
+  @Column('text', { default: '' })
   summary: string;
+
+  // ML model fields (populated by Maral's Python scripts via POST /fish/diagnosis)
+  @Column({ nullable: true })
+  diseaseClass: string;
+
+  @Column('float', { nullable: true })
+  mlConfidence: number;
+
+  @Column({ nullable: true })
+  severity: string;
+
+  @Column({ nullable: true })
+  fishId: number;
+
+  @Column({ default: 'manual' })
+  source: string; // 'manual' | 'ml_model'
 
   @CreateDateColumn()
   timestamp: Date;

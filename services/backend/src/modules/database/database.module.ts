@@ -11,6 +11,7 @@ import { VoiceSessionEntity } from './entities/voice-session.entity';
 import { FeedScheduleEntity } from './entities/feed-schedule.entity';
 import { LightScheduleEntity } from './entities/light-schedule.entity';
 import { TankConfigEntity } from './entities/tank-config.entity';
+import { ActuatorEventEntity } from './entities/actuator-event.entity';
 import { DatabaseService } from './database.service';
 import { DatabaseController } from './database.controller';
 
@@ -23,14 +24,14 @@ import { DatabaseController } from './database.controller';
         const isPlaceholder = dbUrl?.includes('user:pass@host');
         
         if (!dbUrl || isPlaceholder) {
-          // Dev/demo fallback: better-sqlite3 in-memory (no external DB needed)
+          // Dev/demo fallback: persist to local file so data survives restarts
           return {
             type: 'better-sqlite3',
-            database: ':memory:',
+            database: 'fishlinic.sqlite',
             entities: [
               SensorReadingEntity, AlertEntity, CameraSnapshotEntity,
               FishCount, HealthReport, UserCommandEntity, VoiceSessionEntity,
-              FeedScheduleEntity, LightScheduleEntity, TankConfigEntity,
+              FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity,
             ],
             synchronize: true,
             logging: false,
@@ -44,32 +45,18 @@ import { DatabaseController } from './database.controller';
           url: isPostgres ? dbUrl : undefined,
           database: isPostgres ? undefined : 'fishlinic.sqlite',
           entities: [
-            SensorReadingEntity,
-            AlertEntity,
-            CameraSnapshotEntity,
-            FishCount,
-            HealthReport,
-            UserCommandEntity,
-            VoiceSessionEntity,
-            FeedScheduleEntity,
-            LightScheduleEntity,
-            TankConfigEntity,
+            SensorReadingEntity, AlertEntity, CameraSnapshotEntity,
+            FishCount, HealthReport, UserCommandEntity, VoiceSessionEntity,
+            FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity,
           ],
           synchronize: true, // Auto-create tables for dev mode
         };
       },
     }),
     TypeOrmModule.forFeature([
-      SensorReadingEntity,
-      AlertEntity,
-      CameraSnapshotEntity,
-      FishCount,
-      HealthReport,
-      UserCommandEntity,
-      VoiceSessionEntity,
-      FeedScheduleEntity,
-      LightScheduleEntity,
-      TankConfigEntity,
+      SensorReadingEntity, AlertEntity, CameraSnapshotEntity,
+      FishCount, HealthReport, UserCommandEntity, VoiceSessionEntity,
+      FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity,
     ]),
   ],
   controllers: [DatabaseController],

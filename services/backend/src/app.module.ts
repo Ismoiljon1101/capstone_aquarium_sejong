@@ -13,12 +13,14 @@ import { CronModule } from './modules/cron/cron.module';
 import { ManagementModule } from './modules/management/management.module';
 import { GatewayModule } from './modules/gateway/gateway.module';
 import { DatabaseModule } from './modules/database/database.module';
+import { PushModule } from './modules/push/push.module';
 import { LegacyController } from './modules/database/legacy.controller';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    PushModule,
     SerialModule,
     SensorsModule,
     ActuatorsModule,

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserCommandEntity } from '../database/entities/user-command.entity';
+import { ActuatorEventEntity } from '../database/entities/actuator-event.entity';
 import { ActuatorCommand, ActuatorType } from '@fishlinic/types';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
@@ -14,6 +15,8 @@ export class ActuatorsService {
   constructor(
     @InjectRepository(UserCommandEntity)
     private readonly commandRepository: Repository<UserCommandEntity>,
+    @InjectRepository(ActuatorEventEntity)
+    private readonly eventRepository: Repository<ActuatorEventEntity>,
     private readonly configService: ConfigService,
   ) {
     this.bridgeUrl = this.configService.get<string>('SERIAL_BRIDGE_URL') || 'http://localhost:3001';
@@ -31,6 +34,13 @@ export class ActuatorsService {
       createdAt: new Date(),
     });
     const savedCommand = await this.commandRepository.save(entity);
+
+    // Persist to actuator_events for history
+    await this.eventRepository.save(this.eventRepository.create({
+      type: command.type,
+      state: command.state,
+      source: command.source as string,
+    }));
 
     try {
       // Forward command to the serial-bridge
