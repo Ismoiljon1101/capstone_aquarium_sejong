@@ -181,29 +181,28 @@ export class AgentService {
   }
 
   async listChatSessions(): Promise<{ sessionId: string; preview: string; createdAt: Date; messageCount: number }[]> {
-    const rows: { sessionId: string; createdAt: string; count: string }[] = await this.chatRepo
-      .createQueryBuilder('m')
-      .select('m.sessionId', 'sessionId')
-      .addSelect('MIN(m.createdAt)', 'createdAt')
-      .addSelect('COUNT(*)', 'count')
-      .groupBy('m.sessionId')
-      .orderBy('MIN(m.createdAt)', 'DESC')
-      .getRawMany();
+    const all = await this.chatRepo.find({ order: { createdAt: 'ASC' } });
 
-    return Promise.all(
-      rows.map(async r => {
-        const first = await this.chatRepo.findOne({
-          where: { sessionId: r.sessionId, role: 'user' },
-          order: { createdAt: 'ASC' },
-        });
-        return {
-          sessionId: r.sessionId,
-          preview: (first?.content ?? 'Empty chat').slice(0, 80),
-          createdAt: new Date(r.createdAt),
-          messageCount: Number(r.count),
-        };
-      }),
-    );
+    const map = new Map<string, { createdAt: Date; count: number; preview: string }>();
+    for (const msg of all) {
+      if (!map.has(msg.sessionId)) {
+        map.set(msg.sessionId, { createdAt: msg.createdAt, count: 0, preview: '' });
+      }
+      const entry = map.get(msg.sessionId)!;
+      entry.count++;
+      if (msg.role === 'user' && !entry.preview) {
+        entry.preview = msg.content.slice(0, 80);
+      }
+    }
+
+    return Array.from(map.entries())
+      .map(([sessionId, { createdAt, count, preview }]) => ({
+        sessionId,
+        preview: preview || 'Empty chat',
+        createdAt,
+        messageCount: count,
+      }))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
   async deleteSession(sessionId: string) {
