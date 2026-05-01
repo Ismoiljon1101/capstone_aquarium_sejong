@@ -12,6 +12,7 @@ import { FeedScheduleEntity } from './entities/feed-schedule.entity';
 import { LightScheduleEntity } from './entities/light-schedule.entity';
 import { TankConfigEntity } from './entities/tank-config.entity';
 import { ActuatorEventEntity } from './entities/actuator-event.entity';
+import { FishGrowth } from './entities/fish-growth.entity';
 import { DatabaseService } from './database.service';
 import { DatabaseController } from './database.controller';
 
@@ -31,7 +32,7 @@ import { DatabaseController } from './database.controller';
             entities: [
               SensorReadingEntity, AlertEntity, CameraSnapshotEntity,
               FishCount, HealthReport, UserCommandEntity, VoiceSessionEntity,
-              FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity,
+              FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity, FishGrowth,
             ],
             synchronize: true,
             logging: false,
@@ -47,7 +48,7 @@ import { DatabaseController } from './database.controller';
           entities: [
             SensorReadingEntity, AlertEntity, CameraSnapshotEntity,
             FishCount, HealthReport, UserCommandEntity, VoiceSessionEntity,
-            FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity,
+            FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity, FishGrowth,
           ],
           synchronize: true, // Auto-create tables for dev mode
         };
@@ -56,7 +57,7 @@ import { DatabaseController } from './database.controller';
     TypeOrmModule.forFeature([
       SensorReadingEntity, AlertEntity, CameraSnapshotEntity,
       FishCount, HealthReport, UserCommandEntity, VoiceSessionEntity,
-      FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity,
+      FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity, FishGrowth,
     ]),
   ],
   controllers: [DatabaseController],
