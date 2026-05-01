@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  Platform, ActivityIndicator,
   Animated, Easing, StatusBar, Pressable,
 } from 'react-native';
+import { KeyboardAvoidingView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -481,7 +482,7 @@ export default function FishHealthScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: '#020617' }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <StatusBar barStyle="light-content" backgroundColor="#020617" />
 
@@ -635,8 +636,8 @@ export default function FishHealthScreen() {
         </View>
       )}
 
-      {/* ── Input bar ── */}
-      <View>
+      {/* ── Input bar — sticks above keyboard on both platforms ── */}
+      <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
         <View style={{
           flexDirection: 'row', alignItems: 'flex-end', gap: 8,
           paddingHorizontal: 14, paddingTop: 10,
@@ -702,7 +703,7 @@ export default function FishHealthScreen() {
             </Pressable>
           )}
         </View>
-      </View>
+      </KeyboardStickyView>
 
       {/* ── Full-screen voice overlay — ChatGPT Advanced Voice style ── */}
       {callActive && (
