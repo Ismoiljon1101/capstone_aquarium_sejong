@@ -46,18 +46,20 @@ const store = {
 };
 
 export const SETTINGS_KEYS = {
-  API_URL:     'fishlinic_api_url',
-  TTS_ENABLED: 'fishlinic_tts',
-  ALERTS:      'fishlinic_alerts',
-  PUSH:        'fishlinic_push',
-  PH_MIN:      'fishlinic_ph_min',
-  PH_MAX:      'fishlinic_ph_max',
-  TEMP_MIN:    'fishlinic_temp_min',
-  TEMP_MAX:    'fishlinic_temp_max',
-  DO2_MIN:     'fishlinic_do2_min',
-  DO2_MAX:     'fishlinic_do2_max',
-  CO2_MAX:     'fishlinic_co2_max',
+  API_URL:       'fishlinic_api_url',
+  TTS_ENABLED:   'fishlinic_tts',
+  ALERTS:        'fishlinic_alerts',
+  PUSH:          'fishlinic_push',
+  PH_MIN:        'fishlinic_ph_min',
+  PH_MAX:        'fishlinic_ph_max',
+  TEMP_MIN:      'fishlinic_temp_min',
+  TEMP_MAX:      'fishlinic_temp_max',
+  DO2_MIN:       'fishlinic_do2_min',
+  DO2_MAX:       'fishlinic_do2_max',
+  CO2_MAX:       'fishlinic_co2_max',
   ADVANCED_OPEN: 'fishlinic_advanced_open',
+  AGENT_MODE:    'fishlinic_agent_mode',    // 'confirm' | 'auto'
+  AGENT_MONITOR: 'fishlinic_agent_monitor', // 'true' | 'false'
 };
 
 // ── Status badge ─────────────────────────────────────────────────────────────
@@ -479,6 +481,14 @@ export default function SettingsScreen() {
   const [alertSnd, setAlertSnd] = useState(store.get(SETTINGS_KEYS.ALERTS, 'true') === 'true');
   const [push, setPush]         = useState(store.get(SETTINGS_KEYS.PUSH, 'true') === 'true');
 
+  // Agent settings
+  const [agentMode, setAgentMode]       = useState<'confirm' | 'auto'>(
+    store.get(SETTINGS_KEYS.AGENT_MODE, 'confirm') as 'confirm' | 'auto'
+  );
+  const [agentMonitor, setAgentMonitor] = useState(
+    store.get(SETTINGS_KEYS.AGENT_MONITOR, 'true') === 'true'
+  );
+
   const [backendStatus,   setBackend]   = useState<Status>('checking');
   const [ollamaStatus,    setOllama]    = useState<Status>('checking');
   const [predictorStatus, setPredictor] = useState<Status>('checking');
@@ -556,7 +566,95 @@ export default function SettingsScreen() {
         {/* 2. Tank pairing + cloud sync */}
         <TankCard />
 
-        {/* 3. Notifications */}
+        {/* 3. AI Agent */}
+        <Section
+          title="AI Agent · Veronica"
+          footer={agentMode === 'auto'
+            ? 'Auto mode: Veronica acts immediately when a sensor goes out of range. No confirmation needed.'
+            : 'Ask me first: Veronica proposes actions and waits for your tap before touching anything.'}
+        >
+          {/* Mode picker */}
+          <View style={{
+            paddingHorizontal: 16, paddingVertical: 14,
+            borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+          }}>
+            <Text style={{ fontSize: 13, color: '#94a3b8', fontWeight: '600', marginBottom: 10 }}>
+              Action mode
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {(['confirm', 'auto'] as const).map(mode => {
+                const active = agentMode === mode;
+                const label = mode === 'confirm' ? 'Ask me first' : 'Auto';
+                const color = mode === 'auto' ? '#a78bfa' : '#38bdf8';
+                return (
+                  <TouchableOpacity
+                    key={mode}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setAgentMode(mode);
+                      store.set(SETTINGS_KEYS.AGENT_MODE, mode);
+                      // sync to backend
+                      const base = store.get(SETTINGS_KEYS.API_URL, 'http://localhost:3000');
+                      fetch(`${base}/management/tank-config`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ agentMode: mode }),
+                      }).catch(() => null);
+                    }}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={label}
+                    style={{
+                      flex: 1, paddingVertical: 12, borderRadius: 12,
+                      alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: active ? color + '20' : 'rgba(255,255,255,0.04)',
+                      borderWidth: 1,
+                      borderColor: active ? color + '60' : 'rgba(255,255,255,0.08)',
+                    }}>
+                    <Ionicons
+                      name={mode === 'confirm' ? 'hand-left-outline' : 'flash-outline'}
+                      size={18}
+                      color={active ? color : '#475569'}
+                    />
+                    <Text style={{
+                      fontSize: 12, fontWeight: '700', marginTop: 4,
+                      color: active ? color : '#475569',
+                    }}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Overnight monitoring toggle */}
+          <Row
+            icon="eye-outline"
+            iconColor="#a78bfa"
+            label="24/7 monitoring"
+            sub="Veronica watches sensors every 5 min, even when app is closed"
+            last
+            right={
+              <Switch
+                value={agentMonitor}
+                onValueChange={v => {
+                  Haptics.selectionAsync();
+                  setAgentMonitor(v);
+                  store.set(SETTINGS_KEYS.AGENT_MONITOR, String(v));
+                  const base = store.get(SETTINGS_KEYS.API_URL, 'http://localhost:3000');
+                  fetch(`${base}/management/tank-config`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentMonitorEnabled: v }),
+                  }).catch(() => null);
+                }}
+                trackColor={{ true: '#a78bfa', false: '#1e293b' }}
+                thumbColor="#fff"
+              />
+            }
+          />
+        </Section>
+
+        {/* 4. Notifications */}
         <Section title="Notifications">
           <Row icon="notifications-outline" label="Push notifications"
             sub="Critical alerts on your phone, anywhere"

@@ -39,6 +39,13 @@ export class TankConfigEntity {
   @Column({ default: true })
   pushEnabled: boolean;
 
+  // AI Agent settings
+  @Column({ default: 'confirm' })
+  agentMode: string; // 'confirm' | 'auto'
+
+  @Column({ default: true })
+  agentMonitorEnabled: boolean;
+
   @UpdateDateColumn()
   updatedAt: Date;
 }
