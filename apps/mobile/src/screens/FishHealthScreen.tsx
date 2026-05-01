@@ -451,8 +451,14 @@ export default function FishHealthScreen() {
 
   const statusColor = listening ? '#22c55e' : loading ? '#38bdf8' : speaking ? '#f8fafc' : callActive ? '#34d399' : '#94a3b8';
 
+  const nativeVoiceUnavailable = Platform.OS !== 'web' && !sr.supported;
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#020617' }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: '#020617' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
+    >
       <StatusBar barStyle="light-content" backgroundColor="#020617" />
 
       {/* ── Minimal header ── */}
@@ -559,7 +565,7 @@ export default function FishHealthScreen() {
       </ScrollView>
 
       {/* ── Input bar ── */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View>
         <View style={{
           flexDirection: 'row', alignItems: 'flex-end', gap: 8,
           paddingHorizontal: 14, paddingTop: 10,
@@ -625,7 +631,7 @@ export default function FishHealthScreen() {
             </Pressable>
           )}
         </View>
-      </KeyboardAvoidingView>
+      </View>
 
       {/* ── Full-screen voice overlay — ChatGPT Advanced Voice style ── */}
       {callActive && (
@@ -655,22 +661,36 @@ export default function FishHealthScreen() {
 
           {/* Centered orb — tappable to manually restart listening */}
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-            <Pressable
-              onPress={() => {
-                if (!listening && !loading && !speaking) {
-                  listenRetryRef.current = 0;
-                  startListening();
-                }
-              }}
-              style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-              accessibilityLabel="Tap to speak"
-            >
-              <VoiceOrb state={orbState} size={200} />
-            </Pressable>
+            {nativeVoiceUnavailable ? (
+              <View style={{ marginHorizontal: 40, alignItems: 'center', gap: 20 }}>
+                <Ionicons name="mic-off-outline" size={56} color="#334155" />
+                <Text style={{ fontSize: 16, color: '#64748b', fontWeight: '600', textAlign: 'center' }}>
+                  Voice not available
+                </Text>
+                <Text style={{ fontSize: 13, color: '#475569', textAlign: 'center', lineHeight: 20 }}>
+                  Speech recognition requires a web browser.{'\n'}Use the text chat below.
+                </Text>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => {
+                  if (!listening && !loading && !speaking) {
+                    listenRetryRef.current = 0;
+                    startListening();
+                  }
+                }}
+                style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+                accessibilityLabel="Tap to speak"
+              >
+                <VoiceOrb state={orbState} size={200} />
+              </Pressable>
+            )}
 
-            <Text style={{ fontSize: 18, color: statusColor, fontWeight: '600', letterSpacing: -0.3 }}>
-              {listening ? 'Listening…' : speaking ? 'Speaking…' : loading ? 'Thinking…' : 'Tap orb to speak'}
-            </Text>
+            {!nativeVoiceUnavailable && (
+              <Text style={{ fontSize: 18, color: statusColor, fontWeight: '600', letterSpacing: -0.3 }}>
+                {listening ? 'Listening…' : speaking ? 'Speaking…' : loading ? 'Thinking…' : 'Tap orb to speak'}
+              </Text>
+            )}
 
             {micDenied && (
               <View style={{
@@ -760,6 +780,6 @@ export default function FishHealthScreen() {
           </View>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
