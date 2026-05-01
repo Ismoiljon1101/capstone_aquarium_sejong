@@ -45,6 +45,9 @@ export class ActuatorsService {
       source: command.source as string,
     }));
 
+    // Broadcast immediately — UI reflects commanded state regardless of bridge availability
+    this.gateway?.emitActuatorState({ type: command.type, state: command.state });
+
     try {
       // Forward command to the serial-bridge
       const response = await axios.post(`${this.bridgeUrl}/actuate`, command);
@@ -52,9 +55,6 @@ export class ActuatorsService {
       // Update execution timestamp
       savedCommand.executedAt = new Date();
       await this.commandRepository.save(savedCommand);
-
-      // Broadcast state change so all connected clients update immediately
-      this.gateway?.emitActuatorState({ type: command.type, state: command.state });
 
       return { success: true, data: response.data };
     } catch (error) {
