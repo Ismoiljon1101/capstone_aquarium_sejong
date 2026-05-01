@@ -13,6 +13,7 @@ import { LightScheduleEntity } from './entities/light-schedule.entity';
 import { TankConfigEntity } from './entities/tank-config.entity';
 import { ActuatorEventEntity } from './entities/actuator-event.entity';
 import { FishGrowth } from './entities/fish-growth.entity';
+import { ChatMessageEntity } from './entities/chat-message.entity';
 import { DatabaseService } from './database.service';
 import { DatabaseController } from './database.controller';
 
@@ -32,7 +33,7 @@ import { DatabaseController } from './database.controller';
             entities: [
               SensorReadingEntity, AlertEntity, CameraSnapshotEntity,
               FishCount, HealthReport, UserCommandEntity, VoiceSessionEntity,
-              FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity, FishGrowth,
+              FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity, FishGrowth, ChatMessageEntity,
             ],
             synchronize: true,
             logging: false,
@@ -48,7 +49,7 @@ import { DatabaseController } from './database.controller';
           entities: [
             SensorReadingEntity, AlertEntity, CameraSnapshotEntity,
             FishCount, HealthReport, UserCommandEntity, VoiceSessionEntity,
-            FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity, FishGrowth,
+            FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity, FishGrowth, ChatMessageEntity,
           ],
           synchronize: true, // Auto-create tables for dev mode
         };
@@ -57,7 +58,7 @@ import { DatabaseController } from './database.controller';
     TypeOrmModule.forFeature([
       SensorReadingEntity, AlertEntity, CameraSnapshotEntity,
       FishCount, HealthReport, UserCommandEntity, VoiceSessionEntity,
-      FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity, FishGrowth,
+      FeedScheduleEntity, LightScheduleEntity, TankConfigEntity, ActuatorEventEntity, FishGrowth, ChatMessageEntity,
     ]),
   ],
   controllers: [DatabaseController],

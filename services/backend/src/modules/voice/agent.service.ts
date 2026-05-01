@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
@@ -6,6 +8,7 @@ import { SensorsService } from '../sensors/sensors.service';
 import { ActuatorsService } from '../actuators/actuators.service';
 import { ManagementService } from '../management/management.service';
 import { FishService } from '../fish/fish.service';
+import { ChatMessageEntity } from '../database/entities/chat-message.entity';
 import { AGENT_TOOLS, CONFIRMATION_TOOLS, executeTool } from './agent.tools';
 import {
   AgentResult,
@@ -45,19 +48,24 @@ export class AgentService {
     private readonly actuators: ActuatorsService,
     private readonly management: ManagementService,
     private readonly fish: FishService,
+    @InjectRepository(ChatMessageEntity)
+    private readonly chatRepo: Repository<ChatMessageEntity>,
   ) {
     this.ollamaUrl = this.config.get('OLLAMA_URL') ?? 'http://localhost:11434';
     this.model = this.config.get('OLLAMA_MODEL') ?? 'gemma4:e2b';
   }
 
-  async run(userMessage: string): Promise<AgentResult> {
+  async run(userMessage: string, sessionId?: string): Promise<AgentResult> {
+    const history = sessionId ? await this.loadHistory(sessionId) : [];
     const messages: OllamaMessage[] = [
       { role: 'system', content: SYSTEM_PROMPT },
+      ...history,
       { role: 'user', content: userMessage },
     ];
 
     const deps = this.buildDeps();
     let iterations = 0;
+    let finalResponse = '';
 
     try {
       while (iterations < MAX_ITERATIONS) {
@@ -68,7 +76,9 @@ export class AgentService {
 
         // No tool calls — agent finished reasoning, return text response
         if (!msg.tool_calls || msg.tool_calls.length === 0) {
-          return { response: msg.content || 'Done.', aiOffline: false };
+          finalResponse = msg.content || 'Done.';
+          if (sessionId) await this.saveMessages(sessionId, userMessage, finalResponse);
+          return { response: finalResponse, aiOffline: false };
         }
 
         // Append assistant message with tool calls to history
@@ -101,6 +111,7 @@ export class AgentService {
 
             const pendingAction: PendingAction = { tool: name, args, reason };
             const summary = await this.summarizeProposal(pendingAction, messages, deps);
+            if (sessionId) await this.saveMessages(sessionId, userMessage, summary);
             return { response: summary, aiOffline: false, pendingAction };
           }
 
@@ -160,6 +171,33 @@ export class AgentService {
     };
     const label = actionLabel[proposal.tool] ?? proposal.tool;
     return `${proposal.reason} I recommend to ${label}. Confirm?`;
+  }
+
+  async getSessionMessages(sessionId: string) {
+    return this.chatRepo.find({
+      where: { sessionId },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async deleteSession(sessionId: string) {
+    await this.chatRepo.delete({ sessionId });
+  }
+
+  private async loadHistory(sessionId: string): Promise<OllamaMessage[]> {
+    const rows = await this.chatRepo.find({
+      where: { sessionId },
+      order: { createdAt: 'ASC' },
+      take: 20,
+    });
+    return rows.map(r => ({ role: r.role as OllamaMessage['role'], content: r.content }));
+  }
+
+  private async saveMessages(sessionId: string, userText: string, assistantText: string) {
+    await this.chatRepo.save([
+      this.chatRepo.create({ sessionId, role: 'user', content: userText }),
+      this.chatRepo.create({ sessionId, role: 'assistant', content: assistantText }),
+    ]);
   }
 
   private async callOllama(messages: OllamaMessage[]): Promise<OllamaChatResponse> {

@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Body } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Body, Param } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { VoiceService } from './voice.service';
 import { AgentService } from './agent.service';
 import type { ToolName } from './agent.types';
@@ -20,8 +21,25 @@ export class VoiceController {
 
   // Agent: reason + propose (no side effects until /agent/confirm)
   @Post('agent')
-  async runAgent(@Body('text') text: string) {
-    return await this.agentService.run(text);
+  async runAgent(@Body('text') text: string, @Body('sessionId') sessionId?: string) {
+    return await this.agentService.run(text, sessionId);
+  }
+
+  // Session management
+  @Post('sessions/new')
+  newSession() {
+    return { sessionId: randomUUID() };
+  }
+
+  @Get('sessions/:id/messages')
+  async getSessionMessages(@Param('id') id: string) {
+    return await this.agentService.getSessionMessages(id);
+  }
+
+  @Delete('sessions/:id')
+  async deleteSession(@Param('id') id: string) {
+    await this.agentService.deleteSession(id);
+    return { success: true };
   }
 
   // Agent: execute a confirmed write action

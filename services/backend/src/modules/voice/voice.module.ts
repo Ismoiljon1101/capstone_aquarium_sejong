@@ -7,6 +7,7 @@ import { VoiceService } from './voice.service';
 import { AgentService } from './agent.service';
 import { AgentMonitorService } from './agent.monitor';
 import { VoiceSessionEntity } from '../database/entities/voice-session.entity';
+import { ChatMessageEntity } from '../database/entities/chat-message.entity';
 import { SensorsModule } from '../sensors/sensors.module';
 import { VisionModule } from '../vision/vision.module';
 import { ActuatorsModule } from '../actuators/actuators.module';
@@ -17,7 +18,7 @@ import { FishModule } from '../fish/fish.module';
   imports: [
     HttpModule,
     ConfigModule,
-    TypeOrmModule.forFeature([VoiceSessionEntity]),
+    TypeOrmModule.forFeature([VoiceSessionEntity, ChatMessageEntity]),
     SensorsModule,
     VisionModule,
     ActuatorsModule,

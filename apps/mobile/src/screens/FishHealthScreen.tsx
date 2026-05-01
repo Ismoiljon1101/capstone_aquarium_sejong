@@ -300,6 +300,45 @@ function Bubble({ msg }: { msg: Msg }) {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
+// ── Typewriter effect ─────────────────────────────────────────────────────────
+function useTypewriter(text: string, active: boolean): string {
+  const [displayed, setDisplayed] = useState('');
+  const ref = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!active || !text) { setDisplayed(text); return; }
+    setDisplayed('');
+    let i = 0;
+    const delay = Math.max(8, Math.min(20, 1400 / text.length)); // cap at ~1.4s total
+    ref.current = setInterval(() => {
+      i++;
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length && ref.current) { clearInterval(ref.current); ref.current = null; }
+    }, delay);
+    return () => { if (ref.current) clearInterval(ref.current); };
+  }, [text, active]);
+
+  return displayed;
+}
+
+// ── Typewriter bubble (last Veronica message while animating) ─────────────────
+function TypewriterBubble({ text }: { text: string }) {
+  const displayed = useTypewriter(text, true);
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return (
+    <View style={{ paddingHorizontal: 16, marginBottom: 20 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 7 }}>
+        <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#0c4a6e', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="fish" size={11} color="#38bdf8" />
+        </View>
+        <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600', letterSpacing: 0.2 }}>Veronica</Text>
+        <Text style={{ fontSize: 11, color: '#1e293b' }}>{time}</Text>
+      </View>
+      <Text selectable style={{ fontSize: 15, color: '#cbd5e1', lineHeight: 26 }}>{displayed}</Text>
+    </View>
+  );
+}
+
 export default function FishHealthScreen() {
   const insets  = useSafeAreaInsets();
   const api     = useApi();
@@ -320,27 +359,52 @@ export default function FishHealthScreen() {
   const [micDenied, setMicDenied] = useState(false);
   const [pendingAction, setPending] = useState<{ tool: string; args: Record<string, unknown>; reason: string } | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
+  const [animatingMsg, setAnimatingMsg] = useState<string | null>(null);
 
   const scrollRef    = useRef<ScrollView>(null);
   const callRef      = useRef(callActive);
   const loadingRef   = useRef(loading);
   const errorStreak    = useRef(0);
-  const listenRetryRef = useRef(0);   // cap rapid blink when STT fires onend with no result
+  const listenRetryRef = useRef(0);
   callRef.current    = callActive;
   loadingRef.current = loading;
 
   const orbState: keyof typeof ORB_STATES =
     listening ? 'listening' : loading ? 'thinking' : speaking ? 'speaking' : 'idle';
 
-  // Greeting + fish count
+  // Init: create session + load history
   useEffect(() => {
-    setMsgs([{
-      role: 'veronica',
-      text: "Hi! I'm Veronica, your AI aquarium advisor. I have live access to your tank. Ask me anything — water quality, fish health, feeding advice.",
-      ts: new Date(),
-    }]);
+    const GREETING = "Hi! I'm Veronica, your AI aquarium advisor. I have live access to your tank. Ask me anything — water quality, fish health, feeding advice.";
+
+    api.newChatSession()
+      .then(async r => {
+        const sid: string = r.data.sessionId;
+        setSessionId(sid);
+        // load last session history if any (future: persist sessionId across restarts)
+      })
+      .catch(() => {
+        // fallback: local-only session
+        setSessionId(`local-${Date.now()}`);
+      });
+
+    setMsgs([{ role: 'veronica', text: GREETING, ts: new Date() }]);
     api.getFishCount().then(r => setFishCount(r.data?.count ?? 0)).catch(() => null);
     return on('fish:count', (d: any) => setFishCount(d?.count ?? 0));
+  }, []);
+
+  const startNewChat = useCallback(() => {
+    api.newChatSession()
+      .then(r => {
+        setSessionId(r.data.sessionId);
+        setMsgs([{ role: 'veronica', text: "New conversation started. What would you like to know?", ts: new Date() }]);
+        setPending(null);
+        setAnimatingMsg(null);
+      })
+      .catch(() => {
+        setSessionId(`local-${Date.now()}`);
+        setMsgs([{ role: 'veronica', text: "New conversation started. What would you like to know?", ts: new Date() }]);
+      });
   }, []);
 
   const scrollBottom = () =>
@@ -380,7 +444,7 @@ export default function FishHealthScreen() {
     let reply = '';
     let errored = false;
     try {
-      const r = await api.agentQuery(`[Live tank: ${ctx}] User: ${text}`);
+      const r = await api.agentQuery(`[Live tank: ${ctx}] User: ${text}`, sessionId || undefined);
       const aiOffline = r?.data?.aiOffline === true;
       reply = String(r?.data?.response ?? r?.data ?? 'Connection error.');
       if (r?.data?.pendingAction) setPending(r.data.pendingAction);
@@ -399,7 +463,12 @@ export default function FishHealthScreen() {
       if (errorStreak.current >= 2) setLlmOffline(true);
     }
 
-    setMsgs(p => [...p, { role: 'veronica', text: reply, ts: new Date() }]);
+    // Typewriter: show animating version, then commit to msgs when done
+    setAnimatingMsg(reply);
+    setTimeout(() => {
+      setAnimatingMsg(null);
+      setMsgs(p => [...p, { role: 'veronica', text: reply, ts: new Date() }]);
+    }, Math.max(600, Math.min(1600, reply.length * 14)));
     setLoading(false);
     scrollBottom();
 
@@ -521,6 +590,13 @@ export default function FishHealthScreen() {
             <Text style={{ fontSize: 11, color: '#10b981', fontWeight: '600' }}>{fishCount} fish</Text>
           </View>
         )}
+        <Pressable
+          onPress={startNewChat}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}
+          accessibilityLabel="New chat"
+        >
+          <Ionicons name="add-circle-outline" size={22} color="#475569" />
+        </Pressable>
       </View>
 
       {/* ── Offline banner ── */}
@@ -549,6 +625,9 @@ export default function FishHealthScreen() {
         showsVerticalScrollIndicator={false}
       >
         {msgs.map((m, i) => <Bubble key={i} msg={m} />)}
+
+        {/* Typewriter animation for incoming Veronica response */}
+        {animatingMsg !== null && <TypewriterBubble text={animatingMsg} />}
 
         {/* Live transcription ghost — right-aligned, italic */}
         {listening && (

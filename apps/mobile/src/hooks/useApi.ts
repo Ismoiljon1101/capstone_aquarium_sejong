@@ -17,8 +17,11 @@ export function useApi() {
     getFishHealth:      () => api.get('/fish/health'),
     getFishCount:       () => api.get('/fish/count'),
     voiceQuery:         (text: string) => api.post('/voice/query', { text }, { timeout: 60000 }),
-    agentQuery:         (text: string) => api.post('/voice/agent', { text }, { timeout: 90000 }),
+    agentQuery:         (text: string, sessionId?: string) => api.post('/voice/agent', { text, sessionId }, { timeout: 90000 }),
     agentConfirm:       (tool: string, args: Record<string, unknown>) => api.post('/voice/agent/confirm', { tool, args }),
+    newChatSession:     () => api.post('/voice/sessions/new'),
+    getSessionMessages: (id: string) => api.get(`/voice/sessions/${id}/messages`),
+    deleteSession:      (id: string) => api.delete(`/voice/sessions/${id}`),
     getVoiceSessions:   () => api.get('/voice/sessions'),
 
     // ── Management ──

@@ -660,7 +660,17 @@ export default function SettingsScreen() {
             sub="Critical alerts on your phone, anywhere"
             right={
               <Switch value={push}
-                onValueChange={v => { Haptics.selectionAsync(); setPush(v); store.set(SETTINGS_KEYS.PUSH, String(v)); }}
+                onValueChange={v => {
+                  Haptics.selectionAsync();
+                  setPush(v);
+                  store.set(SETTINGS_KEYS.PUSH, String(v));
+                  const base = store.get(SETTINGS_KEYS.API_URL, 'http://localhost:3000');
+                  fetch(`${base}/management/tank-config`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pushEnabled: v }),
+                  }).catch(() => null);
+                }}
                 trackColor={{ true: '#0891b2', false: '#1e293b' }} thumbColor="#fff" />
             } />
           <Row icon="notifications-circle-outline" label="Alert sound"
