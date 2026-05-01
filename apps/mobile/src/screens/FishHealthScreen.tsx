@@ -317,6 +317,8 @@ export default function FishHealthScreen() {
   const [llmOffline, setLlmOffline] = useState(false);
   const [interimText, setInterim] = useState('');
   const [micDenied, setMicDenied] = useState(false);
+  const [pendingAction, setPending] = useState<{ tool: string; args: Record<string, unknown>; reason: string } | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const scrollRef    = useRef<ScrollView>(null);
   const callRef      = useRef(callActive);
@@ -343,10 +345,33 @@ export default function FishHealthScreen() {
   const scrollBottom = () =>
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
 
+  const confirmAction = useCallback(async () => {
+    if (!pendingAction || confirming) return;
+    setConfirming(true);
+    try {
+      const r = await api.agentConfirm(pendingAction.tool, pendingAction.args);
+      const msg = r?.data?.message ?? 'Done.';
+      setMsgs(p => [...p, { role: 'veronica', text: `✓ ${msg}`, ts: new Date() }]);
+    } catch {
+      setMsgs(p => [...p, { role: 'veronica', text: "Couldn't execute the action — check the hardware connection.", ts: new Date() }]);
+    } finally {
+      setPending(null);
+      setConfirming(false);
+      scrollBottom();
+    }
+  }, [pendingAction, confirming]);
+
+  const cancelAction = useCallback(() => {
+    setPending(null);
+    setMsgs(p => [...p, { role: 'veronica', text: "OK, I won't do that.", ts: new Date() }]);
+    scrollBottom();
+  }, []);
+
   const askVeronica = useCallback(async (rawText: string) => {
     if (!rawText.trim() || loadingRef.current) return;
     const text = rawText.trim();
     setMsgs(p => [...p, { role: 'user', text, ts: new Date() }]);
+    setPending(null);
     setLoading(true);
     scrollBottom();
 
@@ -354,10 +379,10 @@ export default function FishHealthScreen() {
     let reply = '';
     let errored = false;
     try {
-      const r = await api.voiceQuery(`[Live tank: ${ctx}] User: ${text}`);
-      // Backend returns { response, aiOffline } — aiOffline=true when Ollama is unreachable
+      const r = await api.agentQuery(`[Live tank: ${ctx}] User: ${text}`);
       const aiOffline = r?.data?.aiOffline === true;
       reply = String(r?.data?.response ?? r?.data ?? 'Connection error.');
+      if (r?.data?.pendingAction) setPending(r.data.pendingAction);
       if (aiOffline) {
         errored = true;
         errorStreak.current += 1;
@@ -456,8 +481,8 @@ export default function FishHealthScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: '#020617' }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
     >
       <StatusBar barStyle="light-content" backgroundColor="#020617" />
 
@@ -563,6 +588,53 @@ export default function FishHealthScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* ── Pending action confirm card ── */}
+      {pendingAction && (
+        <View style={{
+          marginHorizontal: 14, marginBottom: 8,
+          borderRadius: 14, overflow: 'hidden',
+          borderWidth: 1, borderColor: 'rgba(56,189,248,0.28)',
+          backgroundColor: 'rgba(8,145,178,0.08)',
+        }}>
+          <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+              <Ionicons name="flash" size={13} color="#38bdf8" />
+              <Text style={{ fontSize: 11, color: '#38bdf8', fontWeight: '700', letterSpacing: 0.5 }}>
+                ACTION REQUIRED
+              </Text>
+            </View>
+            <Text style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 19 }}>
+              {pendingAction.reason}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(56,189,248,0.15)' }}>
+            <Pressable
+              onPress={cancelAction}
+              style={({ pressed }) => ({
+                flex: 1, paddingVertical: 11, alignItems: 'center',
+                opacity: pressed ? 0.6 : 1,
+                borderRightWidth: 1, borderRightColor: 'rgba(56,189,248,0.15)',
+              })}
+            >
+              <Text style={{ fontSize: 13, color: '#64748b', fontWeight: '600' }}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              onPress={confirmAction}
+              disabled={confirming}
+              style={({ pressed }) => ({
+                flex: 1, paddingVertical: 11, alignItems: 'center',
+                opacity: pressed || confirming ? 0.6 : 1,
+              })}
+            >
+              {confirming
+                ? <ActivityIndicator size="small" color="#38bdf8" />
+                : <Text style={{ fontSize: 13, color: '#38bdf8', fontWeight: '700' }}>Confirm</Text>
+              }
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       {/* ── Input bar ── */}
       <View>

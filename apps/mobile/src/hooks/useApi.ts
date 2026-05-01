@@ -17,6 +17,8 @@ export function useApi() {
     getFishHealth:      () => api.get('/fish/health'),
     getFishCount:       () => api.get('/fish/count'),
     voiceQuery:         (text: string) => api.post('/voice/query', { text }, { timeout: 60000 }),
+    agentQuery:         (text: string) => api.post('/voice/agent', { text }, { timeout: 90000 }),
+    agentConfirm:       (tool: string, args: Record<string, unknown>) => api.post('/voice/agent/confirm', { tool, args }),
     getVoiceSessions:   () => api.get('/voice/sessions'),
 
     // ── Management ──

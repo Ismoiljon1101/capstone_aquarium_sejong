@@ -50,6 +50,7 @@ export default function AppNavigator() {
           const tab = TABS.find(t => t.name === route.name);
           return {
             headerShown: false,
+            tabBarHideOnKeyboard: true,
             tabBarStyle: tab?.hidden ? { display: 'none' } : tabBar,
             tabBarActiveTintColor: '#38bdf8',
             tabBarInactiveTintColor: '#64748b',
