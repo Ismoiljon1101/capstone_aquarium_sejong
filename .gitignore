@@ -25,3 +25,13 @@ dist/
 resources/models/*.pt
 resources/models/*.pth
 resources/models/*.pkl
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Large raw video files
+*.mp4
+*.mov
+*.avi
+*.mkv
