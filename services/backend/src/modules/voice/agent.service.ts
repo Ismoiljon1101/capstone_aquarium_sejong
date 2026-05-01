@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { SensorsService } from '../sensors/sensors.service';
 import { ActuatorsService } from '../actuators/actuators.service';
+import { ManagementService } from '../management/management.service';
 import { AGENT_TOOLS, CONFIRMATION_TOOLS, executeTool } from './agent.tools';
 import {
   AgentResult,
@@ -38,6 +39,7 @@ export class AgentService {
     private readonly config: ConfigService,
     private readonly sensors: SensorsService,
     private readonly actuators: ActuatorsService,
+    private readonly management: ManagementService,
   ) {
     this.ollamaUrl = this.config.get('OLLAMA_URL') ?? 'http://localhost:11434';
     this.model = this.config.get('OLLAMA_MODEL') ?? 'gemma4:e2b';
@@ -76,14 +78,23 @@ export class AgentService {
           const name = tc.function.name as ToolName;
           const args = tc.function.arguments ?? {};
 
-          // Write tool — intercept, build proposal, stop loop
+          // Write tool — auto-execute or intercept depending on agentMode
           if (CONFIRMATION_TOOLS.has(name)) {
             const reason = (args.reason as string) ?? `${name} requested by agent`;
-            this.logger.log(`Agent proposes action: ${name} — ${reason}`);
+            const config = await this.management.getTankConfig();
+            const autoMode = config.agentMode === 'auto';
+
+            this.logger.log(`Agent proposes: ${name} — ${reason} (mode: ${config.agentMode})`);
+
+            if (autoMode) {
+              const exec = await this.executeConfirmedAction(name, args);
+              messages.push({ role: 'tool', content: exec.message });
+              this.logger.log(`Auto-executed ${name}: ${exec.message}`);
+              // Continue loop so agent can produce a follow-up response
+              continue;
+            }
 
             const pendingAction: PendingAction = { tool: name, args, reason };
-
-            // Let agent produce a human-readable summary before returning
             const summary = await this.summarizeProposal(pendingAction, messages, deps);
             return { response: summary, aiOffline: false, pendingAction };
           }
