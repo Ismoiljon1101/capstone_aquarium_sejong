@@ -23,6 +23,7 @@ export function useApi() {
     getSessionMessages: (id: string) => api.get(`/voice/sessions/${id}/messages`),
     deleteSession:      (id: string) => api.delete(`/voice/sessions/${id}`),
     getVoiceSessions:   () => api.get('/voice/sessions'),
+    listChatSessions:   () => api.get('/voice/chat-sessions'),
 
     // ── Management ──
     getFeedSchedules:   () => api.get('/management/feed-schedules'),

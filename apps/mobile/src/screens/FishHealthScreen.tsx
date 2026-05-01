@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView,
+  View, Text, TextInput, TouchableOpacity, ScrollView, Modal,
   Platform, ActivityIndicator,
   Animated, Easing, StatusBar, Pressable,
 } from 'react-native';
@@ -8,9 +8,12 @@ import { KeyboardAvoidingView, KeyboardStickyView } from 'react-native-keyboard-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApi } from '../hooks/useApi';
 import { useSensors, sensorContext } from '../hooks/useSensors';
 import { useSocket } from '../hooks/useSocket';
+
+const SESSION_KEY = '@veronica_session_id';
 // AppHeader not used — custom minimal header below
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -361,6 +364,8 @@ export default function FishHealthScreen() {
   const [confirming, setConfirming] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
   const [animatingMsg, setAnimatingMsg] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [sessions, setSessions] = useState<{ sessionId: string; preview: string; createdAt: Date; messageCount: number }[]>([]);
 
   const scrollRef    = useRef<ScrollView>(null);
   const callRef      = useRef(callActive);
@@ -373,38 +378,88 @@ export default function FishHealthScreen() {
   const orbState: keyof typeof ORB_STATES =
     listening ? 'listening' : loading ? 'thinking' : speaking ? 'speaking' : 'idle';
 
-  // Init: create session + load history
+  // Init: restore persisted session or create new one
   useEffect(() => {
     const GREETING = "Hi! I'm Veronica, your AI aquarium advisor. I have live access to your tank. Ask me anything — water quality, fish health, feeding advice.";
 
-    api.newChatSession()
-      .then(async r => {
-        const sid: string = r.data.sessionId;
-        setSessionId(sid);
-        // load last session history if any (future: persist sessionId across restarts)
-      })
-      .catch(() => {
-        // fallback: local-only session
-        setSessionId(`local-${Date.now()}`);
-      });
+    async function init() {
+      let sid: string | null = null;
+      try { sid = await AsyncStorage.getItem(SESSION_KEY); } catch {}
 
-    setMsgs([{ role: 'veronica', text: GREETING, ts: new Date() }]);
-    api.getFishCount().then(r => setFishCount(r.data?.count ?? 0)).catch(() => null);
+      if (sid) {
+        setSessionId(sid);
+        try {
+          const r = await api.getSessionMessages(sid);
+          const history: Msg[] = (r.data ?? []).map((m: any) => ({
+            role: m.role === 'user' ? 'user' : 'veronica' as const,
+            text: m.content,
+            ts: new Date(m.createdAt),
+          }));
+          setMsgs(history.length > 0 ? history : [{ role: 'veronica', text: GREETING, ts: new Date() }]);
+        } catch {
+          setMsgs([{ role: 'veronica', text: GREETING, ts: new Date() }]);
+        }
+      } else {
+        try {
+          const r = await api.newChatSession();
+          const newSid: string = r.data.sessionId;
+          setSessionId(newSid);
+          await AsyncStorage.setItem(SESSION_KEY, newSid).catch(() => null);
+        } catch {
+          setSessionId(`local-${Date.now()}`);
+        }
+        setMsgs([{ role: 'veronica', text: GREETING, ts: new Date() }]);
+      }
+
+      api.getFishCount().then(r => setFishCount(r.data?.count ?? 0)).catch(() => null);
+    }
+
+    init();
     return on('fish:count', (d: any) => setFishCount(d?.count ?? 0));
   }, []);
 
-  const startNewChat = useCallback(() => {
-    api.newChatSession()
-      .then(r => {
-        setSessionId(r.data.sessionId);
-        setMsgs([{ role: 'veronica', text: "New conversation started. What would you like to know?", ts: new Date() }]);
-        setPending(null);
-        setAnimatingMsg(null);
-      })
-      .catch(() => {
-        setSessionId(`local-${Date.now()}`);
-        setMsgs([{ role: 'veronica', text: "New conversation started. What would you like to know?", ts: new Date() }]);
-      });
+  const startNewChat = useCallback(async () => {
+    try {
+      const r = await api.newChatSession();
+      const newSid: string = r.data.sessionId;
+      setSessionId(newSid);
+      await AsyncStorage.setItem(SESSION_KEY, newSid).catch(() => null);
+    } catch {
+      setSessionId(`local-${Date.now()}`);
+    }
+    setMsgs([{ role: 'veronica', text: "New conversation started. What would you like to know?", ts: new Date() }]);
+    setPending(null);
+    setAnimatingMsg(null);
+  }, []);
+
+  const openHistory = useCallback(async () => {
+    setHistoryOpen(true);
+    try {
+      const r = await api.listChatSessions();
+      setSessions((r.data ?? []).map((s: any) => ({ ...s, createdAt: new Date(s.createdAt) })));
+    } catch {
+      setSessions([]);
+    }
+  }, []);
+
+  const loadSession = useCallback(async (sid: string) => {
+    setHistoryOpen(false);
+    try {
+      const r = await api.getSessionMessages(sid);
+      const history: Msg[] = (r.data ?? []).map((m: any) => ({
+        role: m.role === 'user' ? 'user' : 'veronica' as const,
+        text: m.content,
+        ts: new Date(m.createdAt),
+      }));
+      setSessionId(sid);
+      await AsyncStorage.setItem(SESSION_KEY, sid).catch(() => null);
+      setMsgs(history.length > 0 ? history : [{ role: 'veronica', text: 'This session is empty.', ts: new Date() }]);
+      setPending(null);
+      setAnimatingMsg(null);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 100);
+    } catch {
+      setMsgs([{ role: 'veronica', text: "Couldn't load that session.", ts: new Date() }]);
+    }
   }, []);
 
   const scrollBottom = () =>
@@ -590,6 +645,13 @@ export default function FishHealthScreen() {
             <Text style={{ fontSize: 11, color: '#10b981', fontWeight: '600' }}>{fishCount} fish</Text>
           </View>
         )}
+        <Pressable
+          onPress={openHistory}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}
+          accessibilityLabel="Chat history"
+        >
+          <Ionicons name="time-outline" size={22} color="#475569" />
+        </Pressable>
         <Pressable
           onPress={startNewChat}
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}
@@ -931,6 +993,89 @@ export default function FishHealthScreen() {
           </View>
         </View>
       )}
+
+      {/* ── Chat history modal ── */}
+      <Modal
+        visible={historyOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setHistoryOpen(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}
+          onPress={() => setHistoryOpen(false)}
+        />
+        <View style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          backgroundColor: '#0f172a',
+          borderTopLeftRadius: 20, borderTopRightRadius: 20,
+          maxHeight: '75%',
+          borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+        }}>
+          <View style={{
+            flexDirection: 'row', alignItems: 'center',
+            paddingHorizontal: 20, paddingTop: 18, paddingBottom: 12,
+            borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+          }}>
+            <Ionicons name="time-outline" size={16} color="#38bdf8" />
+            <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: '#f1f5f9', marginLeft: 8 }}>
+              Chat history
+            </Text>
+            <Pressable onPress={() => setHistoryOpen(false)} style={{ padding: 4 }}>
+              <Ionicons name="close" size={20} color="#475569" />
+            </Pressable>
+          </View>
+
+          <ScrollView style={{ paddingTop: 8 }} contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}>
+            {sessions.length === 0 ? (
+              <Text style={{ textAlign: 'center', color: '#475569', fontSize: 13, marginTop: 32 }}>
+                No past sessions yet.
+              </Text>
+            ) : (
+              sessions.map(s => {
+                const isActive = s.sessionId === sessionId;
+                const dateStr = s.createdAt.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                const timeStr = s.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return (
+                  <Pressable
+                    key={s.sessionId}
+                    onPress={() => loadSession(s.sessionId)}
+                    style={({ pressed }) => ({
+                      marginHorizontal: 12, marginVertical: 4,
+                      padding: 14, borderRadius: 12,
+                      backgroundColor: isActive
+                        ? 'rgba(56,189,248,0.10)'
+                        : pressed ? 'rgba(255,255,255,0.04)' : 'transparent',
+                      borderWidth: 1,
+                      borderColor: isActive ? 'rgba(56,189,248,0.25)' : 'rgba(255,255,255,0.05)',
+                    })}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                      <Text style={{ fontSize: 11, color: '#475569' }}>{dateStr} · {timeStr}</Text>
+                      <Text style={{ fontSize: 11, color: '#334155' }}>·</Text>
+                      <Text style={{ fontSize: 11, color: '#334155' }}>{s.messageCount} msgs</Text>
+                      {isActive && (
+                        <View style={{
+                          marginLeft: 'auto', paddingHorizontal: 6, paddingVertical: 2,
+                          borderRadius: 4, backgroundColor: 'rgba(56,189,248,0.15)',
+                        }}>
+                          <Text style={{ fontSize: 10, color: '#38bdf8', fontWeight: '700' }}>ACTIVE</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text
+                      numberOfLines={2}
+                      style={{ fontSize: 13, color: '#94a3b8', lineHeight: 19 }}
+                    >
+                      {s.preview}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

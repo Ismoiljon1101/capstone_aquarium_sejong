@@ -180,6 +180,32 @@ export class AgentService {
     });
   }
 
+  async listChatSessions(): Promise<{ sessionId: string; preview: string; createdAt: Date; messageCount: number }[]> {
+    const rows: { sessionId: string; createdAt: string; count: string }[] = await this.chatRepo
+      .createQueryBuilder('m')
+      .select('m.sessionId', 'sessionId')
+      .addSelect('MIN(m.createdAt)', 'createdAt')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('m.sessionId')
+      .orderBy('MIN(m.createdAt)', 'DESC')
+      .getRawMany();
+
+    return Promise.all(
+      rows.map(async r => {
+        const first = await this.chatRepo.findOne({
+          where: { sessionId: r.sessionId, role: 'user' },
+          order: { createdAt: 'ASC' },
+        });
+        return {
+          sessionId: r.sessionId,
+          preview: (first?.content ?? 'Empty chat').slice(0, 80),
+          createdAt: new Date(r.createdAt),
+          messageCount: Number(r.count),
+        };
+      }),
+    );
+  }
+
   async deleteSession(sessionId: string) {
     await this.chatRepo.delete({ sessionId });
   }

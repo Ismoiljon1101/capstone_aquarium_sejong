@@ -55,4 +55,9 @@ export class VoiceController {
   async getSessions() {
     return await this.voiceService.getSessions();
   }
+
+  @Get('chat-sessions')
+  async listChatSessions() {
+    return await this.agentService.listChatSessions();
+  }
 }
