@@ -47,8 +47,9 @@ export class VoiceController {
   async confirmAction(
     @Body('tool') tool: ToolName,
     @Body('args') args: Record<string, unknown>,
+    @Body('sessionId') sessionId?: string,
   ) {
-    return await this.agentService.executeConfirmedAction(tool, args);
+    return await this.agentService.executeConfirmedAction(tool, args, sessionId);
   }
 
   @Get('sessions')

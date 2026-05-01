@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+import { API_BASE } from './useApi';
 
 export function usePushToken() {
   useEffect(() => {

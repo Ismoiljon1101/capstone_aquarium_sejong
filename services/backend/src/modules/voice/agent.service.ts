@@ -65,7 +65,14 @@ export class AgentService {
 
     const deps = this.buildDeps();
     let iterations = 0;
-    let finalResponse = '';
+
+    const finalize = async (response: string, extra: Partial<AgentResult> = {}): Promise<AgentResult> => {
+      if (sessionId) {
+        try { await this.saveMessages(sessionId, userMessage, response); }
+        catch (e) { this.logger.warn(`saveMessages failed: ${(e as Error).message}`); }
+      }
+      return { response, aiOffline: false, ...extra };
+    };
 
     try {
       while (iterations < MAX_ITERATIONS) {
@@ -74,26 +81,20 @@ export class AgentService {
         const res = await this.callOllama(messages);
         const msg = res.message;
 
-        // No tool calls — agent finished reasoning, return text response
         if (!msg.tool_calls || msg.tool_calls.length === 0) {
-          finalResponse = msg.content || 'Done.';
-          if (sessionId) await this.saveMessages(sessionId, userMessage, finalResponse);
-          return { response: finalResponse, aiOffline: false };
+          return await finalize(msg.content || 'Done.');
         }
 
-        // Append assistant message with tool calls to history
         messages.push({
           role: 'assistant',
           content: msg.content ?? '',
           tool_calls: msg.tool_calls,
         });
 
-        // Process each tool call
         for (const tc of msg.tool_calls) {
           const name = tc.function.name as ToolName;
           const args = tc.function.arguments ?? {};
 
-          // Write tool — auto-execute or intercept depending on agentMode
           if (CONFIRMATION_TOOLS.has(name)) {
             const reason = (args.reason as string) ?? `${name} requested by agent`;
             const config = await this.management.getTankConfig();
@@ -105,65 +106,81 @@ export class AgentService {
               const exec = await this.executeConfirmedAction(name, args);
               messages.push({ role: 'tool', content: exec.message });
               this.logger.log(`Auto-executed ${name}: ${exec.message}`);
-              // Continue loop so agent can produce a follow-up response
               continue;
             }
 
             const pendingAction: PendingAction = { tool: name, args, reason };
-            const summary = await this.summarizeProposal(pendingAction, messages, deps);
-            if (sessionId) await this.saveMessages(sessionId, userMessage, summary);
-            return { response: summary, aiOffline: false, pendingAction };
+            const summary = this.summarizeProposal(pendingAction);
+            return await finalize(summary, { pendingAction });
           }
 
-          // Read tool — execute and feed result back
           const result = await executeTool(name, args, deps);
           this.logger.debug(`Tool ${name} → ${result.slice(0, 120)}`);
-
           messages.push({ role: 'tool', content: result });
         }
       }
 
-      return { response: 'I reached my reasoning limit. Please try a more specific question.', aiOffline: false };
+      return await finalize('I reached my reasoning limit. Please try a more specific question.');
     } catch (err) {
       this.logger.error(`Agent error: ${(err as Error).message}`);
-      return { response: 'Veronica is offline right now. Please check that Ollama is running.', aiOffline: true };
+      const fallback = 'Veronica is offline right now. Please check that Ollama is running.';
+      if (sessionId) {
+        try { await this.saveMessages(sessionId, userMessage, fallback); } catch {}
+      }
+      return { response: fallback, aiOffline: true };
     }
   }
 
-  // Execute a confirmed write action directly
-  async executeConfirmedAction(tool: ToolName, args: Record<string, unknown>): Promise<{ success: boolean; message: string }> {
+  // Execute a confirmed write action directly. If sessionId is provided, persist the result.
+  async executeConfirmedAction(
+    tool: ToolName,
+    args: Record<string, unknown>,
+    sessionId?: string,
+  ): Promise<{ success: boolean; message: string }> {
+    let result: { success: boolean; message: string };
     try {
       switch (tool) {
         case 'controlPump': {
           const state = Boolean(args.state);
           await this.actuators.triggerActuator({ actuatorId: 2, type: 'AIR_PUMP', relayChannel: 2, state, source: 'AGENT' as any });
-          return { success: true, message: `Pump turned ${state ? 'ON' : 'OFF'}.` };
+          result = { success: true, message: `Pump turned ${state ? 'ON' : 'OFF'}.` };
+          break;
         }
         case 'controlLed': {
           const state = Boolean(args.state);
           await this.actuators.triggerActuator({ actuatorId: 3, type: 'LED_STRIP', relayChannel: 3, state, source: 'AGENT' as any });
-          return { success: true, message: `LED turned ${state ? 'ON' : 'OFF'}.` };
+          result = { success: true, message: `LED turned ${state ? 'ON' : 'OFF'}.` };
+          break;
         }
         case 'triggerFeed': {
           const cycles = Math.min(5, Math.max(1, Number(args.cycles) || 2));
           await this.actuators.triggerActuator({ actuatorId: 1, type: 'FEEDER', relayChannel: 1, state: true, source: 'AGENT' as any });
-          return { success: true, message: `Feeder triggered for ${cycles} cycle(s).` };
+          result = { success: true, message: `Feeder triggered for ${cycles} cycle(s).` };
+          break;
         }
         default:
-          return { success: false, message: `Unknown action: ${tool}` };
+          result = { success: false, message: `Unknown action: ${tool}` };
       }
     } catch (err) {
-      return { success: false, message: (err as Error).message };
+      result = { success: false, message: (err as Error).message };
     }
+
+    if (sessionId) {
+      try {
+        await this.chatRepo.save(this.chatRepo.create({
+          sessionId,
+          role: 'assistant',
+          content: result.success ? `✓ ${result.message}` : `✗ ${result.message}`,
+        }));
+      } catch (e) {
+        this.logger.warn(`Could not persist confirm result: ${(e as Error).message}`);
+      }
+    }
+
+    return result;
   }
 
-  // Ask Ollama to produce a plain-English summary of the proposed action
-  private async summarizeProposal(
-    proposal: PendingAction,
-    priorMessages: OllamaMessage[],
-    deps: ReturnType<typeof this.buildDeps>,
-  ): Promise<string> {
-    // Build a short summary without another Ollama round-trip if possible
+  private summarizeProposal(proposal: PendingAction): string {
     const actionLabel: Record<string, string> = {
       controlPump: `turn the air pump ${proposal.args.state ? 'ON' : 'OFF'}`,
       controlLed: `turn the LED strip ${proposal.args.state ? 'ON' : 'OFF'}`,

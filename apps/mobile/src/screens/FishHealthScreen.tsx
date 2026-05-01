@@ -367,6 +367,10 @@ export default function FishHealthScreen() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [sessions, setSessions] = useState<{ sessionId: string; preview: string; createdAt: Date; messageCount: number }[]>([]);
 
+  const abortRef = useRef<AbortController | null>(null);
+  const sessionIdRef = useRef<string>('');
+  sessionIdRef.current = sessionId;
+
   const scrollRef    = useRef<ScrollView>(null);
   const callRef      = useRef(callActive);
   const loadingRef   = useRef(loading);
@@ -391,7 +395,7 @@ export default function FishHealthScreen() {
         try {
           const r = await api.getSessionMessages(sid);
           const history: Msg[] = (r.data ?? []).map((m: any) => ({
-            role: m.role === 'user' ? 'user' : 'veronica' as const,
+            role: (m.role === 'user' ? 'user' : 'veronica') as Msg['role'],
             text: m.content,
             ts: new Date(m.createdAt),
           }));
@@ -419,6 +423,8 @@ export default function FishHealthScreen() {
   }, []);
 
   const startNewChat = useCallback(async () => {
+    abortRef.current?.abort();
+    setLoading(false);
     try {
       const r = await api.newChatSession();
       const newSid: string = r.data.sessionId;
@@ -444,10 +450,12 @@ export default function FishHealthScreen() {
 
   const loadSession = useCallback(async (sid: string) => {
     setHistoryOpen(false);
+    abortRef.current?.abort();
+    setLoading(false);
     try {
       const r = await api.getSessionMessages(sid);
       const history: Msg[] = (r.data ?? []).map((m: any) => ({
-        role: m.role === 'user' ? 'user' : 'veronica' as const,
+        role: (m.role === 'user' ? 'user' : 'veronica') as Msg['role'],
         text: m.content,
         ts: new Date(m.createdAt),
       }));
@@ -469,7 +477,7 @@ export default function FishHealthScreen() {
     if (!pendingAction || confirming) return;
     setConfirming(true);
     try {
-      const r = await api.agentConfirm(pendingAction.tool, pendingAction.args);
+      const r = await api.agentConfirm(pendingAction.tool, pendingAction.args, sessionIdRef.current || undefined);
       const msg = r?.data?.message ?? 'Done.';
       setMsgs(p => [...p, { role: 'veronica', text: `✓ ${msg}`, ts: new Date() }]);
     } catch {
@@ -489,17 +497,32 @@ export default function FishHealthScreen() {
 
   const askVeronica = useCallback(async (rawText: string) => {
     if (!rawText.trim() || loadingRef.current) return;
+
+    // Wait for session bootstrap (max ~3s) so first message persists
+    let waited = 0;
+    while (!sessionIdRef.current && waited < 3000) {
+      await new Promise(r => setTimeout(r, 100));
+      waited += 100;
+    }
+
     const text = rawText.trim();
     setMsgs(p => [...p, { role: 'user', text, ts: new Date() }]);
     setPending(null);
     setLoading(true);
     scrollBottom();
 
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    const startedFor = sessionIdRef.current;
+
     const ctx = sensorContext(sensors, fishCount);
     let reply = '';
     let errored = false;
     try {
-      const r = await api.agentQuery(`[Live tank: ${ctx}] User: ${text}`, sessionId || undefined);
+      const r = await api.agentQuery(`[Live tank: ${ctx}] User: ${text}`, sessionIdRef.current || undefined, ctrl.signal);
+      // Discard if session changed during the request
+      if (sessionIdRef.current !== startedFor) { setLoading(false); return; }
       const aiOffline = r?.data?.aiOffline === true;
       reply = String(r?.data?.response ?? r?.data ?? 'Connection error.');
       if (r?.data?.pendingAction) setPending(r.data.pendingAction);
@@ -511,7 +534,8 @@ export default function FishHealthScreen() {
         errorStreak.current = 0;
         setLlmOffline(false);
       }
-    } catch {
+    } catch (err: any) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') { setLoading(false); return; }
       reply = "I can't reach my brain right now. The AI service may be offline — try again in a moment, or keep typing and I'll catch up.";
       errored = true;
       errorStreak.current += 1;
