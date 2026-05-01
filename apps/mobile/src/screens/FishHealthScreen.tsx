@@ -481,8 +481,7 @@ export default function FishHealthScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: '#020617' }}
-      behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <StatusBar barStyle="light-content" backgroundColor="#020617" />
 
