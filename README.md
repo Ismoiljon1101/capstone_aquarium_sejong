@@ -12,9 +12,8 @@ sprint in progress — see `project_status.md` and `docs/team-ownership.md`.
 
 | Name        | Role                          | Primary folders                                                             |
 |-------------|-------------------------------|-----------------------------------------------------------------------------|
-| Ismail      | Lead Architect / Backend / Mobile | `services/backend/`, `apps/mobile/`, `shared/types/`, `docs/`           |
+| Ismail      | Lead Architect / Backend / Mobile/ Frontend / UI / Dashboard/ AI agent| `services/backend/`, `apps/mobile/`, `shared/types/`, `docs/`,`apps/dashboard/`, atoms/molecules/organisms, mobile UI styling           |
 | Maral       | Database Specialist           | `services/backend/src/modules/database/`, `migrations/`, Supabase           |
-| Hamidullah  | Frontend / UI / Dashboard     | `apps/dashboard/`, atoms/molecules/organisms, mobile UI styling             |
 | Firdavs     | AI Engineer                   | `services/ai-predictor/`, ML models in `resources/models/`                  |
 | Sarvar      | Hardware Engineer             | `firmware/main/`, `firmware/secondary/`, `services/serial-bridge/`          |
 
