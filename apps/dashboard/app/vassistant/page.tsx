@@ -15,7 +15,7 @@ const QUICK_ACTIONS = [
 ];
 
 function VAssistantContent() {
-  const { initiated, busy, error, messages, isTyping, input, setInput, toast, onInitiate, onAsk, onSpeak, setMessages } = useVoiceSession();
+  const { initiated, busy, error, messages, isTyping, input, setInput, toast, pendingAction, confirming, onInitiate, onAsk, onConfirm, onCancel, onSpeak, setMessages } = useVoiceSession();
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const hasCheckedToast = useRef(false);
@@ -123,6 +123,21 @@ function VAssistantContent() {
                   </div></div></div>
                 )}
               </div>
+
+              {pendingAction && (
+                <div className="mx-4 mb-3 rounded-xl border border-cyan-500/25 bg-cyan-500/[0.06] overflow-hidden">
+                  <div className="px-4 py-3">
+                    <p className="text-[10px] font-bold text-cyan-400 tracking-widest mb-1">ACTION REQUIRED</p>
+                    <p className="text-sm" style={{ color: "rgb(var(--text-secondary))" }}>{pendingAction.reason}</p>
+                  </div>
+                  <div className="flex border-t border-cyan-500/15">
+                    <button onClick={onCancel} className="flex-1 py-2.5 text-sm text-slate-500 hover:text-slate-300 transition-colors border-r border-cyan-500/15">Cancel</button>
+                    <button onClick={onConfirm} disabled={confirming} className="flex-1 py-2.5 text-sm text-cyan-400 font-bold hover:text-cyan-300 transition-colors disabled:opacity-50">
+                      {confirming ? "Executing…" : "Confirm"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="p-4 border-t border-white/10">
                 <div className="flex gap-3">

@@ -39,14 +39,26 @@ export function useApi() {
   const triggerVisionAnalysis = () => api.post('/vision/analyze');
   const getLatestVisionReport = () => api.get('/vision/latest-report');
 
-  // Voice
+  // Voice — legacy single-shot
   const sendVoiceQuery = (text: string, snapshotId?: number) =>
     api.post('/voice/query', { text, snapshotId });
-  const getSessions = () => api.get('/voice/sessions');
+
+  // Agent — tool-calling with session persistence
+  const agentQuery    = (text: string, sessionId?: string, signal?: AbortSignal) =>
+    api.post('/voice/agent', { text, sessionId }, { timeout: 90000, signal });
+  const agentConfirm  = (tool: string, args: Record<string, unknown>, sessionId?: string) =>
+    api.post('/voice/agent/confirm', { tool, args, sessionId });
+  const newChatSession     = () => api.post('/voice/sessions/new');
+  const getSessionMessages = (id: string) => api.get(`/voice/sessions/${id}/messages`);
+  const deleteSession      = (id: string) => api.delete(`/voice/sessions/${id}`);
+  const listChatSessions   = () => api.get('/voice/chat-sessions');
+
+  // Sensors history
+  const getAllSensorHistory = (range: string) => api.get(`/sensors/history?range=${range}`);
 
   // Legacy compat
   const getHistory = async (range: string = "24h") => {
-    const res = await api.get(`/sensors/0/readings?range=${range}`);
+    const res = await api.get(`/sensors/history?range=${range}`);
     return res.data;
   };
   const getStatus = () => api.get('/sensors/latest');
@@ -54,6 +66,7 @@ export function useApi() {
   return {
     getLatest,
     getSensorHistory,
+    getAllSensorHistory,
     triggerFeed,
     togglePump,
     toggleLed,
@@ -68,7 +81,12 @@ export function useApi() {
     triggerVisionAnalysis,
     getLatestVisionReport,
     sendVoiceQuery,
-    getSessions,
+    agentQuery,
+    agentConfirm,
+    newChatSession,
+    getSessionMessages,
+    deleteSession,
+    listChatSessions,
     getHistory,
     getStatus,
   };
