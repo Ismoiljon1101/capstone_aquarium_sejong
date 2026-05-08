@@ -4,7 +4,7 @@ import Expo, { ExpoPushMessage } from 'expo-server-sdk';
 @Injectable()
 export class PushService {
   private readonly logger = new Logger(PushService.name);
-  private readonly expo = new Expo({ useFcmV1: false });
+  private readonly expo = new Expo();
 
   async send(token: string | null | undefined, title: string, body: string, data?: Record<string, unknown>) {
     if (!token || !Expo.isExpoPushToken(token)) {
