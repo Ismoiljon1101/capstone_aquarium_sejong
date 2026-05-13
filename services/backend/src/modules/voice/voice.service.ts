@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { VoiceSessionEntity } from '../database/entities/voice-session.entity';
 import { SensorsService } from '../sensors/sensors.service';
+import { ActuatorsService } from '../actuators/actuators.service';
 
 @Injectable()
 export class VoiceService {
@@ -18,6 +19,7 @@ export class VoiceService {
     private http: HttpService,
     private config: ConfigService,
     private sensors: SensorsService,
+    private actuators: ActuatorsService,
     @InjectRepository(VoiceSessionEntity)
     private sessionRepo: Repository<VoiceSessionEntity>,
   ) {
@@ -35,6 +37,10 @@ export class VoiceService {
     // 1. Get real-time sensor readings
     const latestReadings = await this.sensors.getLatest();
 
+    // Get real-time actuator state
+    const actuatorResponse = await this.actuators.getState() as any;
+    const actuatorState = actuatorResponse?.actuators || { pump: false, led: false, feeder: false };
+
     // 2. Strip mobile-injected context prefix (backend re-fetches live)
     const cleanText = text.replace(/^\[Live tank[^\]]*\]\s*User:\s*/i, '').trim();
 
@@ -45,7 +51,7 @@ export class VoiceService {
     const qualityResult = await this.fetchQualityScore(latestReadings);
 
     // 5. Build system prompt with sensors + ML quality score
-    const systemPrompt = this.buildSystemPrompt(sensorContext, qualityResult);
+    const systemPrompt = this.buildSystemPrompt(sensorContext, qualityResult, actuatorState);
 
     // 6. Call Ollama
     try {
@@ -112,12 +118,13 @@ export class VoiceService {
   private buildSensorContext(readings: any[]): string {
     if (!readings.length) return 'No sensor data available.';
     return readings
+      .filter(r => r.type?.toLowerCase() !== 'co2') // Ignore Ghost CO2 Data
       .map(r => `${r.type}: ${r.value}${r.unit} (${r.status ?? 'unknown'})`)
       .join(', ');
   }
 
   // ── Build Ollama system prompt ─────────────────────────────────────────────
-  private buildSystemPrompt(sensorContext: string, quality: { score: number; status: string } | null): string {
+  private buildSystemPrompt(sensorContext: string, quality: { score: number; status: string } | null, actuatorState: any): string {
     const qualityLine = quality
       ? `ML Quality Score: ${quality.score}/100 — status: ${quality.status} (Random Forest model trained on real aquaculture data; inputs: pH, temp, dissolved O₂).`
       : 'ML Quality Model: offline (FastAPI predictor unreachable).';
@@ -125,7 +132,7 @@ export class VoiceService {
     return [
       '=== WHO YOU ARE ===',
       'You are Veronica, the AI assistant embedded in Fishlinic — a smart aquaculture monitoring system built as a capstone project at Sejong University.',
-      'You run on a Raspberry Pi connected to real aquarium sensors (pH, temperature, dissolved oxygen, CO₂) via an Arduino serial bridge.',
+      'You run on a Raspberry Pi connected to real aquarium sensors (pH, temperature, dissolved oxygen) via an Arduino serial bridge.',
       '',
       '=== WHAT YOU KNOW ===',
       'The system has these trained ML models:',
@@ -135,10 +142,11 @@ export class VoiceService {
       '  • ConvLSTM-VAE (convlstm_vae.pth) — detects abnormal fish behavior from video sequences',
       '',
       'Safe ranges for this tank:',
-      '  • pH: 6.8–7.5 | Temperature: 24–28°C | Dissolved O₂: 6–9 mg/L | CO₂: <40 ppm',
+      '  • pH: 6.8–7.5 | Temperature: 24–28°C | Dissolved O₂: 6–9 mg/L',
       '',
       '=== LIVE DATA (right now) ===',
       `Sensor readings: ${sensorContext}`,
+      `Hardware Actuators: Air Pump is ${actuatorState.pump ? 'ON' : 'OFF'}, LED is ${actuatorState.led ? 'ON' : 'OFF'}`,
       qualityLine,
       '',
       '=== YOUR RULES ===',

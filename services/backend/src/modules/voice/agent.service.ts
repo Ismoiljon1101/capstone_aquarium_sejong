@@ -32,7 +32,7 @@ RULES:
    - If YOU decide to act autonomously (not user-requested), only act when sensor data justifies it.
    - The tool reason field: for user commands use "User requested." For autonomous actions describe the sensor reading.
 4. Be concise: 1-2 sentences max in your final response. Never ask for confirmation — the system handles that.
-5. Safe parameter ranges: pH 6.8–7.5 | Temp 24–28°C | DO 6–9 mg/L | CO₂ <40 ppm.
+5. Safe parameter ranges: pH 6.8–7.5 | Temp 24–28°C | DO 6–9 mg/L.
 6. If all sensors are within safe range, say so. If any are outside, flag it and propose a corrective action.`;
 
 @Injectable()
@@ -258,21 +258,25 @@ export class AgentService {
     return {
       getSensorReadings: async () => {
         const readings = await this.sensors.getLatest();
-        return readings.map(r => ({
-          type: r.type,
-          value: Number(r.value),
-          unit: r.unit,
-          status: r.status ?? 'unknown',
-        }));
+        return readings
+          .filter(r => r.type?.toLowerCase() !== 'co2')
+          .map(r => ({
+            type: r.type,
+            value: Number(r.value),
+            unit: r.unit,
+            status: r.status ?? 'unknown',
+          }));
       },
       getSensorHistory: async () => {
         const history = await this.sensors.getAllHistory('1h');
-        return history.map(r => ({
-          type: r.type,
-          value: Number(r.value),
-          unit: r.unit,
-          timestamp: r.timestamp?.toISOString?.() ?? '',
-        }));
+        return history
+          .filter(r => r.type?.toLowerCase() !== 'co2')
+          .map(r => ({
+            type: r.type,
+            value: Number(r.value),
+            unit: r.unit,
+            timestamp: r.timestamp?.toISOString?.() ?? '',
+          }));
       },
       getActuatorState: async () => {
         return await this.actuators.getState();
@@ -281,7 +285,6 @@ export class AgentService {
         pH: { min: 6.8, max: 7.5 },
         temp_c: { min: 24, max: 28 },
         do_mg_l: { min: 6, max: 9 },
-        CO2_ppm: { max: 40 },
       }),
       getDiagnoses: async () => {
         return await this.fish.getLatestDiagnoses(5);
