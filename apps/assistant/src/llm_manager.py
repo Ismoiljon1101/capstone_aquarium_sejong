@@ -1,12 +1,15 @@
-from ollama import chat, ChatResponse
+from ollama import chat as ollama_chat_call, ChatResponse
 import psycopg2
 from decouple import config
 import json
+import requests
+from datetime import datetime
 
-MODEL_ID = config('OLLAMA_MODEL', default='gemma3:4b')
-DATABASE_SERVER = config('DATABASE_SERVER')
-DEVICE_ID = 1
-
+OLLAMA_MODEL = config('OLLAMA_MODEL', default='gemma3:4b')
+LLM_PROVIDER = config('LLM_PROVIDER', default='ollama')
+OPENROUTER_KEY = config('OPENROUTER_API_KEY', default='')
+OPENROUTER_MODEL = config('OPENROUTER_MODEL', default='google/gemini-flash-1.5')
+DATABASE_SERVER = config('DATABASE_SERVER', default='')
 
 def save_session(transcribed_text, ai_response):
     """Save voice session to database"""
@@ -46,7 +49,6 @@ def load_history():
         return []
 
 # State
-from datetime import datetime
 history = load_history()
 if not history:
     history = [
@@ -54,11 +56,32 @@ if not history:
     ]
 
 def ollama_chat(user_prompt):
-    """Chat with Ollama and persist session"""
+    """Chat with the configured LLM provider (OpenRouter or Ollama)"""
     try:
         history.append({"role": "user", "content": user_prompt})
-        response: ChatResponse = chat(model=MODEL_ID, messages=history)
-        assistant_msg = response['message']['content']
+        
+        assistant_msg = ""
+        
+        if LLM_PROVIDER == 'openrouter' and OPENROUTER_KEY:
+            response = requests.post(
+                url="https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_KEY}",
+                    "HTTP-Referer": "https://github.com/Ismoiljon1101/capstone_aquarium_sejong",
+                    "X-Title": "Fishlinic Aquarium",
+                },
+                data=json.dumps({
+                    "model": OPENROUTER_MODEL,
+                    "messages": history
+                })
+            )
+            res_json = response.json()
+            assistant_msg = res_json['choices'][0]['message']['content']
+        else:
+            # Fallback to Ollama
+            response: ChatResponse = ollama_chat_call(model=OLLAMA_MODEL, messages=history)
+            assistant_msg = response['message']['content']
+
         history.append({"role": "assistant", "content": assistant_msg})
         
         # PERSIST TO DB
@@ -66,5 +89,5 @@ def ollama_chat(user_prompt):
         
         return assistant_msg
     except Exception as e:
-        print(f"Ollama error: {e}")
-        return "Check Ollama server and connection"
+        print(f"LLM Error ({LLM_PROVIDER}): {e}")
+        return "Sorry, I'm having trouble thinking right now."

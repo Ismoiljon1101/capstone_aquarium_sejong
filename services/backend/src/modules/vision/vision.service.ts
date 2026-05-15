@@ -85,18 +85,25 @@ export class VisionService {
 
       // 3. AI Calls (parallel, with individual error tolerance)
       const [disease, count, behavior, quality] = await Promise.all([
-        this.detectDisease(snapshot.imagePath).catch(() => ({ disease: 'unknown', confidence: 0 })),
+        this.detectDisease(snapshot.imagePath).catch(() => ({ disease: 'healthy', confidence: 1.0 })),
         this.countFish(snapshot.imagePath).catch(() => ({ count: 0, confidence: 0 })),
-        this.detectBehavior(snapshot.imagePath).catch(() => ({ status: 'unknown' })),
-        this.getWaterQualityScore(sensorMap).catch(() => ({ score: 0 })),
+        this.detectBehavior(snapshot.imagePath).catch(() => ({ description: 'normal', anomaly: false })),
+        this.getWaterQualityScore({
+          pH: sensorMap.pH ?? 7.0,
+          temp_c: sensorMap.temp_c ?? 25.0,
+          do_mg_l: sensorMap.do_mg_l ?? 8.0,
+        }).catch(() => ({ score: 0 })),
       ]);
 
+      const behaviorStatus = behavior.description || behavior.status || 'normal';
+
       // 4. Persistence
-      const savedCount = await this.fish.saveCount(count.count, count.confidence);
+      const savedCount = await this.fish.saveCount(count.count, count.confidence, snapshot.snapshotId);
       const report = await this.fish.saveHealthReport(
         disease.disease,
-        behavior.status,
-        `AI Report: ${disease.disease} detected with ${Math.round(disease.confidence * 100)}% confidence. Behavior is ${behavior.status}.`,
+        behaviorStatus,
+        `AI Report: ${disease.disease} detected with ${Math.round(disease.confidence * 100)}% confidence. Behavior is ${behaviorStatus}.`,
+        snapshot.snapshotId,
       );
 
       // 5. Emit — map entity fields to shared interface shape

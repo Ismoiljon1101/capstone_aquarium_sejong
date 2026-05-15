@@ -1,10 +1,11 @@
 import axios from 'axios';
 type BridgeSensorReading = {
-  sensorId: number;
-  type: 'pH' | 'temp_c' | 'do_mg_l' | 'CO2';
+  sensorId?: number;
+  type: 'pH' | 'temp_c' | 'do_mg_l' | 'CO2' | 'SYSTEM';
   value: number;
-  unit: string;
-  timestamp: string;
+  unit?: string;
+  timestamp?: string;
+  status?: string;
 };
 
 export class Emitter {

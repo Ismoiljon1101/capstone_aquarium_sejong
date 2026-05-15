@@ -22,17 +22,19 @@ export class FishService {
     private readonly alerts: AlertsService,
   ) {}
 
-  async saveCount(count: number, confidence: number) {
+  async saveCount(count: number, confidence: number, snapshotId: number) {
     const record = this.fishCountRepo.create({
       count,
       confidence,
+      snapshotId,
       timestamp: new Date().toISOString(),
     });
     return await this.fishCountRepo.save(record);
   }
 
-  async saveHealthReport(visualStatus: string, behaviorStatus: string, summary: string) {
+  async saveHealthReport(visualStatus: string, behaviorStatus: string, summary: string, snapshotId?: number) {
     const report = this.healthReportRepo.create({
+      snapshotId,
       phStatus: 'ok',
       tempStatus: 'ok',
       doStatus: 'ok',
