@@ -23,6 +23,14 @@ declare const window: any;
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Msg { role: 'user' | 'veronica'; text: string; ts: Date; }
 
+// Strip the hidden sensor-context prefix that clients prepend for the LLM
+// (e.g. "[Live tank: Tank readings: pH 7.0...] User: could you give me live stats").
+// This must NEVER appear in the visible chat UI.
+const LIVE_TANK_PREFIX_RE = /^\[Live tank:[^\]]*\]\s*User:\s*/i;
+function cleanUserContent(content: string): string {
+  return content.replace(LIVE_TANK_PREFIX_RE, '').trim();
+}
+
 // ─── Web-only STT ─────────────────────────────────────────────────────────────
 function useSpeechRecognition() {
   const recRef = useRef<any>(null);
@@ -394,11 +402,14 @@ export default function FishHealthScreen() {
         setSessionId(sid);
         try {
           const r = await api.getSessionMessages(sid);
-          const history: Msg[] = (r.data ?? []).map((m: any) => ({
-            role: (m.role === 'user' ? 'user' : 'veronica') as Msg['role'],
-            text: m.content,
-            ts: new Date(m.createdAt),
-          }));
+          const history: Msg[] = (r.data ?? [])
+            .filter((m: any) => m.role === 'user' || m.role === 'assistant')
+            .map((m: any) => ({
+              role: (m.role === 'user' ? 'user' : 'veronica') as Msg['role'],
+              // Strip any hidden sensor-context prefix that may have leaked into the DB
+              text: m.role === 'user' ? cleanUserContent(m.content) : m.content,
+              ts: new Date(m.createdAt),
+            }));
           setMsgs(history.length > 0 ? history : [{ role: 'veronica', text: GREETING, ts: new Date() }]);
         } catch {
           setMsgs([{ role: 'veronica', text: GREETING, ts: new Date() }]);
@@ -454,11 +465,14 @@ export default function FishHealthScreen() {
     setLoading(false);
     try {
       const r = await api.getSessionMessages(sid);
-      const history: Msg[] = (r.data ?? []).map((m: any) => ({
-        role: (m.role === 'user' ? 'user' : 'veronica') as Msg['role'],
-        text: m.content,
-        ts: new Date(m.createdAt),
-      }));
+      const history: Msg[] = (r.data ?? [])
+        .filter((m: any) => m.role === 'user' || m.role === 'assistant')
+        .map((m: any) => ({
+          role: (m.role === 'user' ? 'user' : 'veronica') as Msg['role'],
+          // Strip any hidden sensor-context prefix that may have leaked into the DB
+          text: m.role === 'user' ? cleanUserContent(m.content) : m.content,
+          ts: new Date(m.createdAt),
+        }));
       setSessionId(sid);
       await AsyncStorage.setItem(SESSION_KEY, sid).catch(() => null);
       setMsgs(history.length > 0 ? history : [{ role: 'veronica', text: 'This session is empty.', ts: new Date() }]);
@@ -826,6 +840,12 @@ export default function FishHealthScreen() {
             value={input}
             onChangeText={setInput}
             onSubmitEditing={sendText}
+            onKeyPress={(e) => {
+              if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                e.preventDefault();
+                sendText();
+              }
+            }}
             returnKeyType="send"
             blurOnSubmit={false}
             multiline
