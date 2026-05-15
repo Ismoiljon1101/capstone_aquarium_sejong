@@ -26,8 +26,9 @@ OneWire oneWire(PIN_TEMP);
 DallasTemperature sensors(&oneWire);
 
 float curPH = 7.0, curTemp = 25.0, curDO = 8.0;
-String inputBuffer = "";
-unsigned long lastSendTime = 0;
+bool isFeeding = false;
+unsigned long feedingStartTime = 0;
+const unsigned long FEED_DURATION = 1500;
 
 void setup() {
   Serial.begin(9600);
@@ -35,9 +36,9 @@ void setup() {
   pinMode(PIN_PUMP, OUTPUT);
   pinMode(PIN_LED, OUTPUT);
   
-  // INITIAL STATES
-  digitalWrite(PIN_PUMP, LOW);  // Pump OFF at boot
-  digitalWrite(PIN_LED, HIGH); // FIXED: HIGH turns Active-LOW relay OFF
+  // INITIAL STATES - Active LOW (HIGH = OFF)
+  digitalWrite(PIN_PUMP, HIGH); 
+  digitalWrite(PIN_LED, HIGH); 
   
   feederServo.attach(PIN_SERVO);
   feederServo.write(0);
@@ -68,7 +69,17 @@ void loop() {
     Serial.print(curTemp, 1);
     Serial.print(",\"do_mg_l\":");
     Serial.print(curDO, 2);
+    Serial.print(",\"pump\":");
+    Serial.print(digitalRead(PIN_PUMP) == LOW ? "true" : "false");
+    Serial.print(",\"led\":");
+    Serial.print(digitalRead(PIN_LED) == LOW ? "true" : "false");
     Serial.println("}");
+  }
+
+  // 3. NON-BLOCKING FEEDER
+  if (isFeeding && (currentMillis - feedingStartTime >= FEED_DURATION)) {
+    feederServo.write(0);
+    isFeeding = false;
   }
 }
 
@@ -93,22 +104,23 @@ void handleSerialCommand(String cmd) {
   // FEEDER
   if (cmd.indexOf("\"cmd\":\"feed\"") > -1) {
     feederServo.write(100);
-    delay(1500);
-    feederServo.write(0);
+    feedingStartTime = millis();
+    isFeeding = true;
   }
-  // PUMP (Active-HIGH)
+  // PUMP (Active-LOW)
   else if (cmd == "PUMP_ON") {
-    digitalWrite(PIN_PUMP, HIGH);
+    digitalWrite(PIN_PUMP, LOW);  // LOW = ON
   }
   else if (cmd == "PUMP_OFF") {
-    digitalWrite(PIN_PUMP, LOW);
+    digitalWrite(PIN_PUMP, HIGH); // HIGH = OFF
   }
   // LED (Active-LOW)
   else if (cmd.indexOf("\"type\":\"LED_STRIP\"") > -1) {
     if (cmd.indexOf("\"state\":true") > -1) {
-      digitalWrite(PIN_LED, LOW);   // LOW turns Active-LOW relay ON
+      digitalWrite(PIN_LED, LOW);   // LOW = ON
     } else {
-      digitalWrite(PIN_LED, HIGH);  // HIGH turns Active-LOW relay OFF
+      digitalWrite(PIN_LED, HIGH);  // HIGH = OFF
     }
   }
 }
+

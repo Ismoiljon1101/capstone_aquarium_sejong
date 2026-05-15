@@ -156,7 +156,7 @@ def fish_feeder_status():
         print("Feeder hardware not connected")
 
 def fish_feeder_active():
-    API_FEEDER_ACTIVE = FEEDER_API + "api/feeder/feed"
+    API_FEEDER_ACTIVE = FEEDER_API + "api/actuators/feed"
     print(API_FEEDER_ACTIVE)
     response = requests.post(
         API_FEEDER_ACTIVE,

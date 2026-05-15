@@ -1,7 +1,13 @@
-import sounddevice as sd
+try:
+    import sounddevice as sd
+except ImportError:
+    sd = None
 from scipy.io.wavfile import write
 import numpy as np
-import whisper
+try:
+    import whisper
+except ImportError:
+    whisper = None
 try:
     import pyaudio
 except ImportError:
@@ -41,17 +47,24 @@ def _load_whisper_model():
     return _whisper_model
 
 def voice_speak():
-    """Optimized voice input with VAD and pre-loaded model"""
+    """Voice input — falls back to keyboard text if audio unavailable"""
+    if pyaudio is None:
+        print("[Voice] PyAudio unavailable — using keyboard input")
+        try:
+            text = input("Type your command: ")
+            return text.strip()
+        except (EOFError, KeyboardInterrupt):
+            return ""
+
     SAMPLE_RATE = 16000
     CHUNK = 512
-    SILENCE_THRESHOLD = 0.25  # Voice activity threshold (lower = more sensitive)
-    MIN_RECORDING_TIME = 1.0  # Minimum recording time in seconds (give user time to start)
-    MAX_RECORDING_TIME = 15.0  # Maximum recording time in seconds (increased)
-    SILENCE_DURATION = 1.5  # Seconds of silence before stopping (more time to think/pause)
-    PING_SKIP_DURATION = 0.5  # Skip first 0.5 seconds to avoid capturing ping sound
-    INITIAL_SILENCE_ALLOWANCE = 1.5  # Allow silence at start (user needs time to start speaking)
-    
-    # Initialize Cobra for voice activity detection
+    SILENCE_THRESHOLD = 0.25
+    MIN_RECORDING_TIME = 1.0
+    MAX_RECORDING_TIME = 15.0
+    SILENCE_DURATION = 1.5
+    PING_SKIP_DURATION = 0.5
+    INITIAL_SILENCE_ALLOWANCE = 1.5
+
     cobra = None
     try:
         if _pvcobra_mod:
@@ -62,8 +75,7 @@ def voice_speak():
         cobra = None
     if not cobra:
         print("[VAD] Using energy-based fallback (no Cobra)")
-    
-    # Initialize audio
+
     pa = pyaudio.PyAudio()
     audio_queue = queue.Queue()
     audio_frames = []

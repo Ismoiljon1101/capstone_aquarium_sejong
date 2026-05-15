@@ -58,7 +58,24 @@ fishlinic/
 
 ---
 
-## Getting started
+## Quick Start (Automated)
+
+You can launch or stop all components of the system at once using the provided helper scripts in the root directory:
+
+```bash
+# Start everything (kills old processes, starts all servers in background)
+./start_all.sh
+
+# View logs for any service
+tail -f logs/backend.log
+
+# Stop everything cleanly
+./stop_all.sh
+```
+
+---
+
+## Getting started (Manual)
 
 ```bash
 # 1. Clone + install (from repo root)

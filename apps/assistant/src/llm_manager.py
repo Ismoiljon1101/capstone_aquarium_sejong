@@ -3,7 +3,7 @@ import psycopg2
 from decouple import config
 import json
 
-MODEL_ID = config('OLLAMA_MODEL', default='qwen2.5:3b')
+MODEL_ID = config('OLLAMA_MODEL', default='gemma3:4b')
 DATABASE_SERVER = config('DATABASE_SERVER')
 DEVICE_ID = 1
 
