@@ -191,10 +191,17 @@ export class AgentService {
   }
 
   async getSessionMessages(sessionId: string) {
-    return this.chatRepo.find({
+    const rows = await this.chatRepo.find({
       where: { sessionId },
       order: { createdAt: 'ASC' },
     });
+    // Sanitize any old rows that were stored with the [Live tank: ...] User: prefix
+    return rows.map(r => ({
+      ...r,
+      content: r.role === 'user'
+        ? r.content.replace(/^\[Live tank:[^\]]*\]\s*User:\s*/i, '').trim()
+        : r.content,
+    }));
   }
 
   async listChatSessions(): Promise<{ sessionId: string; preview: string; createdAt: Date; messageCount: number }[]> {
@@ -208,7 +215,8 @@ export class AgentService {
       const entry = map.get(msg.sessionId)!;
       entry.count++;
       if (msg.role === 'user' && !entry.preview) {
-        entry.preview = msg.content.slice(0, 80);
+        const cleanContent = msg.content.replace(/^\[Live tank:[^\]]*\]\s*User:\s*/i, '').trim();
+        entry.preview = cleanContent.slice(0, 80);
       }
     }
 
@@ -236,8 +244,12 @@ export class AgentService {
   }
 
   private async saveMessages(sessionId: string, userText: string, assistantText: string) {
+    // Strip the "[Live tank: ...] User: " sensor context prefix injected by mobile/web clients
+    // before persisting — the LLM still receives the full enriched prompt, but chat history
+    // should only store the clean user-visible message.
+    const cleanUserText = userText.replace(/^\[Live tank:[^\]]*\]\s*User:\s*/i, '').trim();
     await this.chatRepo.save([
-      this.chatRepo.create({ sessionId, role: 'user', content: userText }),
+      this.chatRepo.create({ sessionId, role: 'user', content: cleanUserText }),
       this.chatRepo.create({ sessionId, role: 'assistant', content: assistantText }),
     ]);
   }

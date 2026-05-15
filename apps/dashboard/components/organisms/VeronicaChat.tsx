@@ -186,7 +186,12 @@ export const VeronicaChat: React.FC = () => {
             placeholder="Ask about pH, temperature, fish health…"
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && send()}
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                send();
+              }
+            }}
           />
           <button onClick={send} disabled={!input.trim() || loading}
             className="bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-bold px-4 rounded-xl text-sm transition-colors shrink-0">
