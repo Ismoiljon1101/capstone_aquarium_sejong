@@ -1,17 +1,24 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { API_BASE } from './useApi';
 
+/** Push token registration — silently no-ops on Expo Go and web. */
 export function usePushToken() {
   useEffect(() => {
-    if (Platform.OS === 'web') return;
+    // expo-notifications is not supported in Expo Go (SDK 53+) and not needed on web.
+    // Skip silently to prevent native module crash.
+    const isExpoGo = Constants.executionEnvironment === 'storeClient';
+    if (Platform.OS === 'web' || isExpoGo) return;
     registerToken();
   }, []);
 }
 
 async function registerToken() {
   try {
+    // Dynamic import so the module never even loads in Expo Go / web bundles.
+    const Notifications = await import('expo-notifications');
+
     const { status: existing } = await Notifications.getPermissionsAsync();
     const { status } = existing === 'granted'
       ? { status: existing }
@@ -31,3 +38,4 @@ async function registerToken() {
     // silently fail — push is non-critical
   }
 }
+
