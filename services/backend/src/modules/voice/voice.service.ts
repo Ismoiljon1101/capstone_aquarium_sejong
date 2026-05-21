@@ -6,9 +6,23 @@ import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { VoiceSessionEntity } from '../database/entities/voice-session.entity';
 import { SensorsService } from '../sensors/sensors.service';
-
 import { VisionService } from '../vision/vision.service';
 import { FishService } from '../fish/fish.service';
+import { ActuatorsService } from '../actuators/actuators.service';
+import { ManagementService } from '../management/management.service';
+import { FeedScheduleEntity } from '../database/entities/feed-schedule.entity';
+import { LightScheduleEntity } from '../database/entities/light-schedule.entity';
+
+interface ActuatorState {
+  status: string;
+  message?: string;
+  hardware?: string;
+  actuators?: {
+    feeder: boolean;
+    pump: boolean;
+    led: boolean;
+  };
+}
 
 @Injectable()
 export class VoiceService {
@@ -26,15 +40,17 @@ export class VoiceService {
     private sensors: SensorsService,
     private vision: VisionService,
     private fish: FishService,
+    private actuators: ActuatorsService,
+    private management: ManagementService,
     @InjectRepository(VoiceSessionEntity)
     private sessionRepo: Repository<VoiceSessionEntity>,
   ) {
     this.ollamaUrl       = this.config.get('OLLAMA_URL')    ?? 'http://localhost:11434';
     this.ollamaModel     = this.config.get('OLLAMA_MODEL')  ?? 'batiai/gemma4-e4b:q4';
     this.predictorUrl    = this.config.get('AI_PREDICTOR_URL') ?? 'http://localhost:8000';
-    this.provider        = this.config.get('LLM_PROVIDER') ?? 'ollama';
-    this.openRouterKey   = this.config.get('OPENROUTER_API_KEY');
-    this.openRouterModel = this.config.get('OPENROUTER_MODEL') ?? 'google/gemini-flash-1.5';
+    this.provider        = this.config.get('LLM_PROVIDER') ?? 'openrouter';
+    this.openRouterKey   = this.config.get('OPENROUTER_API_KEY') ?? '';
+    this.openRouterModel = this.config.get('OPENROUTER_MODEL') ?? 'google/gemini-2.0-flash-lite:free';
   }
 
   async handleQuery(
@@ -54,21 +70,45 @@ export class VoiceService {
     // 2. Get real-time sensor readings
     const latestReadings = await this.sensors.getLatest();
 
+    // Fetch actuator states and active schedules to enrich prompt context
+    let actuatorState: ActuatorState | null = null;
+    let lightSchedule: LightScheduleEntity | null = null;
+    let feedSchedules: FeedScheduleEntity[] = [];
+    try {
+      actuatorState = await this.actuators.getState() as ActuatorState;
+      lightSchedule = await this.management.getLightSchedule();
+      feedSchedules = await this.management.listFeedSchedules();
+    } catch (e) {
+      this.logger.warn(`Failed to fetch actuator/schedule status: ${e.message}`);
+    }
+
     // 3. Strip mobile-injected context prefix
     const cleanText = text.replace(/^\[Live tank[^\]]*\]\s*User:\s*/i, '').trim();
 
     // 4. Build context strings
     const sensorContext = this.buildSensorContext(latestReadings);
     const visionContext = this.buildVisionContext(visionData);
+    const actuatorContext = this.buildActuatorContext(actuatorState);
+    const scheduleContext = this.buildScheduleContext(lightSchedule, feedSchedules);
     const qualityResult = await this.fetchQualityScore(latestReadings);
 
     // 5. Build system prompt with all real-time data
-    const systemPrompt = this.buildSystemPrompt(sensorContext, visionContext, qualityResult);
+    const systemPrompt = this.buildSystemPrompt(
+      sensorContext,
+      visionContext,
+      qualityResult,
+      actuatorContext,
+      scheduleContext,
+    );
 
     // 6. Call LLM (OpenRouter or Ollama)
     try {
       const t0 = Date.now();
       let aiResponse = '';
+
+      if (this.provider === 'openrouter' && !this.openRouterKey) {
+        this.logger.warn('LLM provider is set to openrouter but OPENROUTER_API_KEY is empty. Falling back to local Ollama.');
+      }
 
       if (this.provider === 'openrouter' && this.openRouterKey) {
         aiResponse = await this.callOpenRouter(systemPrompt, cleanText);
@@ -160,7 +200,10 @@ export class VoiceService {
   // ── Build rich context string from all sensor readings ─────────────────────
   private buildSensorContext(readings: any[]): string {
     if (!readings.length) return 'No sensor data available.';
-    return readings
+    // Ignore CO2 sensor since it has been physically removed
+    const filtered = readings.filter(r => r.type?.toUpperCase() !== 'CO2');
+    if (!filtered.length) return 'No sensor data available (CO2 sensor removed).';
+    return filtered
       .map(r => `${r.type}: ${r.value}${r.unit} (${r.status ?? 'unknown'})`)
       .join(', ');
   }
@@ -180,8 +223,40 @@ export class VoiceService {
     ].join(' ');
   }
 
-  // ── Build Ollama system prompt ─────────────────────────────────────────────
-  private buildSystemPrompt(sensorContext: string, visionContext: string, quality: { score: number; status: string } | null): string {
+  // ── Build actuator context from current state ──────────────────────────────
+  private buildActuatorContext(actuatorState: any): string {
+    if (!actuatorState || actuatorState.status === 'error') {
+      return 'Hardware connection state is unknown (Serial Bridge offline).';
+    }
+    const onlineStr = actuatorState.hardware === 'connected' ? 'CONNECTED' : 'OFFLINE';
+    const acts = actuatorState.actuators;
+    if (!acts) {
+      return `Arduino is ${onlineStr}, but actuator states are unknown.`;
+    }
+    return `Arduino is ${onlineStr}. Actuator states: Feeder is ${acts.feeder ? 'ON/FEEDING' : 'OFF'}, Aeration Air Pump is ${acts.pump ? 'ON' : 'OFF'}, LED Strip Light is ${acts.led ? 'ON' : 'OFF'}.`;
+  }
+
+  // ── Build schedule context ──────────────────────────────────────────────────
+  private buildScheduleContext(light: any, feeds: any[]): string {
+    const lightStr = light
+      ? `LED Light Schedule: ${light.enabled ? `Enabled (${light.onTime} to ${light.offTime}, ${light.brightness}% brightness, color ${light.color})` : 'Disabled'}`
+      : 'LED Light Schedule: None';
+
+    const feedStr = feeds && feeds.length > 0
+      ? `Feeding Schedules: ${feeds.map(f => `${f.time} (${f.enabled ? 'Enabled' : 'Disabled'}, portion: ${f.portionSec}s)`).join(', ')}`
+      : 'Feeding Schedules: None';
+
+    return `${lightStr}. ${feedStr}.`;
+  }
+
+  // ── Build LLM system prompt ─────────────────────────────────────────────────
+  private buildSystemPrompt(
+    sensorContext: string,
+    visionContext: string,
+    quality: { score: number; status: string } | null,
+    actuatorContext: string,
+    scheduleContext: string,
+  ): string {
     const qualityLine = quality
       ? `ML Quality Score: ${quality.score}/100 — status: ${quality.status} (Random Forest model trained on real aquaculture data).`
       : 'ML Quality Model: offline.';
@@ -189,28 +264,34 @@ export class VoiceService {
     return [
       '=== WHO YOU ARE ===',
       'You are Veronica, the AI assistant for Fishlinic — a smart aquaculture system at Sejong University.',
-      'You help users monitor fish health and water quality using real-time sensors and AI vision.',
+      'You help users monitor fish health, water quality, and manage hardware actuators using real-time sensors, AI vision, and scheduled automation.',
       '',
       '=== LIVE DATA (right now) ===',
       `Visual Observation: ${visionContext}`,
       `Sensor readings: ${sensorContext}`,
       qualityLine,
       '',
+      '=== HARDWARE & ACTUATORS ===',
+      actuatorContext,
+      '',
+      '=== SCHEDULES ===',
+      scheduleContext,
+      '',
       '=== YOUR RULES ===',
       '1. ALWAYS use the live data provided above. If the vision data says there is 1 fish, do not say there are more.',
       '2. If you see "Healthy Fish" or "Healthy", reassure the user.',
       '3. Be concise: 1-2 sentences max. English only.',
       '4. Mention the vision results if the user asks about the fish or "how they look".',
+      '5. You are fully aware of pump, feeder, and light states, schedules, and thresholds. If a user asks about them, use the live hardware data above.',
     ].join('\n');
   }
 
-  // ── Smart fallback when Ollama is offline ──────────────────────────────────
+  // ── Smart fallback when Ollama/OpenRouter is offline ──────────────────────
   private sensorFallback(question: string, readings: any[], vision: string, quality: { score: number; status: string } | null): string {
     const get  = (type: string) => readings.find(r => r.type?.toLowerCase() === type.toLowerCase());
     const pH   = get('pH');
     const temp = get('TEMP') ?? get('temp_c');
     const do2  = get('DO2')  ?? get('do_mg_l');
-    const co2  = get('CO2');
 
     if (!readings.length) {
       return "I can't reach the sensors right now. Please check that the serial bridge is running and connected to the backend.";
@@ -237,7 +318,7 @@ export class VoiceService {
       if (quality) {
         return `Your trained water quality model scores the tank at ${quality.score}/100 (${quality.status}). pH ${pH?.value ?? '–'}, temp ${temp?.value ?? '–'}°C, O₂ ${do2?.value ?? '–'} mg/L.`;
       }
-      const issues = [pH, temp, do2, co2].filter(s => s && s.status !== 'ok');
+      const issues = [pH, temp, do2].filter(s => s && s.status !== 'ok');
       if (issues.length === 0) {
         return `All sensors look good! pH ${pH?.value ?? '–'}, temp ${temp?.value ?? '–'}°C, O₂ ${do2?.value ?? '–'} mg/L. Your tank is healthy.`;
       }
@@ -256,7 +337,7 @@ export class VoiceService {
       quality ? `quality ${quality.score}/100` : null,
     ].filter(Boolean).join(', ');
 
-    return `Live tank data (${summary}) — my AI brain (Ollama) is offline. Please wait for the model pull to finish: ollama pull batiai/gemma4-e4b:q4.`;
+    return `Live tank data (${summary}) — my AI brain is offline. Please verify network status or local Ollama connectivity.`;
   }
 
   async getSessions() {

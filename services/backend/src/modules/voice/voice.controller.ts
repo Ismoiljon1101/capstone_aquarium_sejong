@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Delete, Body, Param } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { ConfigService } from '@nestjs/config';
 import { VoiceService } from './voice.service';
 import { AgentService } from './agent.service';
 import type { ToolName } from './agent.types';
@@ -9,7 +10,21 @@ export class VoiceController {
   constructor(
     private readonly voiceService: VoiceService,
     private readonly agentService: AgentService,
+    private readonly config: ConfigService,
   ) {}
+
+  @Get('status')
+  getLlmStatus() {
+    const provider = this.config.get('LLM_PROVIDER') ?? 'openrouter';
+    const model = provider === 'openrouter'
+      ? (this.config.get('OPENROUTER_MODEL') ?? 'google/gemini-2.0-flash-lite:free')
+      : (this.config.get('OLLAMA_MODEL') ?? 'batiai/gemma4-e4b:q4');
+    return {
+      provider,
+      model,
+      hasKey: !!this.config.get('OPENROUTER_API_KEY'),
+    };
+  }
 
   @Post('query')
   async handleQuery(

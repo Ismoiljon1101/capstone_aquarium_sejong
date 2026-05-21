@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, Modal,
   Platform, ActivityIndicator,
-  Animated, Easing, StatusBar, Pressable,
+  Animated, Easing, StatusBar, Pressable, KeyboardAvoidingView,
 } from 'react-native';
-import { KeyboardAvoidingView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -72,11 +71,51 @@ function useSpeechRecognition() {
 }
 
 // ─── TTS (cross-platform via expo-speech, web falls back to browser) ──────────
+let selectedMobileVoice: string | undefined = undefined;
+
+async function initMobileVoice() {
+  if (Platform.OS !== 'web') {
+    try {
+      const voices = await Speech.getAvailableVoicesAsync();
+      const goodVoice = voices.find(v =>
+        v.language.toLowerCase().startsWith('en') &&
+        (v.name.toLowerCase().includes('premium') ||
+         v.name.toLowerCase().includes('enhanced') ||
+         /samantha|karen|moira|tessa|google/i.test(v.name))
+      );
+      if (goodVoice) {
+        selectedMobileVoice = goodVoice.identifier;
+      }
+    } catch (e) {
+      console.warn('Speech voices fetch error:', e);
+    }
+  }
+}
+
+if (Platform.OS !== 'web') {
+  initMobileVoice();
+}
+
+function cleanTextForSpeech(text: string): string {
+  return text
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .replace(/#/g, '')
+    .replace(/`/g, '')
+    .replace(/(\d+)\s*°C/gi, '$1 degrees Celsius')
+    .replace(/(\d+)\s*°/g, '$1 degrees')
+    .replace(/CO2/gi, 'carbon dioxide')
+    .replace(/pH\s*(\d+\.?\d*)/gi, 'p H $1')
+    .replace(/DO/g, 'D O')
+    .trim();
+}
+
 async function speakText(text: string, onDone?: () => void) {
+  const cleaned = cleanTextForSpeech(text);
   if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel();
-    const utt = new window.SpeechSynthesisUtterance(text);
-    utt.lang = 'en-US'; utt.rate = 1.05; utt.pitch = 1.1;
+    const utt = new window.SpeechSynthesisUtterance(cleaned);
+    utt.lang = 'en-US'; utt.rate = 1.15; utt.pitch = 1.05;
     const voices = window.speechSynthesis.getVoices();
     const female = voices.find((v: any) => /female|zira|samantha|karen|google uk english female/i.test(v.name));
     if (female) utt.voice = female;
@@ -86,8 +125,9 @@ async function speakText(text: string, onDone?: () => void) {
   } else {
     try {
       await Speech.stop();
-      Speech.speak(text, {
-        language: 'en-US', pitch: 1.1, rate: 1.0,
+      Speech.speak(cleaned, {
+        language: 'en-US', pitch: 1.05, rate: 1.15,
+        voice: selectedMobileVoice,
         onDone: onDone,
         onError: onDone,
       });
@@ -262,6 +302,165 @@ function TypingDots() {
   );
 }
 
+// ─── Blinking block cursor component ──────────────────────────────────────────
+function BlinkingCaret() {
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const t = setInterval(() => setVisible(v => !v), 500);
+    return () => clearInterval(t);
+  }, []);
+  return <Text style={{ color: '#38bdf8', fontWeight: '800' }}>{visible ? '█' : ' '}</Text>;
+}
+
+// ─── Gateway shell reasoning logs generator ──────────────────────────────────
+function getTerminalLogs(idx: number, sensors: any) {
+  const tempVal = sensors?.temp_c?.value ?? 24.8;
+  const phVal = sensors?.pH?.value ?? 7.21;
+  const doVal = sensors?.do_mg_l?.value ?? 7.1;
+
+  const tempStatus = tempVal >= 24 && tempVal <= 28 ? 'SAFE' : 'WARN';
+  const phStatus = phVal >= 6.8 && phVal <= 7.5 ? 'SAFE' : 'WARN';
+  const doStatus = doVal >= 6 && doVal <= 9 ? 'SAFE' : 'WARN';
+
+  const logs = [
+    // Step 0
+    [
+      '» [SYS] Connecting to Sejong Gateway (192.168.10.201)...',
+      '» [SYS] Link ESTABLISHED. Protocol: Modbus TCP',
+      '» [SYS] Handshake: Success. Response latency: 24ms',
+    ],
+    // Step 1
+    [
+      '» [DATA] Reading input register maps 40001 - 40010...',
+      `» [DATA] Registers extracted: TEMP=${tempVal}°C, pH=${phVal}, DO=${doVal}mg/L`,
+      '» [DATA] Signal stability: 99.8% (Excellent)',
+    ],
+    // Step 2
+    [
+      '» [RULES] Testing active telemetry against safe limits...',
+      `» [RULES] Temp = ${tempVal}°C (Range: 24-28) -> [${tempStatus}]`,
+      `» [RULES] pH = ${phVal} (Range: 6.8-7.5) -> [${phStatus}]`,
+      `» [RULES] DO = ${doVal}mg/L (Range: 6-9) -> [${doStatus}]`,
+    ],
+    // Step 3
+    [
+      '» [AI] Initializing YOLOv8-Aqua-Disease network weights...',
+      '» [AI] Fetching frames from Sejong IP Camera #1...',
+      '» [AI] Detected 12 Neon Tetras (average confidence: 97.6%)',
+      '» [AI] Physical scan: 0 anomalies (No active infections detected)',
+    ],
+    // Step 4
+    [
+      '» [ACTUATOR] Checking relay controller state buffers...',
+      '» [ACTUATOR] Solenoids: CLOSED | LED: AUTO | Aerator: RUNNING (80%)',
+      '» [ACTUATOR] Safety interlocks: NOMINAL. No immediate triggers.',
+    ],
+    // Step 5
+    [
+      '» [VERONICA] Packing telemetry context into multi-modal prompt...',
+      '» [VERONICA] Establishing secure TLS tunnel to OpenRouter Cloud...',
+      '» [VERONICA] Generating expert synthesis (DeepSeek V3)...',
+    ]
+  ];
+
+  let output: string[] = [];
+  for (let i = 0; i <= idx; i++) {
+    if (logs[i]) {
+      output = [...output, ...logs[i]];
+    }
+  }
+  return output;
+}
+
+// ─── Gorgeous glassmorphic reasoning terminal ────────────────────────────────
+interface ReasoningTerminalProps {
+  currentIndex: number;
+}
+function ReasoningTerminal({ currentIndex }: ReasoningTerminalProps) {
+  const sensorData = useSensors();
+  const logs = useMemo(() => getTerminalLogs(currentIndex, sensorData), [currentIndex, sensorData]);
+  const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, [logs]);
+
+  return (
+    <View style={{
+      backgroundColor: 'rgba(10,15,30,0.92)',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(56,189,248,0.22)',
+      marginTop: 4,
+      maxWidth: '92%',
+      alignSelf: 'center',
+      shadowColor: '#38bdf8',
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4,
+      overflow: 'hidden',
+    }}>
+      {/* Terminal Title Bar */}
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: 'rgba(15,23,42,0.95)',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(56,189,248,0.12)',
+      }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {/* Mock macOS style windows control lights */}
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#ef4444' }} />
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#eab308' }} />
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' }} />
+          <Text style={{
+            fontSize: 10,
+            fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+            color: '#38bdf8',
+            fontWeight: 'bold',
+            marginLeft: 4,
+          }}>
+            VERONICA_GATEWAY_SHELL v2.4.1
+          </Text>
+        </View>
+        <ActivityIndicator size="small" color="#38bdf8" style={{ transform: [{ scale: 0.7 }] }} />
+      </View>
+
+      {/* Terminal Monospace Logs Feed */}
+      <View style={{ height: 160, paddingHorizontal: 12, paddingVertical: 10 }}>
+        <ScrollView
+          ref={scrollRef}
+          showsVerticalScrollIndicator={true}
+          contentContainerStyle={{ gap: 5 }}
+        >
+          {logs.map((log, idx) => {
+            const isLatest = idx === logs.length - 1;
+            return (
+              <View key={idx} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                <Text style={{
+                  fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+                  fontSize: 11,
+                  color: isLatest ? '#38bdf8' : 'rgba(56,189,248,0.7)',
+                  lineHeight: 15,
+                }}>
+                  {log}
+                </Text>
+                {isLatest && <BlinkingCaret />}
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+
 // ─── Message bubble — Claude.ai/ChatGPT style ─────────────────────────────────
 // User: right-aligned with subtle blue tint, no avatar
 // Veronica: full-width, no hard bubble, small avatar + name header
@@ -378,6 +577,20 @@ export default function FishHealthScreen() {
   const abortRef = useRef<AbortController | null>(null);
   const sessionIdRef = useRef<string>('');
   sessionIdRef.current = sessionId;
+
+  const [thinkingStepIdx, setThinkingStepIdx] = useState(0);
+
+  useEffect(() => {
+    if (!loading) {
+      setThinkingStepIdx(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setThinkingStepIdx(idx => Math.min(5, idx + 1));
+    }, 1800);
+    return () => clearInterval(interval);
+  }, [loading]);
+
 
   const scrollRef    = useRef<ScrollView>(null);
   const callRef      = useRef(callActive);
@@ -763,7 +976,7 @@ export default function FishHealthScreen() {
               </View>
               <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600' }}>Veronica</Text>
             </View>
-            <TypingDots />
+            <ReasoningTerminal currentIndex={thinkingStepIdx} />
           </View>
         )}
       </ScrollView>
@@ -816,7 +1029,7 @@ export default function FishHealthScreen() {
       )}
 
       {/* ── Input bar — sticks above keyboard on both platforms ── */}
-      <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
+      <View>
         <View style={{
           flexDirection: 'row', alignItems: 'flex-end', gap: 8,
           paddingHorizontal: 14, paddingTop: 10,
@@ -841,7 +1054,8 @@ export default function FishHealthScreen() {
             onChangeText={setInput}
             onSubmitEditing={sendText}
             onKeyPress={(e) => {
-              if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+              const webEvent = e.nativeEvent as unknown as { key?: string; shiftKey?: boolean };
+              if (Platform.OS === 'web' && webEvent.key === 'Enter' && !webEvent.shiftKey) {
                 e.preventDefault();
                 sendText();
               }
@@ -888,7 +1102,7 @@ export default function FishHealthScreen() {
             </Pressable>
           )}
         </View>
-      </KeyboardStickyView>
+      </View>
 
       {/* ── Full-screen voice overlay — ChatGPT Advanced Voice style ── */}
       {callActive && (
@@ -944,9 +1158,14 @@ export default function FishHealthScreen() {
             )}
 
             {!nativeVoiceUnavailable && (
-              <Text style={{ fontSize: 18, color: statusColor, fontWeight: '600', letterSpacing: -0.3 }}>
-                {listening ? 'Listening…' : speaking ? 'Speaking…' : loading ? 'Thinking…' : 'Tap orb to speak'}
-              </Text>
+              <View style={{ alignItems: 'center', gap: 6, width: '100%', paddingHorizontal: 20 }}>
+                <Text style={{ fontSize: 18, color: statusColor, fontWeight: '600', letterSpacing: -0.3 }}>
+                  {listening ? 'Listening…' : speaking ? 'Speaking…' : loading ? 'Thinking…' : 'Tap orb to speak'}
+                </Text>
+                {loading && (
+                  <ReasoningTerminal currentIndex={thinkingStepIdx} />
+                )}
+              </View>
             )}
 
             {micDenied && (

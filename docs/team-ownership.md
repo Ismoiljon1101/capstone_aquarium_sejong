@@ -1,6 +1,6 @@
 # Team Ownership & Current Sprint
 
-_Last updated: 2026-05-01 · HEAD: `4399eb3` · Branch to pull: `develop`_ · Demo: **June 30, 2026**
+_Last updated: 2026-05-07 · Branch to pull: `develop`_ · Demo: **June 30, 2026**
 
 ## Setup (everyone)
 
@@ -39,17 +39,18 @@ Socket events: `sensor:update`, `alert:new`, `fish:count`, `health:report`,
 |-----------------------------------|-----------------|-------|
 | NestJS backend (`:3000`)          | ✅ working      | sensors, alerts, actuators, voice, vision, management, cron |
 | AI predictor (`:8001`)            | ✅ working      | RF quality, YOLO disease/count, ConvLSTM-VAE loaded |
-| Serial bridge (`:3001`)           | ✅ live         | real Arduino connected, `SIMULATE_SENSORS=false` |
+| Serial bridge (`:3001`)           | ✅ live         | real Arduino connected, auto-reconnect on disconnect |
 | Mobile (`:8081`)                  | ✅ production   | Dashboard (live data), Controls, Fish AI (ChatGPT-style), Settings, Alerts, History |
 | Veronica (Ollama `gemma4:e2b`)    | ✅ working      | real sensor context, aiOffline flag, STT fixed |
 | Dashboard (`:3002`)               | ⚠️ partial     | feeder panel done; camera / growth / alerts pages need wiring |
-| Dynamic scheduler                 | ✅ running      | 60s tick: feed schedules, light cycle, emergency thresholds |
+| Dynamic scheduler                 | ✅ running      | 60s tick: feed schedules, light cycle, emergency thresholds, morning brief at 07:01 |
 | Tank management (BE + mobile UI)  | ✅ done         | feed schedules, light schedule, tank config, cleaning tracker |
 | Trained ML models                 | ✅ loaded       | `resources/models/` — rf_quality.pkl, yolo_disease.pt, yolo_count.pt, convlstm_vae.pth |
-| Autonomous AI agent               | 🔴 starting    | WOW feature — Ismail, 5–10 days |
+| Autonomous AI agent               | ✅ complete     | tool loop, confirm-before-act, auto mode, proactive monitor, morning brief, addSchedule |
+| Push notifications                | ✅ complete     | PushService (expo-server-sdk), usePushToken in App.tsx, deep linking to Alerts screen |
+| Hardware resilience               | ✅ complete     | stale detection (60s), hardware:status WS event, serial bridge reconnect, offline banner |
 | DB migrations                     | ❌ not started | backend uses `synchronize: true`; no migration files |
 | Supabase production               | ❌ not started | `DATABASE_URL` + SSL config not set |
-| Push notifications                | ❌ not started | after agent — Ismail, 2–3 days |
 
 **Big picture**: hardware live, mobile production-quality, AI voice working.
 Next = autonomous agent (WOW) → push notifications → Supabase → dashboard parity → demo June 30.
@@ -102,25 +103,30 @@ Core Veronica voice pipeline is owned by Ismail. Firdavs supports the Python pre
 
 ---
 
-## Ismail — Autonomous AI Agent + Push Notifications
+## Ismail — Autonomous AI Agent + Push Notifications ✅ COMPLETE
 
-**Priority 1: Autonomous AI Agent (5–10 days)**
+All tasks below are done as of 2026-05-07.
 
-| # | Task                                                                                          | Files                                                                          | Done when                                                      |
-|---|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|----------------------------------------------------------------|
-| 1 | Tool schema for Ollama: `readSensors`, `readHistory`, `controlActuator`, `triggerFeed`, `addSchedule` | `services/backend/src/modules/voice/voice.service.ts`             | LLM can call each tool by name                                 |
-| 2 | Agent loop: LLM picks tool → backend executes → LLM reasons → repeats or responds            | `services/backend/src/modules/voice/voice.service.ts`                          | multi-step tasks complete autonomously                         |
-| 3 | Confirm-before-act UI: proposed action card with Confirm / Cancel                             | `apps/mobile/src/screens/FishHealthScreen.tsx`                                 | user sees reasoning + taps confirm before any action executes  |
-| 4 | Proactive monitor: trend detector on sensor stream → triggers agent → push to mobile          | `services/backend/src/modules/voice/` (new monitor service)                    | agent proactively warns before emergency                       |
-| 5 | Morning health brief: cron 07:00 → overnight summary delivered to chat                        | `services/backend/src/modules/cron/`                                           | morning brief appears in Fish AI chat at 07:00                 |
+| # | Task                                                                                          | Files                                                                          | Status |
+|---|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|--------|
+| 1 | Tool schema: `readSensors`, `readHistory`, `getActuatorState`, `readDiagnoses`, `readThresholds`, `controlPump`, `controlLed`, `triggerFeed`, `addSchedule` | `voice/agent.tools.ts`, `agent.types.ts` | ✅ |
+| 2 | Agent loop (MAX_ITERATIONS=6): LLM picks tool → executes → repeats or responds               | `voice/agent.service.ts`                                                       | ✅ |
+| 3 | Confirm-before-act UI: proposed action card with Confirm / Cancel                             | `apps/mobile/src/screens/FishHealthScreen.tsx:363`                             | ✅ |
+| 4 | Proactive monitor: 5-min watcher → agent → push on issue                                     | `voice/agent.monitor.ts`                                                       | ✅ |
+| 5 | Morning health brief: cron `1 7 * * *` → Veronica summary → push notification                | `cron/cron.service.ts`                                                         | ✅ |
+| 6 | Push token registration on app start                                                          | `apps/mobile/src/hooks/usePushToken.ts`, `App.tsx`                             | ✅ |
+| 7 | Backend push sender (expo-server-sdk)                                                         | `modules/push/push.service.ts`                                                 | ✅ |
+| 8 | Deep linking — notification tap → Alerts screen                                               | `navigation/navigationRef.ts`, `AppNavigator.tsx`, `usePushToken.ts`           | ✅ |
 
-**Priority 2: Push Notifications (2–3 days, after agent)**
+## Ismail — Hardware Resilience ✅ COMPLETE (2026-05-07)
 
-| # | Task                                                                       | Files                                                                                          | Done when                                          |
-|---|----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|----------------------------------------------------|
-| 6 | Expo push token registration on app start                                  | `apps/mobile/App.tsx`, `src/hooks/usePushToken.ts` (new)                                       | token saved via `PATCH /management/tank-config`    |
-| 7 | Backend push sender when scheduler creates CRITICAL alert                  | `services/backend/src/modules/alerts/push.service.ts` (new)                                    | phone buzzes on emergency threshold breach         |
-| 8 | Deep linking — notification tap → Alerts screen                            | `apps/mobile/src/navigation/AppNavigator.tsx`                                                   | tap opens the correct alert                        |
+| # | Task                                                                                 | Files                                                      | Status |
+|---|--------------------------------------------------------------------------------------|------------------------------------------------------------|--------|
+| 1 | Stale data detection — readings >60s old get `status: 'stale'`                      | `sensors/sensors.service.ts`                               | ✅ |
+| 2 | Hardware watchdog — 30s watcher emits `hardware:status` WS event                    | `sensors/sensors.service.ts`                               | ✅ |
+| 3 | Serial bridge reconnect — auto-retries every 10s on disconnect                      | `services/serial-bridge/src/index.ts`                      | ✅ |
+| 4 | No fake data by default — simulator opt-in only, bridge no longer falls back to mock | `sensors.simulator.ts`, `serial-bridge/src/index.ts`       | ✅ |
+| 5 | Mobile offline banner — "Arduino offline" shown in Dashboard                         | `apps/mobile/src/screens/DashboardScreen.tsx`              | ✅ |
 
 ---
 
