@@ -1,6 +1,6 @@
 # Project Status: Fishlinic
 
-_Last updated: 2026-05-07 · Branch: `develop`_
+_Last updated: 2026-05-21 · Branch: `develop`_
 _Demo date: **June 30, 2026**_
 
 ## Mission
@@ -58,6 +58,8 @@ See `docs/team-ownership.md` for sprint assignments per engineer.
   - Live transcription ghost bubble during speech
   - Clean prose layout for AI (no hard bubbles)
   - Mic permission detection + error banner
+  - **macOS Glassmorphic Reasoning Terminal**: scrolling console `[● ● ●] VERONICA_REASONING_SHELL v2.4.1` with a blinking caret `█` cursor that displays live registers, telemetry limits, and vision checks to engage users during thinking processes
+  - **Expo Go Compatibility Fix**: replaced custom C++ JSI bindings (from `react-native-keyboard-controller`) with standard native `KeyboardAvoidingView` layouts, completely resolving `TurboModule runtime is not ready` crashes when run inside standard Expo Go clients over local Wi-Fi
 - [x] Controls: actuator toggles + feed cycles + Feed Now with success/failure + haptics
 - [x] Dashboard Feed Now quick action: success/failure state, 3s auto-reset, haptics
 - [x] Settings: editable tank ranges, live service status, persistence
