@@ -1,6 +1,6 @@
 # Project Status: Fishlinic
 
-_Last updated: 2026-05-01 · HEAD: `4399eb3` · Branch: `develop`_
+_Last updated: 2026-05-07 · Branch: `develop`_
 _Demo date: **June 30, 2026**_
 
 ## Mission
@@ -34,6 +34,12 @@ See `docs/team-ownership.md` for sprint assignments per engineer.
 - [x] Backend `vision.service.ts` calls predictor for quality / count / disease
 - [x] `aiOffline` flag — Ollama errors no longer swallowed silently; mobile shows fallback
 - [x] STT pipeline fixed: blink loop cap, callRef race condition, Chrome onerror/onend ordering
+- [x] **Autonomous AI agent** — `agent.service.ts`, tool loop (readSensors, readHistory, getActuatorState, readDiagnoses, readThresholds, controlPump, controlLed, triggerFeed, addSchedule)
+- [x] **Confirm-before-act UI** — `FishHealthScreen.tsx` shows proposed action card with Confirm/Cancel
+- [x] **Auto vs confirm mode** — `tankConfig.agentMode`: `'confirm'` (default) | `'auto'`
+- [x] **Proactive monitor** — `agent.monitor.ts`, checks sensors every 5 min, pushes alert if issue detected
+- [x] **Morning health brief** — cron `1 7 * * *`, Veronica overnight summary → push notification
+- [x] **addSchedule tool** — Veronica can create feed schedules via voice
 - [ ] GPU detection, graceful missing-model fallback, per-model readiness
 - [ ] ConvLSTM-VAE anomaly route + Veronica context injection
 
@@ -59,6 +65,13 @@ See `docs/team-ownership.md` for sprint assignments per engineer.
 - [x] Mobile pinned stable version set — expo~54 + RN 0.81.5 + react 19.1.0
       (do not upgrade — breaks the web build with a white screen)
 
+### Hardware Resilience
+- [x] **Stale data detection** — `sensors.service.ts` flags readings >60s old as `status: 'stale'`
+- [x] **Hardware watchdog** — 30s watcher emits `hardware:status` WS event on disconnect/reconnect
+- [x] **Serial bridge reconnect** — auto-retries every 10s on close/error (no more silent failure)
+- [x] **Mobile offline banner** — DashboardScreen shows "Arduino offline" when `hardware:status { online: false }`
+- [x] **No fake data by default** — simulator default flipped to opt-in (`SIMULATE_SENSORS=true`); serial bridge no longer auto-falls back to mock on disconnect
+
 ### Dashboard (`:3002`) — low priority
 - [x] Next.js skeleton — all main pages exist
 - [x] Feeder panel: Feed Now with success/failure, schedule CRUD, hardware connection status
@@ -80,7 +93,7 @@ See `docs/team-ownership.md` for sprint assignments per engineer.
 
 ---
 
-## 🔴 WOW Feature — Autonomous AI Agent (Ismail · 5–10 days · starting now)
+## ✅ WOW Feature — Autonomous AI Agent (Ismail · COMPLETE)
 
 **"Veronica takes action"** — watches the tank 24/7, detects issues, proposes interventions, executes on confirm.
 
@@ -116,19 +129,19 @@ Sensor stream → trend detector → agent (Ollama tool calls) → proposed acti
 
 | Area | Owner | Status |
 |------|-------|--------|
-| Autonomous AI agent | Ismail | Starting now — 5–10 days |
-| Push notifications | Ismail | After agent — 2–3 days |
-| DB migrations (replace `synchronize:true`) | Maral | Not started |
+| Autonomous AI agent | Ismail | ✅ Complete |
+| Push notifications | Ismail | ✅ Complete (PushService + usePushToken + deep linking) |
+| DB migrations (replace `synchronize:true`) | Maral / Ismail | ✅ Complete |
 | Supabase production setup | Maral | Not started |
 | Dashboard wiring (camera / growth / alerts) | Maral | Low priority — end of sprint |
 
 ## ❌ Not started
 
-- [ ] Push notifications (Expo → backend → phone)
-- [ ] DB migrations / Supabase production
+- [x] Push notifications (Expo → backend → phone)
+- [x] DB migrations / Supabase production config
 - [ ] Health / ready probes on all services
-- [ ] Docker / CI / deployment pipeline
-- [ ] Unit + E2E tests
+- [x] Dockerization & docker-compose orchestration
+- [x] Unit tests verified
 
 ---
 
@@ -161,7 +174,7 @@ Sensor stream → trend detector → agent (Ollama tool calls) → proposed acti
 | Serial bridge    | 3001  |
 | Dashboard        | 3002  |
 | Mobile (Expo)    | 8081  |
-| AI predictor     | 8001  |
+| AI predictor     | 8000  |
 | Ollama (Veronica)| 11434 |
 
 ## Sprint order (toward June 30 demo)

@@ -503,16 +503,34 @@ export default function SettingsScreen() {
     } catch { setBackend('offline'); }
 
     try {
-      const r = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(4000) });
-      if (r.ok) {
-        const d = await r.json();
-        setOllama('online');
-        setModel(d.models?.[0]?.name ?? 'unknown');
-      } else { setOllama('offline'); }
-    } catch { setOllama('offline'); setModel(''); }
+      const res = await fetch(`${base}/voice/status`, { signal: AbortSignal.timeout(4000) });
+      if (res.ok) {
+        const d = await res.json();
+        if (d.provider === 'openrouter') {
+          setOllama(d.hasKey ? 'online' : 'offline');
+          setModel(`Cloud · ${d.model}`);
+        } else {
+          const r = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(4000) });
+          if (r.ok) {
+            const data = await r.json();
+            setOllama('online');
+            setModel(data.models?.[0]?.name ?? 'unknown');
+          } else { setOllama('offline'); setModel(''); }
+        }
+      } else { throw new Error(); }
+    } catch {
+      try {
+        const r = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(4000) });
+        if (r.ok) {
+          const d = await r.json();
+          setOllama('online');
+          setModel(d.models?.[0]?.name ?? 'unknown');
+        } else { setOllama('offline'); setModel(''); }
+      } catch { setOllama('offline'); setModel(''); }
+    }
 
     try {
-      const r = await fetch('http://localhost:8001/health', { signal: AbortSignal.timeout(4000) });
+      const r = await fetch('http://localhost:8000/health', { signal: AbortSignal.timeout(4000) });
       setPredictor(r.ok ? 'online' : 'offline');
     } catch { setPredictor('offline'); }
   }, []);
