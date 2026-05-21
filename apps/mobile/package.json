@@ -4,6 +4,7 @@
   "main": "index.js",
   "private": true,
   "_versionNote": "DO NOT change these versions — expo~54 + RN 0.81.5 + react 19.1.0 is the tested stable set. Upgrading any of these (especially expo or react-native) will break the web build with a white screen.",
+  "_CRITICAL_WARNING": "████████████████████████████████████████████████████████████████████████████████████████████ DO !!NOT!! ADD react-native-keyboard-controller OR react-native-reanimated (v4+) TO THIS PROJECT EVER AGAIN ████████████████████████████████████████████████████████████████████████████████████████████ BOTH PACKAGES USE JSI TURBOMODULES (NEW ARCHITECTURE) WHICH ARE NOT BUNDLED IN STANDARD EXPO GO — ADDING THEM BACK WILL IMMEDIATELY CRASH THE APP ON ANY PHYSICAL PHONE WITH 'TurboModule runtime is not ready' WITH ZERO BENEFIT SINCE NEITHER PACKAGE WAS EVEN USED IN THE SOURCE CODE — THE PREVIOUS AGENT ADDED THEM AS DEAD WEIGHT AND BROKE EXPO GO COMPLETELY — IF YOU ADD THEM BACK YOU OWE THE DEVELOPER A NEW PHONE ████████████████████████████████████████████████████████████████████████████████████████████",
   "scripts": {
     "dev": "expo start",
     "start": "expo start",
@@ -25,8 +26,6 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
-    "react-native-keyboard-controller": "1.18.5",
-    "react-native-reanimated": "~4.1.7",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-web": "~0.21.0",
