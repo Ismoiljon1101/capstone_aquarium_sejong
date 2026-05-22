@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApi } from '../hooks/useApi';
 import { useSensors, sensorContext } from '../hooks/useSensors';
 import { useSocket } from '../hooks/useSocket';
+import FishVisionCard from '../components/FishVisionCard';
 
 const SESSION_KEY = '@veronica_session_id';
 // AppHeader not used — custom minimal header below
@@ -911,6 +912,8 @@ export default function FishHealthScreen() {
           <Ionicons name="add-circle-outline" size={22} color="#475569" />
         </Pressable>
       </View>
+
+      <FishVisionCard />
 
       {/* ── Offline banner ── */}
       {llmOffline && (

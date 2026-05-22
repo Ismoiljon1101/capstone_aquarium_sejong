@@ -14,4 +14,9 @@ export class VisionController {
   async getLatestReport() {
     return await this.visionService.getLatestReport();
   }
+
+  @Get('latest')
+  async getLatest() {
+    return await this.visionService.getLatestSummary();
+  }
 }

@@ -33,6 +33,8 @@ export function useApi() {
     getActuatorState:   () => api.get('/actuators/state'),
     getFishHealth:      () => api.get('/fish/health'),
     getFishCount:       () => api.get('/fish/count'),
+    getFishVision:      () => api.get('/vision/latest'),
+    triggerVisionScan:  () => api.post('/vision/analyze'),
     voiceQuery:         (text: string) => api.post('/voice/query', { text }, { timeout: 60000 }),
     agentQuery:         (text: string, sessionId?: string, signal?: AbortSignal) =>
                           api.post('/voice/agent', { text, sessionId }, { timeout: 90000, signal }),

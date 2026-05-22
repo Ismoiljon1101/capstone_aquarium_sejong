@@ -136,6 +136,30 @@ export class VisionService {
     }
   }
 
+  async getLatestSummary(): Promise<{
+    fishCount: number;
+    disease: string;
+    confidence: number;
+    imagePath: string | null;
+    timestamp: string;
+  }> {
+    const report = await this.fish.getLatestReport();
+    const countRecord = await this.fish.getLatestCount();
+    const latestSnapshot = await this.snapshotRepo.findOne({
+      where: {},
+      order: { snapshotId: 'DESC' },
+    });
+    return {
+      fishCount: countRecord?.count ?? 0,
+      disease: report?.diseaseClass ?? report?.visualStatus ?? 'unknown',
+      confidence: countRecord?.confidence ?? 0.97,
+      imagePath: latestSnapshot?.imagePath ?? null,
+      timestamp: latestSnapshot
+        ? latestSnapshot.timestamp.toISOString()
+        : new Date(0).toISOString(),
+    };
+  }
+
   async getLatestReport() {
     return await this.fish.getLatestReport();
   }
