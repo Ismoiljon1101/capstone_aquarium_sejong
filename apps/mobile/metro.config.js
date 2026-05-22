@@ -8,12 +8,10 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// // Force Metro to ignore the node:sea shim production which causes ENOENT on Windows
-// // This is a known issue in Expo 50/51/52 on Windows with Node 20+.
-// // We only apply this on Windows to avoid breaking macOS/Linux builds.
-if (process.platform === 'win32' && config.resolver) {
+// // Force Metro to enable package exports for Node 20+ / Web compatibility
+// // Do not hardcode conditionNames, let Expo handle 'react-native' vs 'browser' automatically.
+if (config.resolver) {
   config.resolver.unstable_enablePackageExports = true;
-  config.resolver.unstable_conditionNames = ['browser', 'require', 'import'];
 }
 
 module.exports = config;
