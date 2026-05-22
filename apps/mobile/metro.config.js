@@ -8,9 +8,9 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// // Force Metro to enable package exports for Node 20+ / Web compatibility
-// // Do not hardcode conditionNames, let Expo handle 'react-native' vs 'browser' automatically.
-if (config.resolver) {
+// // Force Metro to enable package exports for Node 20+ / Web compatibility ONLY on Windows
+// // Doing this on macOS forces Metro to load Node.js CJS modules for react-native, causing white screens.
+if (process.platform === 'win32' && config.resolver) {
   config.resolver.unstable_enablePackageExports = true;
 }
 
