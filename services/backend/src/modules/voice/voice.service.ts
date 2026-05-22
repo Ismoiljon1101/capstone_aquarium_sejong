@@ -106,11 +106,8 @@ export class VoiceService {
       const t0 = Date.now();
       let aiResponse = '';
 
-      if (this.provider === 'openrouter' && !this.openRouterKey) {
-        this.logger.warn('LLM provider is set to openrouter but OPENROUTER_API_KEY is empty. Falling back to local Ollama.');
-      }
-
-      if (this.provider === 'openrouter' && this.openRouterKey) {
+      // use cloud models unless requested by me to run ollama except yolo
+      if (this.openRouterKey) {
         aiResponse = await this.callOpenRouter(systemPrompt, cleanText);
       } else {
         aiResponse = await this.callOllama(systemPrompt, cleanText);

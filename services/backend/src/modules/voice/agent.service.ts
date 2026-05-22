@@ -263,7 +263,8 @@ export class AgentService {
   }
 
   private async callLLM(messages: OllamaMessage[]): Promise<OllamaChatResponse> {
-    if (this.provider === 'openrouter' && this.openRouterKey) return this.callOpenRouter(messages);
+    // use cloud models unless requested by me to run ollama except yolo
+    if (this.openRouterKey) return this.callOpenRouter(messages);
     const res = await firstValueFrom(
       this.http.post<OllamaChatResponse>(`${this.ollamaUrl}/api/chat`, {
         model: this.model, messages, tools: AGENT_TOOLS, stream: false
