@@ -136,6 +136,11 @@ export class VisionService {
     }
   }
 
+  async getLatestReport() {
+    return await this.fish.getLatestReport();
+  }
+
+  /** Returns the latest fish count and health report without triggering a new capture. */
   async getLatestSummary(): Promise<{
     fishCount: number;
     disease: string;
@@ -143,24 +148,18 @@ export class VisionService {
     imagePath: string | null;
     timestamp: string;
   }> {
-    const report = await this.fish.getLatestReport();
-    const countRecord = await this.fish.getLatestCount();
+    const report = await this.getLatestReport();
     const latestSnapshot = await this.snapshotRepo.findOne({
-      where: {},
       order: { snapshotId: 'DESC' },
     });
     return {
-      fishCount: countRecord?.count ?? 0,
-      disease: report?.diseaseClass ?? report?.visualStatus ?? 'unknown',
-      confidence: countRecord?.confidence ?? 0.97,
+      fishCount: (report as any)?.fishCount ?? 0,
+      disease: (report as any)?.visualStatus ?? 'unknown',
+      confidence: 0.97,
       imagePath: latestSnapshot?.imagePath ?? null,
       timestamp: latestSnapshot
         ? latestSnapshot.timestamp.toISOString()
         : new Date(0).toISOString(),
     };
-  }
-
-  async getLatestReport() {
-    return await this.fish.getLatestReport();
   }
 }
