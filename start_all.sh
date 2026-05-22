@@ -10,8 +10,7 @@ echo "Stopping existing services..."
 # 3005: Dashboard
 # 8000: AI Predictor
 # 8081: Mobile (Expo)
-# 11434: Ollama
-ports=(3000 3001 3005 8000 8081 11434)
+ports=(3000 3001 3005 8000 8081)
 
 for port in "${ports[@]}"; do
     pid=$(lsof -ti :$port)
@@ -38,13 +37,6 @@ mkdir -p "$ROOT_DIR/logs"
 
 echo "----------------------------------------"
 
-# 2. Start Ollama
-echo "Starting Ollama..."
-ollama serve > "$ROOT_DIR/logs/ollama.log" 2>&1 &
-
-# Wait a bit for ollama to initialize
-sleep 2
-
 # 3. Start Backend
 echo "Starting Backend (Port 3000)..."
 (cd services/backend && pnpm dev) > "$ROOT_DIR/logs/backend.log" 2>&1 &
@@ -61,16 +53,15 @@ echo "Starting Dashboard (Port 3005)..."
 echo "Starting AI Predictor (Port 8000)..."
 (cd services/ai-predictor && pnpm dev) > "$ROOT_DIR/logs/ai-predictor.log" 2>&1 &
 
-# 7. Start Mobile App
+# 7. Start Mobile App (with -c to clear metro cache and fix white screen issues)
 echo "Starting Mobile (Port 8081)..."
-(cd apps/mobile && npx expo start) > "$ROOT_DIR/logs/mobile.log" 2>&1 &
+(cd apps/mobile && npx expo start -c) > "$ROOT_DIR/logs/mobile.log" 2>&1 &
 
 # 8. Start Assistant
 echo "Starting Assistant..."
 (cd apps/assistant && pnpm dev) > "$ROOT_DIR/logs/assistant.log" 2>&1 &
 
-
 echo "----------------------------------------"
 echo "All services started!"
 echo "Logs are available in the 'logs' directory (e.g., tail -f logs/backend.log)"
-echo "To stop everything, run: ./stop_all.sh"
+echo "To stop everything, run ./start_all.sh again (it kills old processes automatically)."
