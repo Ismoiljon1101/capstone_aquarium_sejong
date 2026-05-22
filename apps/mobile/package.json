@@ -4,7 +4,7 @@
   "main": "index.js",
   "private": true,
   "_versionNote": "DO NOT change these versions — expo~54 + RN 0.81.5 + react 19.1.0 is the tested stable set. Upgrading any of these (especially expo or react-native) will break the web build with a white screen.",
-  "_CRITICAL_WARNING": "████████████████████████████████████████████████████████████████████████████████████████████ DO !!NOT!! ADD react-native-keyboard-controller OR react-native-reanimated (v4+) TO THIS PROJECT EVER AGAIN ████████████████████████████████████████████████████████████████████████████████████████████ BOTH PACKAGES USE JSI TURBOMODULES (NEW ARCHITECTURE) WHICH ARE NOT BUNDLED IN STANDARD EXPO GO — ADDING THEM BACK WILL IMMEDIATELY CRASH THE APP ON ANY PHYSICAL PHONE WITH 'TurboModule runtime is not ready' WITH ZERO BENEFIT SINCE NEITHER PACKAGE WAS EVEN USED IN THE SOURCE CODE — THE PREVIOUS AGENT ADDED THEM AS DEAD WEIGHT AND BROKE EXPO GO COMPLETELY — IF YOU ADD THEM BACK YOU OWE THE DEVELOPER A NEW PHONE ████████████████████████████████████████████████████████████████████████████████████████████",
+  "_CRITICAL_WARNING": "██████████ DO !!NOT!! MIX EXPO SDK 54 WITH SDK 55 NATIVE MODULES. DO NOT UPGRADE EXPO-SPEECH OR EXPO-HAPTICS TO ^55. IF YOU DO, THE APP WILL CRASH ON PHYSICAL PHONES WITH A WHITE SCREEN OF DEATH. DO NOT ADD TURBOMODULES. ██████████",
   "scripts": {
     "dev": "expo start",
     "start": "expo start",
