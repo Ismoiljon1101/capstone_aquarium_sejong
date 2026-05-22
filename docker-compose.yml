@@ -1,24 +1,6 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:15-alpine
-    container_name: fishlinic-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: fishlinic
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d fishlinic"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: always
-
   backend:
     build:
       context: .
@@ -29,16 +11,30 @@ services:
     env_file:
       - services/backend/.env
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/fishlinic
       - AI_PREDICTOR_URL=http://ai-predictor:8000
       - SERIAL_BRIDGE_URL=http://host.docker.internal:3001
       - PORT=3000
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: always
+    restart: unless-stopped
+
+  serial-bridge:
+    build:
+      context: ./services/serial-bridge
+      dockerfile: Dockerfile
+    container_name: fishlinic-serial-bridge
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    container_name: fishlinic-dashboard
+    ports:
+      - "3002:3000"
+    restart: unless-stopped
 
   ai-predictor:
     build:
@@ -47,8 +43,4 @@ services:
     container_name: fishlinic-ai-predictor
     ports:
       - "8000:8000"
-    restart: always
-
-volumes:
-  postgres_data:
-    driver: local
+    restart: unless-stopped
