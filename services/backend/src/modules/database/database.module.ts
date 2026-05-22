@@ -43,16 +43,26 @@ import { DatabaseController } from './database.controller';
           };
         }
 
-        const isPostgres = dbUrl?.startsWith('postgresql');
+        const isPostgres = dbUrl.startsWith('postgresql') || dbUrl.startsWith('postgres');
+
+        if (isPostgres) {
+          return {
+            type: 'postgres',
+            url: dbUrl,
+            entities: entitiesList,
+            synchronize: false,
+            migrationsRun: true,
+            migrations: [path.join(__dirname, '/../../migrations/*{.ts,.js}')],
+            ssl: { rejectUnauthorized: false },
+          };
+        }
 
         return {
-          type: isPostgres ? 'postgres' : 'sqlite',
-          url: isPostgres ? dbUrl : undefined,
-          database: isPostgres ? undefined : 'fishlinic.sqlite',
+          type: 'better-sqlite3',
+          database: 'fishlinic.sqlite',
           entities: entitiesList,
-          synchronize: !isPostgres, // Only auto-create tables in SQLite dev mode
-          migrationsRun: isPostgres, // Auto run migrations on Postgres startup
-          migrations: isPostgres ? [path.join(__dirname, '/../../migrations/*{.ts,.js}')] : [],
+          synchronize: true,
+          logging: false,
         };
       },
     }),
