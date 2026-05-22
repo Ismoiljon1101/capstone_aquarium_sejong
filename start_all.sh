@@ -36,6 +36,11 @@ ROOT_DIR=$(pwd)
 mkdir -p "$ROOT_DIR/logs"
 
 echo "----------------------------------------"
+echo "Purging old node_modules and Expo cache..."
+rm -rf node_modules apps/mobile/.expo apps/mobile/node_modules
+echo "Installing packages..."
+pnpm install
+echo "----------------------------------------"
 
 # 3. Start Backend
 echo "Starting Backend (Port 3000)..."
