@@ -32,6 +32,13 @@ echo "----------------------------------------"
 
 ROOT_DIR=$(pwd)
 
+echo "----------------------------------------"
+echo "Cleaning caches and installing packages..."
+rm -rf node_modules apps/mobile/node_modules apps/mobile/.expo
+pnpm install
+echo "Dependencies installed."
+echo "----------------------------------------"
+
 # Create logs directory
 mkdir -p "$ROOT_DIR/logs"
 
