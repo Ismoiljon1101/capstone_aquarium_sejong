@@ -23,7 +23,7 @@ async def predict_quality(reading: WaterReading):
     from fastapi import HTTPException
     from fastapi.responses import JSONResponse
     if model is None:
-        return JSONResponse({"error": "Quality model not loaded"}, status_code=503)
+        raise HTTPException(status_code=503, detail="Model not loaded — file missing")
     try:
         features = np.array([[reading.pH, reading.temp_c, reading.do_mg_l]])
         prediction = model.predict(features)

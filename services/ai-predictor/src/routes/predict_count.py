@@ -1,5 +1,5 @@
 # predict_count.py
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from ultralytics import YOLO
 import os
@@ -18,6 +18,8 @@ class ImageRequest(BaseModel):
 
 @router.post("/predict/count")
 def count_fish(req: ImageRequest):
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded — file missing")
     results = model(req.imagePath)
     count = len(results[0].boxes)
     confidence = float(sum(b.conf for b in results[0].boxes) / max(count, 1))

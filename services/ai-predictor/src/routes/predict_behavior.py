@@ -1,5 +1,5 @@
 # predict_behavior.py
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import torch, os
 import numpy as np
@@ -19,5 +19,7 @@ class BehaviorRequest(BaseModel):
 
 @router.post("/predict/behavior")
 def predict_behavior(req: BehaviorRequest):
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded — file missing")
     # Returns anomaly flag — full frame sequence logic owned by Firdavs
     return { "anomaly": False, "score": 0.0, "description": "normal" }

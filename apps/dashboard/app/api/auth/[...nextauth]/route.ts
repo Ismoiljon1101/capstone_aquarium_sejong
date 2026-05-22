@@ -3,7 +3,7 @@ import GithubProvider from "next-auth/providers/github";
 import { NextAuthOptions } from "next-auth";
 
 // minimal config to resolve the 404/Unexpected token errors
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID ?? "",

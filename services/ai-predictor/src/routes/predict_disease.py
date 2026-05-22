@@ -18,6 +18,8 @@ class ImageRequest(BaseModel):
 
 @router.post("/predict/disease")
 def predict_disease(req: ImageRequest):
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded — file missing")
     results = model(req.imagePath)
     detections = results[0].boxes
     if len(detections) == 0:
