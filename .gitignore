@@ -35,3 +35,28 @@ resources/models/*.pkl
 *.mov
 *.avi
 *.mkv
+# Local/generated datasets and outputs
+data/
+outputs/
+
+# Archive / old experiments
+scripts/archive/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Node / build outputs
+node_modules/
+.next/
+dist/
+build/
+
+# OS junk
+.DS_Store
+Thumbs.db
