@@ -12,9 +12,9 @@ import { VisionService } from '../vision/vision.service';
 import { ChatMessageEntity } from '../database/entities/chat-message.entity';
 import { AGENT_TOOLS, CONFIRMATION_TOOLS, executeTool } from './agent.tools';
 import {
+  AgentChatResponse,
+  AgentMessage,
   AgentResult,
-  OllamaMessage,
-  OllamaChatResponse,
   PendingAction,
   ToolName,
 } from './agent.types';
@@ -41,7 +41,10 @@ RULES:
 export class AgentService {
   private readonly logger = new Logger(AgentService.name);
   private readonly ollamaUrl: string;
+  private readonly openRouterUrl: string;
+  private readonly openRouterKey: string;
   private readonly model: string;
+  private readonly llmProvider: 'openrouter' | 'ollama';
 
   constructor(
     private readonly http: HttpService,
@@ -55,12 +58,19 @@ export class AgentService {
     private readonly chatRepo: Repository<ChatMessageEntity>,
   ) {
     this.ollamaUrl = this.config.get('OLLAMA_URL') ?? 'http://localhost:11434';
-    this.model = this.config.get('OLLAMA_MODEL') ?? 'gemma4:e2b';
+    this.openRouterUrl = this.config.get('OPENROUTER_BASE_URL') ?? 'https://openrouter.ai/api/v1';
+    this.openRouterKey = this.config.get('OPENROUTER_API_KEY') ?? '';
+    this.model =
+      this.config.get('OPENROUTER_MODEL') ??
+      this.config.get('OLLAMA_MODEL') ??
+      'deepseek/deepseek-chat-v3.1';
+    // Agent and plain Veronica chat must hit the same upstream provider.
+    this.llmProvider = this.openRouterKey ? 'openrouter' : 'ollama';
   }
 
   async run(userMessage: string, sessionId?: string): Promise<AgentResult> {
     const history = sessionId ? await this.loadHistory(sessionId) : [];
-    const messages: OllamaMessage[] = [
+    const messages: AgentMessage[] = [
       { role: 'system', content: SYSTEM_PROMPT },
       ...history,
       { role: 'user', content: userMessage },
@@ -84,7 +94,7 @@ export class AgentService {
       while (iterations < MAX_ITERATIONS) {
         iterations++;
 
-        const res = await this.callOllama(messages);
+        const res = await this.callModel(messages);
         const msg = res.message;
 
         if (!msg.tool_calls || msg.tool_calls.length === 0) {
@@ -110,7 +120,7 @@ export class AgentService {
 
             if (autoMode) {
               const exec = await this.executeConfirmedAction(name, args);
-              messages.push({ role: 'tool', content: exec.message });
+              messages.push({ role: 'tool', content: exec.message, tool_call_id: tc.id });
               this.logger.log(`Auto-executed ${name}: ${exec.message}`);
               continue;
             }
@@ -122,14 +132,14 @@ export class AgentService {
 
           const result = await executeTool(name, args, deps);
           this.logger.debug(`Tool ${name} -> ${result.slice(0, 120)}`);
-          messages.push({ role: 'tool', content: result });
+          messages.push({ role: 'tool', content: result, tool_call_id: tc.id });
         }
       }
 
       return await finalize('I reached my reasoning limit. Please try a more specific question.');
     } catch (err) {
       this.logger.error(`Agent error: ${(err as Error).message}`);
-      const fallback = 'Veronica is offline right now. Please check that Ollama is running.';
+      const fallback = 'Veronica is offline right now. Please check the configured AI provider.';
       if (sessionId) {
         try {
           await this.saveMessages(sessionId, userMessage, fallback);
@@ -233,13 +243,13 @@ export class AgentService {
     await this.chatRepo.delete({ sessionId });
   }
 
-  private async loadHistory(sessionId: string): Promise<OllamaMessage[]> {
+  private async loadHistory(sessionId: string): Promise<AgentMessage[]> {
     const rows = await this.chatRepo.find({
       where: { sessionId },
       order: { createdAt: 'ASC' },
       take: 20,
     });
-    return rows.map(r => ({ role: r.role as OllamaMessage['role'], content: r.content }));
+    return rows.map(r => ({ role: r.role as AgentMessage['role'], content: r.content }));
   }
 
   private async saveMessages(sessionId: string, userText: string, assistantText: string) {
@@ -249,16 +259,85 @@ export class AgentService {
     ]);
   }
 
-  private async callOllama(messages: OllamaMessage[]): Promise<OllamaChatResponse> {
+  private async callModel(messages: AgentMessage[]): Promise<AgentChatResponse> {
+    if (this.llmProvider === 'openrouter') {
+      const res = await firstValueFrom(
+        this.http.post<{
+          choices?: Array<{
+            message?: {
+              role?: string;
+              content?: string;
+              tool_calls?: Array<{
+                id?: string;
+                function?: { name?: string; arguments?: string };
+              }>;
+            };
+          }>;
+        }>(
+          `${this.openRouterUrl}/chat/completions`,
+          {
+            model: this.model,
+            messages,
+            tools: AGENT_TOOLS,
+          },
+          {
+            headers: this.buildOpenRouterHeaders(),
+          },
+        ),
+      );
+
+      const message = res.data?.choices?.[0]?.message;
+      return {
+        message: {
+          role: message?.role ?? 'assistant',
+          content: message?.content ?? '',
+          tool_calls: (message?.tool_calls ?? []).map((call) => ({
+            id: call.id,
+            function: {
+              name: call.function?.name ?? '',
+              // OpenRouter returns function arguments as a JSON string.
+              arguments: this.parseToolArguments(call.function?.arguments),
+            },
+          })),
+        },
+      };
+    }
+
     const res = await firstValueFrom(
-      this.http.post<OllamaChatResponse>(`${this.ollamaUrl}/api/chat`, {
+      this.http.post<{ message?: AgentChatResponse['message'] }>(`${this.ollamaUrl}/api/chat`, {
         model: this.model,
         messages,
         tools: AGENT_TOOLS,
         stream: false,
       }),
     );
-    return res.data;
+
+    return {
+      message: {
+        role: res.data?.message?.role ?? 'assistant',
+        content: res.data?.message?.content ?? '',
+        tool_calls: res.data?.message?.tool_calls ?? [],
+      },
+    };
+  }
+
+  private parseToolArguments(raw?: string): Record<string, unknown> {
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw);
+      return typeof parsed === 'object' && parsed ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private buildOpenRouterHeaders() {
+    return {
+      Authorization: `Bearer ${this.openRouterKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://fishlinic.local',
+      'X-Title': 'Fishlinic',
+    };
   }
 
   private buildDeps() {

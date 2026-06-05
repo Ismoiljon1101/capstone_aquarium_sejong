@@ -27,7 +27,8 @@ import * as Haptics from 'expo-haptics';
 import AppHeader from '../components/AppHeader';
 import { useSocket } from '../hooks/useSocket';
 import { useProfile, getInitials, TIER_META, SubscriptionTier } from '../hooks/useProfile';
-import { API_BASE, replacePort } from '../hooks/useApi';
+import { API_BASE } from '../hooks/useApi';
+import { getApiBase, hydrateRuntimeConfig, saveApiBase, subscribeApiBase } from '../lib/runtime-config';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -476,7 +477,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { connected } = useSocket();
 
-  const [apiUrl, setApiUrl]     = useState(store.get(SETTINGS_KEYS.API_URL, API_BASE));
+  const [apiUrl, setApiUrl]     = useState(getApiBase());
   const [urlDirty, setUrlDirty] = useState(false);
   const [tts, setTts]           = useState(store.get(SETTINGS_KEYS.TTS_ENABLED, 'true') === 'true');
   const [alertSnd, setAlertSnd] = useState(store.get(SETTINGS_KEYS.ALERTS, 'true') === 'true');
@@ -491,47 +492,57 @@ export default function SettingsScreen() {
   );
 
   const [backendStatus,   setBackend]   = useState<Status>('checking');
-  const [ollamaStatus,    setOllama]    = useState<Status>('checking');
+  const [llmStatus,       setLlm]       = useState<Status>('checking');
   const [predictorStatus, setPredictor] = useState<Status>('checking');
-  const [ollamaModel,     setModel]     = useState('');
+  const [llmModel,        setModel]     = useState('');
+  const [llmProvider,     setLlmProvider] = useState('');
 
   const checkServices = useCallback(async () => {
-    const base = store.get(SETTINGS_KEYS.API_URL, API_BASE);
-    const predictorUrl = replacePort(base, 8001);
-    const ollamaUrl = replacePort(base, 11434);
+    const base = getApiBase();
 
     try {
-      const r = await fetch(`${base}/sensors/latest`, { signal: AbortSignal.timeout(4000) });
-      setBackend(r.ok ? 'online' : 'offline');
-    } catch { setBackend('offline'); }
-
-    try {
-      const r = await fetch(`${ollamaUrl}/api/tags`, { signal: AbortSignal.timeout(4000) });
-      if (r.ok) {
-        const d = await r.json();
-        setOllama('online');
-        setModel(d.models?.[0]?.name ?? 'unknown');
-      } else { setOllama('offline'); }
-    } catch { setOllama('offline'); setModel(''); }
-
-    try {
-      const r = await fetch(`${predictorUrl}/health`, { signal: AbortSignal.timeout(4000) });
-      setPredictor(r.ok ? 'online' : 'offline');
-    } catch { setPredictor('offline'); }
+      const r = await fetch(`${base}/health/services`, { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) throw new Error('health check failed');
+      const d = await r.json();
+      setBackend(d?.backend?.status === 'online' ? 'online' : 'offline');
+      setLlm(d?.llm?.status === 'online' ? 'online' : 'offline');
+      setModel(d?.llm?.model || '');
+      setLlmProvider(d?.llm?.provider || '');
+      setPredictor(d?.predictor?.status === 'online' ? 'online' : 'offline');
+    } catch {
+      setBackend('offline');
+      setLlm('offline');
+      setPredictor('offline');
+      setModel('');
+      setLlmProvider('');
+    }
   }, []);
 
   useEffect(() => {
+    void hydrateRuntimeConfig().then((base) => {
+      setApiUrl(base);
+      setUrlDirty(false);
+    });
+    const unsubscribe = subscribeApiBase((base) => {
+      setApiUrl(base);
+      setUrlDirty(false);
+    });
     checkServices();
     const id = setInterval(checkServices, 20000);
-    return () => clearInterval(id);
+    return () => {
+      unsubscribe();
+      clearInterval(id);
+    };
   }, [checkServices]);
 
-  const saveUrl = () => {
+  const saveUrl = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    store.set(SETTINGS_KEYS.API_URL, apiUrl);
+    await saveApiBase(apiUrl);
     setUrlDirty(false);
     setBackend('checking');
-    checkServices();
+    setLlm('checking');
+    setPredictor('checking');
+    await checkServices();
   };
 
   const handleResetRanges = () => {
@@ -597,7 +608,7 @@ export default function SettingsScreen() {
                       setAgentMode(mode);
                       store.set(SETTINGS_KEYS.AGENT_MODE, mode);
                       // sync to backend
-                      const base = store.get(SETTINGS_KEYS.API_URL, API_BASE);
+                      const base = getApiBase();
                       fetch(`${base}/management/tank-config`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
@@ -643,7 +654,7 @@ export default function SettingsScreen() {
                   Haptics.selectionAsync();
                   setAgentMonitor(v);
                   store.set(SETTINGS_KEYS.AGENT_MONITOR, String(v));
-                  const base = store.get(SETTINGS_KEYS.API_URL, API_BASE);
+                  const base = getApiBase();
                   fetch(`${base}/management/tank-config`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -667,7 +678,7 @@ export default function SettingsScreen() {
                   Haptics.selectionAsync();
                   setPush(v);
                   store.set(SETTINGS_KEYS.PUSH, String(v));
-                  const base = store.get(SETTINGS_KEYS.API_URL, API_BASE);
+                  const base = getApiBase();
                   fetch(`${base}/management/tank-config`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -736,10 +747,10 @@ export default function SettingsScreen() {
           <Row icon="cloud-outline" label="Backend" sub="NestJS · port 3000" right={<StatusBadge status={backendStatus} />} />
           <Row icon="wifi-outline"  label="Realtime socket" sub="Live telemetry"
             right={<StatusBadge status={connected ? 'online' : 'offline'} label={connected ? 'Connected' : 'Disconnected'} />} />
-          <Row icon="sparkles-outline" label="Veronica LLM" sub={ollamaModel || 'Local language model'} right={<StatusBadge status={ollamaStatus} />} />
+          <Row icon="sparkles-outline" label="Veronica AI" sub={llmModel || llmProvider || 'Language model'} right={<StatusBadge status={llmStatus} />} />
           <Row icon="analytics-outline" label="AI Predictor" sub="RF · YOLO · ConvLSTM-VAE" right={<StatusBadge status={predictorStatus} />} />
           <Row icon="refresh-outline" label="Refresh status" last
-            onPress={() => { Haptics.selectionAsync(); setBackend('checking'); setOllama('checking'); setPredictor('checking'); checkServices(); }}
+            onPress={() => { Haptics.selectionAsync(); setBackend('checking'); setLlm('checking'); setPredictor('checking'); checkServices(); }}
             right={<Ionicons name="chevron-forward" size={18} color="#64748b" />} />
         </CollapseGroup>
 

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { API_BASE } from './useApi';
+import { getApiBase } from '../lib/runtime-config';
 
 export function usePushToken() {
   useEffect(() => {
@@ -22,7 +22,7 @@ async function registerToken() {
     const token = (await Notifications.getExpoPushTokenAsync()).data;
     if (!token) return;
 
-    await fetch(`${API_BASE}/management/tank-config`, {
+    await fetch(`${getApiBase()}/management/tank-config`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pushToken: token }),

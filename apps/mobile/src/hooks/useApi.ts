@@ -1,19 +1,5 @@
 import axios from 'axios';
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
-
-function resolveBase(): string {
-  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
-  const hostUri =
-    (Constants.expoConfig as any)?.hostUri ??
-    (Constants.manifest2 as any)?.extra?.expoClient?.hostUri ??
-    (Constants as any).manifest?.debuggerHost;
-  if (hostUri && Platform.OS !== 'web') {
-    const host = String(hostUri).split(':')[0];
-    if (host && host !== 'localhost') return `http://${host}:3000`;
-  }
-  return 'http://localhost:3000';
-}
+import { getApiBase, getDefaultApiBase } from '../lib/runtime-config';
 
 export function replacePort(baseUrl: string, port: number): string {
   try {
@@ -25,8 +11,13 @@ export function replacePort(baseUrl: string, port: number): string {
   }
 }
 
-export const API_BASE = resolveBase();
-const api = axios.create({ baseURL: API_BASE, timeout: 8000 });
+export const API_BASE = getDefaultApiBase();
+const api = axios.create({ timeout: 8000 });
+
+api.interceptors.request.use((config) => ({
+  ...config,
+  baseURL: getApiBase(),
+}));
 
 export function useApi() {
   return {
