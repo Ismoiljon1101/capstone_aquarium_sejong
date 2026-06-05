@@ -1,6 +1,7 @@
 export type ToolName =
   | 'readSensors'
   | 'readHistory'
+  | 'readBehaviorAnalysis'
   | 'readDiagnoses'
   | 'getActuatorState'
   | 'readThresholds'
@@ -21,38 +22,37 @@ export interface ToolDefinition {
   };
 }
 
-// Ollama returns tool calls as objects (not JSON strings like OpenAI)
-export interface OllamaToolCall {
+export interface AgentToolCall {
+  id?: string;
   function: {
     name: string;
     arguments: Record<string, unknown>;
   };
 }
 
-export interface OllamaMessage {
+export interface AgentMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
-  tool_calls?: OllamaToolCall[];
+  tool_calls?: AgentToolCall[];
+  tool_call_id?: string;
 }
 
-export interface OllamaChatResponse {
+export interface AgentChatResponse {
   message: {
     role: string;
     content: string;
-    tool_calls?: OllamaToolCall[];
+    tool_calls?: AgentToolCall[];
   };
-  done: boolean;
 }
 
-// A proposed action that requires user confirmation before executing
 export interface PendingAction {
   tool: ToolName;
   args: Record<string, unknown>;
-  reason: string; // human-readable explanation from Veronica
+  reason: string;
 }
 
 export interface AgentResult {
   response: string;
   aiOffline: boolean;
-  pendingAction?: PendingAction; // present when Veronica proposes a write action
+  pendingAction?: PendingAction;
 }

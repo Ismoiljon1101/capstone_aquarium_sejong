@@ -1,23 +1,27 @@
 #!/bin/bash
-echo "Starting Fishlinic Aquaculture System..."
+set -euo pipefail
 
-echo "----------------------------------------"
-echo "Stopping existing services..."
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOG_DIR="$ROOT_DIR/logs"
 
-# Ports used by the project:
-# 3000: Backend
-# 3001: Serial Bridge
-# 3005: Dashboard
-# 8000: AI Predictor
-# 8081: Mobile (Expo)
-ports=(3000 3001 3005 8000 8081)
+echo "Starting Fishlinic services..."
 
-for port in "${ports[@]}"; do
-    pid=$(lsof -ti :$port)
-    if [ ! -z "$pid" ]; then
-        echo "Killing process on port $port (PID: $pid)..."
-        kill -9 $pid
+mkdir -p "$LOG_DIR"
+
+kill_port() {
+  local port="$1"
+  if command -v lsof >/dev/null 2>&1; then
+    local pids
+    pids="$(lsof -ti :"$port" || true)"
+    if [ -n "$pids" ]; then
+      echo "Stopping port $port: $pids"
+      kill -9 $pids || true
     fi
+  fi
+}
+
+for port in 3000 3001 3005 8000 8081; do
+  kill_port "$port"
 done
 
 # Kill assistant process since it doesn't bind to a port
@@ -27,67 +31,37 @@ if [ ! -z "$assistant_pid" ]; then
     kill -9 $assistant_pid
 fi
 
-echo "Existing services stopped."
-echo "----------------------------------------"
-
-ROOT_DIR=$(pwd)
-
-echo "----------------------------------------"
-echo "Cleaning caches and installing packages..."
-rm -rf node_modules apps/mobile/node_modules apps/mobile/.expo
+echo "Installing workspace dependencies..."
+cd "$ROOT_DIR"
 pnpm install
-echo "Dependencies installed."
-echo "----------------------------------------"
 
-# Create logs directory
-mkdir -p "$ROOT_DIR/logs"
+echo "Node: $(node -v)"
+echo "pnpm: $(pnpm -v)"
+echo "Python: $(python --version 2>&1)"
 
-echo "----------------------------------------"
-echo "Environment Check:"
-node -v | sed 's/^/Node: /'
-pnpm -v | sed 's/^/pnpm: /'
-python --version | sed 's/^/Python: /'
-echo "----------------------------------------"
+echo "Starting backend on :3000"
+(cd "$ROOT_DIR/services/backend" && pnpm dev) > "$LOG_DIR/backend.log" 2>&1 &
 
-# 3. Start Backend
-echo "Starting Backend (Port 3000)..."
-(cd services/backend && pnpm dev) > "$ROOT_DIR/logs/backend.log" 2>&1 &
-BACKEND_PID=$!
-sleep 2
-tail -n 5 "$ROOT_DIR/logs/backend.log" | sed 's/^/  [BACKEND] /'
+echo "Starting AI predictor on :8000"
+(cd "$ROOT_DIR/services/ai-predictor" && pnpm dev) > "$LOG_DIR/ai-predictor.log" 2>&1 &
 
-# 4. Start AI Predictor
-echo "Starting AI Predictor (Port 8000)..."
-if [ -d "services/ai-predictor/venv" ]; then
-    (cd services/ai-predictor && source venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 8000) > "$ROOT_DIR/logs/ai.log" 2>&1 &
-else
-    (cd services/ai-predictor && uvicorn main:app --host 0.0.0.0 --port 8000) > "$ROOT_DIR/logs/ai.log" 2>&1 &
-fi
-AI_PID=$!
-sleep 2
-tail -n 5 "$ROOT_DIR/logs/ai.log" | sed 's/^/  [AI] /'
+echo "Starting serial bridge on :3001"
+(cd "$ROOT_DIR/services/serial-bridge" && pnpm dev) > "$LOG_DIR/serial-bridge.log" 2>&1 &
 
-# 5. Start Dashboard
-echo "Starting Dashboard (Port 3005)..."
-(cd apps/dashboard && pnpm dev -- -p 3005) > "$ROOT_DIR/logs/dashboard.log" 2>&1 &
-DASH_PID=$!
-sleep 2
-tail -n 5 "$ROOT_DIR/logs/dashboard.log" | sed 's/^/  [DASHBOARD] /'
+echo "Starting dashboard on :3005"
+(cd "$ROOT_DIR/apps/dashboard" && pnpm dev -- -p 3005) > "$LOG_DIR/dashboard.log" 2>&1 &
 
-# 6. Start Serial Bridge
-echo "Starting Serial Bridge (Port 3001)..."
-(cd services/serial-bridge && pnpm dev) > "$ROOT_DIR/logs/bridge.log" 2>&1 &
-BRIDGE_PID=$!
-sleep 2
-tail -n 5 "$ROOT_DIR/logs/bridge.log" | sed 's/^/  [BRIDGE] /'
+sleep 4
 
-echo "----------------------------------------"
-echo "All background services started."
-echo "Logs are actively writing to the ./logs directory."
-echo "----------------------------------------"
+echo "Recent backend log:"
+tail -n 5 "$LOG_DIR/backend.log" || true
+echo "Recent AI predictor log:"
+tail -n 5 "$LOG_DIR/ai-predictor.log" || true
+echo "Recent serial bridge log:"
+tail -n 5 "$LOG_DIR/serial-bridge.log" || true
+echo "Recent dashboard log:"
+tail -n 5 "$LOG_DIR/dashboard.log" || true
 
-# 7. Start Mobile App IN FOREGROUND so you can see the QR Code and use commands (r, i, a, w)
-echo "Starting Mobile (Port 8081) in the foreground..."
-cd apps/mobile && npx expo start -c
-echo "All services exited!"
-echo "To stop everything, run ./start_all.sh again (it kills old processes automatically)."
+echo "Starting Expo on :8081"
+cd "$ROOT_DIR/apps/mobile"
+npx expo start -c

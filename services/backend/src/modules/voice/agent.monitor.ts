@@ -8,8 +8,8 @@ const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 const SAFE_RANGES = {
   pH:     { min: 6.8, max: 7.5 },
-  TEMP:   { min: 24,  max: 28  },
-  DO2:    { min: 6,   max: 9   },
+  temp_c: { min: 24,  max: 28  },
+  do_mg_l:{ min: 6,   max: 9   },
   CO2:    { min: 0,   max: 40  },
 };
 

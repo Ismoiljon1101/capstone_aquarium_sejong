@@ -24,31 +24,51 @@ export class FishService {
 
   async saveCount(count: number, confidence: number, snapshotId: number) {
     const record = this.fishCountRepo.create({
+      snapshotId,
       count,
       confidence,
-      snapshotId,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
     });
     return await this.fishCountRepo.save(record);
   }
 
-  async saveHealthReport(visualStatus: string, behaviorStatus: string, summary: string, snapshotId?: number) {
+  async saveHealthReport(data: {
+    snapshotId?: number;
+    phStatus: string;
+    tempStatus: string;
+    doStatus: string;
+    visualStatus: string;
+    behaviorStatus: string;
+    behaviorLabel?: string;
+    behaviorConfidence?: number;
+    overallScore: number;
+    summary: string;
+    diseaseClass?: string;
+    mlConfidence?: number;
+    severity?: string;
+    source?: string;
+  }) {
     const report = this.healthReportRepo.create({
-      snapshotId,
-      phStatus: 'ok',
-      tempStatus: 'ok',
-      doStatus: 'ok',
-      visualStatus,
-      behaviorStatus,
-      overallScore: 0.9,
-      summary,
-      timestamp: new Date().toISOString(),
+      snapshotId: data.snapshotId,
+      phStatus: data.phStatus,
+      tempStatus: data.tempStatus,
+      doStatus: data.doStatus,
+      visualStatus: data.visualStatus,
+      behaviorStatus: data.behaviorStatus,
+      behaviorLabel: data.behaviorLabel,
+      behaviorConfidence: data.behaviorConfidence,
+      overallScore: data.overallScore,
+      summary: data.summary,
+      diseaseClass: data.diseaseClass,
+      mlConfidence: data.mlConfidence,
+      severity: data.severity,
+      source: data.source ?? 'vision_pipeline',
+      timestamp: new Date(),
     });
     return await this.healthReportRepo.save(report);
   }
 
   async saveGrowthRecord(avgSize: number, count: number) {
-    // 1. Get previous record to calculate delta
     const lastRecord = await this.fishGrowthRepo.findOne({
       where: {},
       order: { createdAt: 'DESC' },
@@ -56,7 +76,6 @@ export class FishService {
 
     const delta = lastRecord ? avgSize - lastRecord.avgSizeEstimate : 0;
 
-    // 2. Create new record
     const growth = this.fishGrowthRepo.create({
       date: new Date().toISOString().split('T')[0],
       avgSizeEstimate: avgSize,
@@ -76,10 +95,12 @@ export class FishService {
   }): Promise<HealthReport> {
     const isHealthy = data.diseaseClass.toLowerCase() === 'healthy';
     const report = this.healthReportRepo.create({
-      visualStatus: isHealthy ? 'ok' : 'abnormal',
+      visualStatus: isHealthy ? 'ok' : 'warn',
       behaviorStatus: 'ok',
       overallScore: data.confidence,
-      summary: data.summary ?? `ML detected: ${data.diseaseClass} (${(data.confidence * 100).toFixed(1)}% confidence)`,
+      summary:
+        data.summary ??
+        `ML detected: ${data.diseaseClass} (${(data.confidence * 100).toFixed(1)}% confidence)`,
       diseaseClass: data.diseaseClass,
       mlConfidence: data.confidence,
       severity: data.severity,
@@ -94,7 +115,7 @@ export class FishService {
         sensorId: 0,
         tankId: 1,
         type: 'FISH_DISEASE',
-        severity: data.severity === 'High' ? 'critical' : 'warning' as any,
+        severity: data.severity === 'High' ? 'critical' : ('warning' as any),
         message: `Fish disease detected: ${data.diseaseClass} (${data.severity} severity, ${(data.confidence * 100).toFixed(1)}% confidence)`,
       });
     }
@@ -111,8 +132,10 @@ export class FishService {
       sensorId: data.readingId ?? 0,
       tankId: 1,
       type: 'WATER_ANOMALY',
-      severity: data.severity === 'High' ? 'critical' : 'warning' as any,
-      message: data.message ?? `Water quality anomaly: ${data.anomalyType} (${data.severity})`,
+      severity: data.severity === 'High' ? 'critical' : ('warning' as any),
+      message:
+        data.message ??
+        `Water quality anomaly: ${data.anomalyType} (${data.severity})`,
     });
   }
 
@@ -126,7 +149,16 @@ export class FishService {
 
   async generateDailyReport() {
     this.logger.log('Generating daily fish health report...');
-    return await this.saveHealthReport('good', 'normal', 'Daily automated report: Fish appear healthy and active.');
+    return await this.saveHealthReport({
+      phStatus: 'ok',
+      tempStatus: 'ok',
+      doStatus: 'ok',
+      visualStatus: 'ok',
+      behaviorStatus: 'ok',
+      overallScore: 1,
+      summary: 'Daily automated report placeholder.',
+      source: 'manual',
+    });
   }
 
   async getLatestCount() {

@@ -1,0 +1,133 @@
+{
+  "total_windows": 4306,
+  "original_windows": 5327,
+  "feature_columns": [
+    "points_in_window",
+    "speed_mean",
+    "speed_std",
+    "speed_min",
+    "speed_max",
+    "speed_range",
+    "vertical_speed_mean",
+    "vertical_speed_std",
+    "vertical_speed_abs_mean",
+    "vertical_speed_abs_max",
+    "angle_change_mean",
+    "angle_change_std",
+    "angle_change_max",
+    "tilt_mean",
+    "tilt_std",
+    "tilt_max",
+    "bbox_area_mean",
+    "bbox_area_std",
+    "bbox_area_max",
+    "conf_mean",
+    "surface_ratio",
+    "middle_ratio",
+    "bottom_ratio",
+    "x_range",
+    "y_range",
+    "movement_area",
+    "accel_mean",
+    "accel_std",
+    "accel_max",
+    "zone_transitions",
+    "stationary_ratio"
+  ],
+  "classes": [
+    "dead_or_moribund_floating",
+    "erratic_or_chasing",
+    "feeding_response",
+    "group_swimming",
+    "lethargic_low_activity",
+    "normal_swimming",
+    "surface_gasping",
+    "swim_bladder_concern"
+  ],
+  "accuracy": 0.8271,
+  "macro_f1": 0.8291,
+  "weighted_f1": 0.825,
+  "cv_macro_f1_mean": 0.8395,
+  "cv_macro_f1_std": 0.0097,
+  "per_class_f1": {
+    "dead_or_moribund_floating": 0.9463,
+    "erratic_or_chasing": 0.6597,
+    "feeding_response": 0.8099,
+    "group_swimming": 0.8,
+    "lethargic_low_activity": 0.8517,
+    "normal_swimming": 0.72,
+    "surface_gasping": 0.9366,
+    "swim_bladder_concern": 0.9082
+  },
+  "top_features": [
+    {
+      "feature": "bbox_area_mean",
+      "importance": 0.0691
+    },
+    {
+      "feature": "bbox_area_max",
+      "importance": 0.0627
+    },
+    {
+      "feature": "tilt_mean",
+      "importance": 0.0562
+    },
+    {
+      "feature": "angle_change_mean",
+      "importance": 0.0556
+    },
+    {
+      "feature": "speed_mean",
+      "importance": 0.0496
+    },
+    {
+      "feature": "tilt_max",
+      "importance": 0.0495
+    },
+    {
+      "feature": "conf_mean",
+      "importance": 0.0459
+    },
+    {
+      "feature": "vertical_speed_abs_mean",
+      "importance": 0.0441
+    },
+    {
+      "feature": "bbox_area_std",
+      "importance": 0.0414
+    },
+    {
+      "feature": "tilt_std",
+      "importance": 0.0397
+    },
+    {
+      "feature": "movement_area",
+      "importance": 0.0383
+    },
+    {
+      "feature": "vertical_speed_std",
+      "importance": 0.0359
+    },
+    {
+      "feature": "y_range",
+      "importance": 0.0329
+    },
+    {
+      "feature": "x_range",
+      "importance": 0.0309
+    },
+    {
+      "feature": "stationary_ratio",
+      "importance": 0.0291
+    }
+  ],
+  "settings": {
+    "n_estimators": 300,
+    "min_per_class": 500,
+    "max_per_class": 600,
+    "window_size": 20,
+    "window_step": 10,
+    "min_points": 8,
+    "test_size": 0.2
+  }
+}

@@ -1,7 +1,5 @@
 import { ToolDefinition, ToolName } from './agent.types';
 
-// ── Tool definitions (sent to Ollama so it knows what it can call) ────────────
-
 export const AGENT_TOOLS: ToolDefinition[] = [
   {
     type: 'function',
@@ -16,6 +14,14 @@ export const AGENT_TOOLS: ToolDefinition[] = [
     function: {
       name: 'readHistory',
       description: 'Read sensor history for the last hour to detect trends (rising, dropping, stable).',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'readBehaviorAnalysis',
+      description: 'Capture a fresh live video clip from the tank camera and run fish behavior analysis immediately. Use this for fish behavior, movement, activity level, stress, feeding response, counting fish, or visual fish health questions.',
       parameters: { type: 'object', properties: {}, required: [] },
     },
   },
@@ -47,7 +53,7 @@ export const AGENT_TOOLS: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'controlPump',
-      description: 'Turn the air pump ON or OFF. Requires user confirmation — do not call unless you have a clear sensor-based reason.',
+      description: 'Turn the air pump ON or OFF. Requires user confirmation, do not call unless you have a clear sensor-based reason.',
       parameters: {
         type: 'object',
         properties: {
@@ -62,7 +68,7 @@ export const AGENT_TOOLS: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'controlLed',
-      description: 'Turn the LED strip ON or OFF. Requires user confirmation — do not call unless you have a clear reason.',
+      description: 'Turn the LED strip ON or OFF. Requires user confirmation, do not call unless you have a clear reason.',
       parameters: {
         type: 'object',
         properties: {
@@ -90,15 +96,18 @@ export const AGENT_TOOLS: ToolDefinition[] = [
   },
 ];
 
-// Tools that write to hardware — require user confirmation before executing
 export const CONFIRMATION_TOOLS = new Set<string>(['controlPump', 'controlLed', 'triggerFeed']);
-
-// ── Tool executor ─────────────────────────────────────────────────────────────
-// Returns a string result to feed back into the Ollama message history
 
 export type ToolExecutorDeps = {
   getSensorReadings: () => Promise<Array<{ type: string; value: number; unit: string; status: string }>>;
   getSensorHistory: () => Promise<Array<{ type: string; value: number; unit: string; timestamp: string }>>;
+  runBehaviorAnalysis: () => Promise<{
+    behavior: Record<string, unknown>;
+    count: Record<string, unknown>;
+    disease: Record<string, unknown>;
+    quality: Record<string, unknown>;
+    reportId?: number;
+  }>;
   getActuatorState: () => Promise<Record<string, unknown>>;
   getThresholds: () => Promise<Record<string, unknown>>;
   getDiagnoses: () => Promise<Array<{ diseaseClass: string; mlConfidence: number; severity: string; timestamp: Date }>>;
@@ -122,7 +131,6 @@ export async function executeTool(
       case 'readHistory': {
         const history = await deps.getSensorHistory();
         if (!history.length) return 'No history data available for the last hour.';
-        // Summarize: latest 5 readings per sensor type
         const byType = new Map<string, number[]>();
         for (const r of history) {
           if (!byType.has(r.type)) byType.set(r.type, []);
@@ -131,10 +139,26 @@ export async function executeTool(
         const summary = [...byType.entries()].map(([type, vals]) => {
           const latest = vals.slice(-1)[0];
           const oldest = vals[0];
-          const trend = latest > oldest + 0.1 ? '↑ rising' : latest < oldest - 0.1 ? '↓ dropping' : '→ stable';
+          const trend = latest > oldest + 0.1 ? 'rising' : latest < oldest - 0.1 ? 'dropping' : 'stable';
           return `${type}: ${trend} (was ${oldest.toFixed(2)}, now ${latest.toFixed(2)}, ${vals.length} readings)`;
         });
         return summary.join(' | ');
+      }
+
+      case 'readBehaviorAnalysis': {
+        const result = await deps.runBehaviorAnalysis();
+        const behavior = result.behavior ?? {};
+        const disease = result.disease ?? {};
+        const count = result.count ?? {};
+        const quality = result.quality ?? {};
+        return [
+          `behavior=${behavior['label'] ?? behavior['status'] ?? 'unknown'} (${behavior['confidence'] ?? 'n/a'})`,
+          `behavior_status=${behavior['status'] ?? 'unknown'}`,
+          `disease=${disease['disease'] ?? 'unknown'} (${disease['confidence'] ?? 'n/a'})`,
+          `fish_count=${count['count'] ?? 'unknown'}`,
+          `water_quality=${quality['label'] ?? quality['status'] ?? 'unknown'}`,
+          result.reportId ? `report_id=${result.reportId}` : '',
+        ].filter(Boolean).join(' | ');
       }
 
       case 'getActuatorState': {
@@ -147,7 +171,7 @@ export async function executeTool(
         if (!diagnoses.length) return 'No fish diagnoses on record yet.';
         return diagnoses
           .slice(0, 5)
-          .map(d => `${d.diseaseClass} (${d.severity}, ${(d.mlConfidence * 100).toFixed(1)}% confidence) — ${new Date(d.timestamp).toLocaleString()}`)
+          .map(d => `${d.diseaseClass} (${d.severity}, ${(d.mlConfidence * 100).toFixed(1)}% confidence) - ${new Date(d.timestamp).toLocaleString()}`)
           .join(' | ');
       }
 
@@ -156,7 +180,6 @@ export async function executeTool(
         return JSON.stringify(thresholds);
       }
 
-      // Write tools should never reach here — they are intercepted before execution
       case 'controlPump':
       case 'controlLed':
       case 'triggerFeed':

@@ -1,39 +1,45 @@
-.expo/
+# Node / build
 node_modules/
 dist/
-*.sqlite
-.env
+.next/
+build/
+.expo/
 
-# videos and heavy junk
-videos/
-Video+Code/
-
-# python cache
+# Python
 __pycache__/
+*.pyc
 
-# node stuff
-node_modules/
-.expo/
-dist/
-
-# env & db
+# Env
 .env
+.env.*
+!.env.example
+
+# DB
 *.sqlite
+
+# Logs
 *.log
 
-# ML Models
+# OS
+.DS_Store
+Thumbs.db
+
+# Videos & large media
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# ML Models (tracked separately via LFS)
 resources/models/*.pt
 resources/models/*.pth
 resources/models/*.pkl
-*.mp4
-*.mov
-*.avi
-*.mkv
 
-# Large raw video files
-*.mp4
-*.mov
-*.avi
-*.mkv
-.DS_Store
-*.sqlite
+# Local/generated datasets & outputs
+data/
+outputs/
+videos/
+Video+Code/
+
+# Archive / old experiments
+scripts/archive/

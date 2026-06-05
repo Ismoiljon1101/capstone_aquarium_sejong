@@ -1,31 +1,41 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import axios from 'axios';
-import { execSync, spawn } from 'child_process';
-import path from 'path';
-import { SerialParser } from './parser';
-import { Emitter } from './emitter';
-import EventEmitter from 'events';
+import express from "express";
+import dotenv from "dotenv";
+import axios from "axios";
+import { execSync, spawn } from "child_process";
+import path from "path";
+import { existsSync } from "fs";
+import { SerialParser } from "./parser";
+import { Emitter } from "./emitter";
+import EventEmitter from "events";
 
 type BridgeCommand = {
   actuatorId: number;
-  type: 'FEEDER' | 'AIR_PUMP' | 'LED_STRIP' | 'STATUS_LED';
+  type: "FEEDER" | "AIR_PUMP" | "LED_STRIP" | "STATUS_LED";
   relayChannel: number;
   state: boolean;
-  source: 'APP' | 'CRON' | 'AI' | 'EMERGENCY';
+  source: "APP" | "CRON" | "AI" | "EMERGENCY";
 };
 
 dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT || 3001);
-const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
-const mainPortPath = process.env.SERIAL_PORT_MAIN || '/dev/ttyUSB0';
-const cameraDevice = Number(process.env.CAMERA_DEVICE || 1); // 0=built-in, 1+=iPhone
-const captureScript = path.join(__dirname, 'capture.py');
+const backendUrl = process.env.BACKEND_URL || "http://localhost:3000";
+const predictorUrl = process.env.AI_PREDICTOR_URL || "http://localhost:8000";
+const mainPortPath = process.env.SERIAL_PORT_MAIN || "/dev/ttyUSB0";
+const cameraDevice = process.env.CAMERA_DEVICE
+  ? Number(process.env.CAMERA_DEVICE)
+  : undefined;
+const localCaptureScript = path.join(__dirname, "capture.py");
+const sourceCaptureScript = path.join(__dirname, "..", "src", "capture.py");
+const captureScript = existsSync(localCaptureScript)
+  ? localCaptureScript
+  : sourceCaptureScript;
+const mockModeEnabled = process.env.MOCK_MODE === "true";
 const parser = new SerialParser();
 const emitter = new Emitter(backendUrl);
 
+let isMockMode = false;
 const actuatorState = {
   feeder: false,
   pump: false,
@@ -61,7 +71,7 @@ const handleData = (line: string) => {
   if (readings.length > 0) {
     lastReadingAt = new Date().toISOString();
   }
-  
+
   readings.forEach((reading) => {
     latestData[reading.type] = reading;
     void emitter.forwardReading(reading);
@@ -69,64 +79,90 @@ const handleData = (line: string) => {
 };
 
 const applyCommandState = (command: BridgeCommand) => {
-  if (command.type === 'FEEDER') actuatorState.feeder = command.state;
-  if (command.type === 'AIR_PUMP') actuatorState.pump = command.state;
-  if (command.type === 'LED_STRIP') actuatorState.led = command.state;
+  if (command.type === "FEEDER") actuatorState.feeder = command.state;
+  if (command.type === "AIR_PUMP") actuatorState.pump = command.state;
+  if (command.type === "LED_STRIP") actuatorState.led = command.state;
 };
 
 // Send offline state to backend so UI knows hardware is missing
 const emitOfflineState = () => {
   void emitter.forwardReading({
-    type: 'SYSTEM',
+    type: "SYSTEM",
     value: 0,
-    unit: 'status',
-    status: 'offline'
+    unit: "status",
+    status: "offline",
   });
-  latestData['SYSTEM'] = { type: 'SYSTEM', value: 0, status: 'offline' };
+  latestData["SYSTEM"] = { type: "SYSTEM", value: 0, status: "offline" };
 };
 
 async function startSerial() {
+  if (mockModeEnabled) {
+    isMockMode = true;
+    console.log("[Bridge] Running in MOCK mode (no hardware required)");
+    // Send a periodic heartbeat so backend knows we're alive
+    setInterval(() => {
+      handleData(
+        JSON.stringify({
+          pH: 7.0 + (Math.random() * 0.2 - 0.1),
+          TEMP: 25 + (Math.random() * 2 - 1),
+          DO_mg_L: 7 + (Math.random() * 1 - 0.5),
+          status: "ok",
+        }),
+      );
+    }, 5000);
+    return;
+  }
+
   try {
-    const { SerialPort } = await import('serialport');
-    const { ReadlineParser } = await import('@serialport/parser-readline');
-    
+    const { SerialPort } = await import("serialport");
+    const { ReadlineParser } = await import("@serialport/parser-readline");
+
     const ports = await SerialPort.list();
     const availablePaths = ports.map((p: any) => p.path);
-    
-    const actualMainPath = mainPortPath && availablePaths.includes(mainPortPath) 
-      ? mainPortPath 
-      : availablePaths.find((p: string) => p.includes('usbserial') || p.includes('usbmodem'));
+
+    const actualMainPath =
+      mainPortPath && availablePaths.includes(mainPortPath)
+        ? mainPortPath
+        : availablePaths.find(
+            (p: string) => p.includes("usbserial") || p.includes("usbmodem"),
+          );
 
     if (actualMainPath) {
-      console.log(`[Bridge] Attempting to connect to Serial at ${actualMainPath}`);
+      console.log(
+        `[Bridge] Attempting to connect to Serial at ${actualMainPath}`,
+      );
       serialMain = new SerialPort({ path: actualMainPath, baudRate: 9600 });
-      const lineParser = serialMain.pipe(new ReadlineParser({ delimiter: '\r\n' }));
+      const lineParser = serialMain.pipe(
+        new ReadlineParser({ delimiter: "\r\n" }),
+      );
 
-      lineParser.on('data', handleData);
-      
-      serialMain.on('open', () => {
+      lineParser.on("data", handleData);
+
+      serialMain.on("open", () => {
         isConnected = true;
         console.log(`[Bridge] Connected successfully to ${actualMainPath}`);
       });
 
-      serialMain.on('close', () => {
-        if (isConnected) console.log('[Bridge] Serial Port Closed.');
+      serialMain.on("close", () => {
+        if (isConnected) console.log("[Bridge] Serial Port Closed.");
         isConnected = false;
         emitOfflineState();
         setTimeout(startSerial, 3000); // Auto-reconnect loop
       });
 
-      serialMain.on('error', (error: Error) => {
-        if (isConnected) console.error('[Bridge] Serial Error:', error.message);
+      serialMain.on("error", (error: Error) => {
+        if (isConnected) console.error("[Bridge] Serial Error:", error.message);
         isConnected = false;
         emitOfflineState();
-        // The close event will usually follow and handle the reconnect
       });
     } else {
-      if (isConnected) console.warn('[Bridge] Hardware disconnected. No valid serial port found.');
+      if (isConnected)
+        console.warn(
+          "[Bridge] Hardware disconnected. No valid serial port found.",
+        );
       isConnected = false;
       emitOfflineState();
-      setTimeout(startSerial, 3000); // Keep looking every 3 seconds
+      setTimeout(startSerial, 3000);
     }
   } catch (error) {
     console.error(`[Bridge] Serial connect error. Retrying...`);
@@ -137,20 +173,30 @@ async function startSerial() {
 }
 
 async function handleCommand(command: BridgeCommand) {
+  if (mockModeEnabled) {
+    applyCommandState(command);
+    return {
+      success: true,
+      hardware: "mock",
+      actuators: actuatorState,
+      command,
+    };
+  }
+
   if (!isConnected || !serialMain || !serialMain.isOpen) {
-    throw new Error('Hardware is disconnected. Cannot execute command.');
+    throw new Error("Hardware is disconnected. Cannot execute command.");
   }
 
   let payload = `${JSON.stringify(command)}\n`;
-  let expectedAck = '';
+  let expectedAck = "";
 
-  if (command.type === 'FEEDER') {
+  if (command.type === "FEEDER") {
     payload = `{"cmd":"feed","duration":1}\n`;
-    expectedAck = 'FEEDER';
-  } else if (command.type === 'AIR_PUMP') {
+    expectedAck = "FEEDER";
+  } else if (command.type === "AIR_PUMP") {
     payload = command.state ? "PUMP_ON\n" : "PUMP_OFF\n";
     expectedAck = command.state ? "PUMP_ON" : "PUMP_OFF";
-  } else if (command.type === 'LED_STRIP') {
+  } else if (command.type === "LED_STRIP") {
     expectedAck = command.state ? "LED_ON" : "LED_OFF";
   }
 
@@ -166,19 +212,23 @@ async function handleCommand(command: BridgeCommand) {
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
       ackEmitter.removeAllListeners(`ack_${expectedAck}`);
-      reject(new Error(`Command timed out: Arduino did not acknowledge '${expectedAck}' within 3 seconds.`));
+      reject(
+        new Error(
+          `Command timed out: Arduino did not acknowledge '${expectedAck}' within 3 seconds.`,
+        ),
+      );
     }, 3000);
 
     ackEmitter.once(`ack_${expectedAck}`, () => {
       clearTimeout(timeout);
-      applyCommandState(command); // Apply state only if hardware acknowledges
+      applyCommandState(command);
       resolve();
     });
   });
 
   return {
     success: true,
-    hardware: 'serial',
+    hardware: "serial",
     actuators: actuatorState,
     command,
   };
@@ -187,21 +237,23 @@ async function handleCommand(command: BridgeCommand) {
 // Start connection loop
 startSerial();
 
-app.get('/', (_req, res) => {
-  res.send('<h1>Fishlinic Serial Bridge</h1><p>Status: Running</p>');
+app.get("/", (_req, res) => {
+  res.send("<h1>Fishlinic Serial Bridge</h1><p>Status: Running</p>");
 });
 
-app.get('/status', (_req, res) => {
+app.get("/status", (_req, res) => {
   res.json({
-    status: 'online',
-    hardware: isConnected ? 'connected' : 'offline',
+    status: "online",
+    hardware: isConnected ? "connected" : isMockMode ? "mock" : "offline",
+    mockMode: isMockMode,
     backend: backendUrl,
+    predictor: predictorUrl,
     lastReadingAt,
     actuators: actuatorState,
   });
 });
 
-app.get('/latest', (_req, res) => {
+app.get("/latest", (_req, res) => {
   res.json({
     telemetry: latestData,
     actuators: actuatorState,
@@ -209,7 +261,7 @@ app.get('/latest', (_req, res) => {
   });
 });
 
-app.post('/command', async (req, res) => {
+app.post("/command", async (req, res) => {
   try {
     const result = await handleCommand(req.body as BridgeCommand);
     res.json(result);
@@ -220,7 +272,7 @@ app.post('/command', async (req, res) => {
   }
 });
 
-app.post('/actuate', async (req, res) => {
+app.post("/actuate", async (req, res) => {
   try {
     const result = await handleCommand(req.body as BridgeCommand);
     res.json(result);
@@ -231,25 +283,19 @@ app.post('/actuate', async (req, res) => {
   }
 });
 
-app.get('/ports', async (_req, res) => {
-  const { SerialPort } = await import('serialport');
-  const ports = await SerialPort.list();
-  res.json(ports);
-});
-
-// ---------------------------------------------------------------------------
-// Camera endpoints — iPhone via QuickTime/AVFoundation
-// ---------------------------------------------------------------------------
-
-app.post('/camera/snapshot', (_req, res) => {
+app.post("/camera/snapshot", (_req, res) => {
   try {
-    const result = execSync(
-      `python3 "${captureScript}" --device ${cameraDevice}`,
-      { timeout: 10000, encoding: 'utf-8' }
-    ).trim();
+    const deviceArg =
+      cameraDevice === undefined ? "" : ` --device ${cameraDevice}`;
+    const result = execSync(`python3 "${captureScript}"${deviceArg}`, {
+      timeout: 10000,
+      encoding: "utf-8",
+    }).trim();
 
-    if (!result || result.startsWith('ERROR')) {
-      res.status(503).json({ error: 'Camera capture failed. Is iPhone connected via USB?' });
+    if (!result || result.startsWith("ERROR")) {
+      res
+        .status(503)
+        .json({ error: "Camera capture failed. Is iPhone connected via USB?" });
       return;
     }
 
@@ -262,12 +308,12 @@ app.post('/camera/snapshot', (_req, res) => {
   }
 });
 
-app.get('/camera/devices', (_req, res) => {
+app.get("/camera/devices", (_req, res) => {
   try {
-    const result = execSync(
-      `python3 "${captureScript}" --list`,
-      { timeout: 10000, encoding: 'utf-8' }
-    ).trim();
+    const result = execSync(`python3 "${captureScript}" --list`, {
+      timeout: 10000,
+      encoding: "utf-8",
+    }).trim();
     res.json(JSON.parse(result));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -275,18 +321,19 @@ app.get('/camera/devices', (_req, res) => {
   }
 });
 
-app.get('/camera/stream', (_req, res) => {
+app.get("/camera/stream", (_req, res) => {
   res.writeHead(200, {
-    'Content-Type': 'multipart/x-mixed-replace; boundary=frame',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    "Content-Type": "multipart/x-mixed-replace; boundary=frame",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
   });
 
-  const child = spawn('python3', [
-    '-c',
+  const streamDeviceIndex = cameraDevice ?? 1;
+  const child = spawn("python3", [
+    "-c",
     `
 import cv2, sys, time
-cap = cv2.VideoCapture(${cameraDevice}, cv2.CAP_AVFOUNDATION)
+cap = cv2.VideoCapture(${streamDeviceIndex}, cv2.CAP_AVFOUNDATION)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 while cap.isOpened():
@@ -294,24 +341,29 @@ while cap.isOpened():
     if not ret: break
     _, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
     data = buf.tobytes()
-    sys.stdout.buffer.write(b'--frame\r\nContent-Type: image/jpeg\r\n\r\n')
+    sys.stdout.buffer.write(b'--frame\\r\\nContent-Type: image/jpeg\\r\\n\\r\\n')
     sys.stdout.buffer.write(data)
-    sys.stdout.buffer.write(b'\r\n')
+    sys.stdout.buffer.write(b'\\r\\n')
     sys.stdout.buffer.flush()
     time.sleep(0.033)
 cap.release()
-`
+`,
   ]);
 
   child.stdout.pipe(res);
-  child.stderr.on('data', (d: Buffer) => console.error(`[Camera Stream] ${d}`));
+  child.stderr.on("data", (d: Buffer) => console.error(`[Camera Stream] ${d}`));
 
-  _req.on('close', () => {
+  _req.on("close", () => {
     child.kill();
   });
+});
+
+app.get("/ports", async (_req, res) => {
+  const { SerialPort } = await import("serialport");
+  const ports = await SerialPort.list();
+  res.json(ports);
 });
 
 app.listen(port, () => {
   console.log(`[Bridge] Serial Bridge running on port ${port}`);
 });
-

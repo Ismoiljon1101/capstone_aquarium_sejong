@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-
-const WS_URL = process.env.EXPO_PUBLIC_WS_URL ?? 'http://localhost:3000';
+import { getApiBase, subscribeApiBase } from '../lib/runtime-config';
+import { replacePort } from './useApi';
 
 export type SensorReading = {
   sensorId?: number;
@@ -32,16 +32,26 @@ export type HealthReport = {
   phStatus: 'ok' | 'warn' | 'critical';
   tempStatus: 'ok' | 'warn' | 'critical';
   doStatus: 'ok' | 'warn' | 'critical';
-  overallScore: number;
+  overallScore?: number;
   createdAt?: string;
   timestamp?: string;
 };
 
 let socket: Socket | null = null;
+let socketUrl = '';
 
-function getSocket() {
-  if (!socket) {
-    socket = io(WS_URL, {
+function resolveSocketUrl() {
+  return process.env.EXPO_PUBLIC_WS_URL ?? replacePort(getApiBase(), 3000);
+}
+
+function getSocket(forceReconnect = false) {
+  const nextUrl = resolveSocketUrl();
+
+  if (!socket || forceReconnect || socketUrl !== nextUrl) {
+    socket?.removeAllListeners();
+    socket?.disconnect();
+    socketUrl = nextUrl;
+    socket = io(nextUrl, {
       transports: ['websocket'],
       reconnectionAttempts: 5,
       timeout: 10000,
@@ -60,7 +70,7 @@ export function useSocket() {
   const [healthReport, setHealthReport] = useState<HealthReport | null>(null);
 
   useEffect(() => {
-    const client = getSocket();
+    let client = getSocket();
 
     const handleConnect = () => setConnected(true);
     const handleDisconnect = () => setConnected(false);
@@ -69,21 +79,36 @@ export function useSocket() {
     const handleFishCount = (data: FishCountPayload) => setFishCount(data);
     const handleHealthReport = (data: HealthReport) => setHealthReport(data);
 
-    setConnected(client.connected);
-    client.on('connect', handleConnect);
-    client.on('disconnect', handleDisconnect);
-    client.on('sensor:update', handleSensorUpdate);
-    client.on('alert:new', handleAlert);
-    client.on('fish:count', handleFishCount);
-    client.on('health:report', handleHealthReport);
+    const bind = (current: Socket) => {
+      setConnected(current.connected);
+      current.on('connect', handleConnect);
+      current.on('disconnect', handleDisconnect);
+      current.on('sensor:update', handleSensorUpdate);
+      current.on('alert:new', handleAlert);
+      current.on('fish:count', handleFishCount);
+      current.on('health:report', handleHealthReport);
+    };
+
+    const unbind = (current: Socket) => {
+      current.off('connect', handleConnect);
+      current.off('disconnect', handleDisconnect);
+      current.off('sensor:update', handleSensorUpdate);
+      current.off('alert:new', handleAlert);
+      current.off('fish:count', handleFishCount);
+      current.off('health:report', handleHealthReport);
+    };
+
+    bind(client);
+
+    const unsubscribe = subscribeApiBase(() => {
+      unbind(client);
+      client = getSocket(true);
+      bind(client);
+    });
 
     return () => {
-      client.off('connect', handleConnect);
-      client.off('disconnect', handleDisconnect);
-      client.off('sensor:update', handleSensorUpdate);
-      client.off('alert:new', handleAlert);
-      client.off('fish:count', handleFishCount);
-      client.off('health:report', handleHealthReport);
+      unsubscribe();
+      unbind(client);
     };
   }, []);
 

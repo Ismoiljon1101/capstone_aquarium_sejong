@@ -57,7 +57,7 @@ export class SensorsService {
   }
 
   async getLatest(): Promise<SensorReadingEntity[]> {
-    const types = ['pH', 'TEMP', 'DO2', 'CO2'];
+    const types = ['pH', 'temp_c', 'do_mg_l', 'CO2'];
     const results = await Promise.all(
       types.map(type =>
         this.sensorRepository.findOne({
@@ -101,16 +101,17 @@ export class SensorsService {
   }
 
   private evaluateReading(reading: SensorReading): string {
-    const { type, value } = reading;
+    const type = String(reading.type);
+    const value = Number(reading.value);
     if (type === 'pH') {
       if (value < 6.5 || value > 8.0) return 'critical';
       if (value < 6.8 || value > 7.5) return 'warn';
     }
-    if (type === 'temp_c') {
+    if (type === 'temp_c' || type === 'TEMP') {
       if (value < 22 || value > 30) return 'critical';
       if (value < 24 || value > 28) return 'warn';
     }
-    if (type === 'do_mg_l') {
+    if (type === 'do_mg_l' || type === 'DO2') {
       if (value < 4) return 'critical';
       if (value < 6) return 'warn';
     }

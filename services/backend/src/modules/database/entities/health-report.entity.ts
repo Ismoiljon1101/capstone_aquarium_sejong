@@ -23,6 +23,12 @@ export class HealthReport {
   @Column({ default: 'ok' })
   behaviorStatus: string;
 
+  @Column({ nullable: true })
+  behaviorLabel: string;
+
+  @Column('float', { nullable: true })
+  behaviorConfidence: number;
+
   @Column('float', { default: 1.0 })
   overallScore: number;
 

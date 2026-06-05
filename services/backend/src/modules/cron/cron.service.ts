@@ -57,8 +57,8 @@ export class CronService {
 
   @Cron('0 6 * * *')
   async dailyHealthReport() {
-    this.logger.log('Generating daily automated health report...');
-    await this.fish.generateDailyReport();
+    this.logger.log('Generating daily automated health report from fresh camera and sensors...');
+    await this.vision.runFullAnalysis('CRON_DAILY');
   }
 
   @Cron('0 7 * * *')
