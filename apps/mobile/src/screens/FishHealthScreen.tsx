@@ -22,6 +22,14 @@ declare const window: any;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Msg { role: 'user' | 'veronica'; text: string; ts: Date; }
+interface VisionScan {
+  disease?: { disease?: string; confidence?: number };
+  count?: { count?: number; confidence?: number };
+  behavior?: { label?: string; status?: string; confidence?: number; description?: string };
+  quality?: { label?: string; status?: string; score?: number };
+  snapshotId?: number;
+  reportId?: number;
+}
 
 // ─── Web-only STT ─────────────────────────────────────────────────────────────
 function useSpeechRecognition() {
@@ -366,6 +374,9 @@ export default function FishHealthScreen() {
   const [animatingMsg, setAnimatingMsg] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [sessions, setSessions] = useState<{ sessionId: string; preview: string; createdAt: Date; messageCount: number }[]>([]);
+  const [visionScan, setVisionScan] = useState<VisionScan | null>(null);
+  const [visionLoading, setVisionLoading] = useState(false);
+  const [visionError, setVisionError] = useState('');
 
   const abortRef = useRef<AbortController | null>(null);
   const sessionIdRef = useRef<string>('');
@@ -421,6 +432,23 @@ export default function FishHealthScreen() {
     init();
     return on('fish:count', (d: any) => setFishCount(d?.count ?? 0));
   }, []);
+
+  const refreshVision = useCallback(async () => {
+    if (visionLoading) return;
+    setVisionLoading(true);
+    setVisionError('');
+    try {
+      const r = await api.analyzeVision('MOBILE_REFRESH');
+      setVisionScan(r.data ?? null);
+      if (typeof r.data?.count?.count === 'number') {
+        setFishCount(r.data.count.count);
+      }
+    } catch (err: any) {
+      setVisionError(err?.response?.data?.detail ?? err?.response?.data?.error ?? 'Vision scan failed.');
+    } finally {
+      setVisionLoading(false);
+    }
+  }, [visionLoading]);
 
   const startNewChat = useCallback(async () => {
     abortRef.current?.abort();
@@ -702,10 +730,74 @@ export default function FishHealthScreen() {
       )}
 
       {/* ── Messages ── */}
+      <View style={{
+        marginHorizontal: 14, marginTop: 10, marginBottom: 4,
+        borderRadius: 14,
+        borderWidth: 1, borderColor: 'rgba(56,189,248,0.18)',
+        backgroundColor: '#0f172a',
+        overflow: 'hidden',
+      }}>
+        <View style={{
+          paddingHorizontal: 14, paddingTop: 12, paddingBottom: 10,
+          flexDirection: 'row', alignItems: 'center', gap: 10,
+          borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+        }}>
+          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(56,189,248,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="scan-outline" size={15} color="#38bdf8" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#e2e8f0' }}>Fish Vision</Text>
+            <Text style={{ fontSize: 11, color: '#64748b' }}>Fresh scan from live camera</Text>
+          </View>
+          <Pressable
+            onPress={refreshVision}
+            disabled={visionLoading}
+            style={({ pressed }) => ({
+              paddingHorizontal: 12, paddingVertical: 8,
+              borderRadius: 10,
+              backgroundColor: visionLoading ? 'rgba(56,189,248,0.10)' : '#0891b2',
+              opacity: pressed || visionLoading ? 0.75 : 1,
+            })}
+          >
+            {visionLoading
+              ? <ActivityIndicator size="small" color="#e0f2fe" />
+              : <Text style={{ fontSize: 12, color: '#fff', fontWeight: '700' }}>Refresh Scan</Text>}
+          </Pressable>
+        </View>
+
+        <View style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 8 }}>
+          <Text style={{ fontSize: 12, color: '#94a3b8', lineHeight: 18 }}>
+            {visionError
+              ? visionError
+              : visionScan
+                ? `Count ${visionScan.count?.count ?? '--'} · Disease ${visionScan.disease?.disease ?? 'unknown'} · Behavior ${visionScan.behavior?.label ?? visionScan.behavior?.status ?? 'unknown'}`
+                : 'No scan yet. Tap Refresh Scan to capture the live tank video and analyze fish count, health, and behavior.'}
+          </Text>
+
+          {visionScan && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(16,185,129,0.10)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.18)' }}>
+                <Text style={{ fontSize: 11, color: '#10b981', fontWeight: '700' }}>{visionScan.count?.count ?? '--'} fish</Text>
+              </View>
+              <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: (visionScan.disease?.disease === 'healthy' || visionScan.disease?.disease === 'none') ? 'rgba(16,185,129,0.10)' : 'rgba(239,68,68,0.10)', borderWidth: 1, borderColor: (visionScan.disease?.disease === 'healthy' || visionScan.disease?.disease === 'none') ? 'rgba(16,185,129,0.18)' : 'rgba(239,68,68,0.18)' }}>
+                <Text style={{ fontSize: 11, color: (visionScan.disease?.disease === 'healthy' || visionScan.disease?.disease === 'none') ? '#10b981' : '#f87171', fontWeight: '700' }}>
+                  {(visionScan.disease?.disease === 'healthy' || visionScan.disease?.disease === 'none') ? 'Healthy' : (visionScan.disease?.disease ?? 'Unknown')}
+                </Text>
+              </View>
+              <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: (visionScan.behavior?.status === 'ok') ? 'rgba(16,185,129,0.10)' : 'rgba(251,191,36,0.10)', borderWidth: 1, borderColor: (visionScan.behavior?.status === 'ok') ? 'rgba(16,185,129,0.18)' : 'rgba(251,191,36,0.18)' }}>
+                <Text style={{ fontSize: 11, color: (visionScan.behavior?.status === 'ok') ? '#10b981' : '#fbbf24', fontWeight: '700' }}>
+                  {visionScan.behavior?.label ?? visionScan.behavior?.status ?? 'Behavior unknown'}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: 20, paddingBottom: 12 }}
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: 12 }}
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}

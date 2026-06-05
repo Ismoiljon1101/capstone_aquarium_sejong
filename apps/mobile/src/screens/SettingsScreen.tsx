@@ -27,6 +27,7 @@ import * as Haptics from 'expo-haptics';
 import AppHeader from '../components/AppHeader';
 import { useSocket } from '../hooks/useSocket';
 import { useProfile, getInitials, TIER_META, SubscriptionTier } from '../hooks/useProfile';
+import { API_BASE, replacePort } from '../hooks/useApi';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -475,7 +476,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { connected } = useSocket();
 
-  const [apiUrl, setApiUrl]     = useState(store.get(SETTINGS_KEYS.API_URL, 'http://localhost:3000'));
+  const [apiUrl, setApiUrl]     = useState(store.get(SETTINGS_KEYS.API_URL, API_BASE));
   const [urlDirty, setUrlDirty] = useState(false);
   const [tts, setTts]           = useState(store.get(SETTINGS_KEYS.TTS_ENABLED, 'true') === 'true');
   const [alertSnd, setAlertSnd] = useState(store.get(SETTINGS_KEYS.ALERTS, 'true') === 'true');
@@ -495,7 +496,9 @@ export default function SettingsScreen() {
   const [ollamaModel,     setModel]     = useState('');
 
   const checkServices = useCallback(async () => {
-    const base = store.get(SETTINGS_KEYS.API_URL, 'http://localhost:3000');
+    const base = store.get(SETTINGS_KEYS.API_URL, API_BASE);
+    const predictorUrl = replacePort(base, 8001);
+    const ollamaUrl = replacePort(base, 11434);
 
     try {
       const r = await fetch(`${base}/sensors/latest`, { signal: AbortSignal.timeout(4000) });
@@ -503,7 +506,7 @@ export default function SettingsScreen() {
     } catch { setBackend('offline'); }
 
     try {
-      const r = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(4000) });
+      const r = await fetch(`${ollamaUrl}/api/tags`, { signal: AbortSignal.timeout(4000) });
       if (r.ok) {
         const d = await r.json();
         setOllama('online');
@@ -512,7 +515,7 @@ export default function SettingsScreen() {
     } catch { setOllama('offline'); setModel(''); }
 
     try {
-      const r = await fetch('http://localhost:8001/health', { signal: AbortSignal.timeout(4000) });
+      const r = await fetch(`${predictorUrl}/health`, { signal: AbortSignal.timeout(4000) });
       setPredictor(r.ok ? 'online' : 'offline');
     } catch { setPredictor('offline'); }
   }, []);
@@ -594,7 +597,7 @@ export default function SettingsScreen() {
                       setAgentMode(mode);
                       store.set(SETTINGS_KEYS.AGENT_MODE, mode);
                       // sync to backend
-                      const base = store.get(SETTINGS_KEYS.API_URL, 'http://localhost:3000');
+                      const base = store.get(SETTINGS_KEYS.API_URL, API_BASE);
                       fetch(`${base}/management/tank-config`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
@@ -640,7 +643,7 @@ export default function SettingsScreen() {
                   Haptics.selectionAsync();
                   setAgentMonitor(v);
                   store.set(SETTINGS_KEYS.AGENT_MONITOR, String(v));
-                  const base = store.get(SETTINGS_KEYS.API_URL, 'http://localhost:3000');
+                  const base = store.get(SETTINGS_KEYS.API_URL, API_BASE);
                   fetch(`${base}/management/tank-config`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -664,7 +667,7 @@ export default function SettingsScreen() {
                   Haptics.selectionAsync();
                   setPush(v);
                   store.set(SETTINGS_KEYS.PUSH, String(v));
-                  const base = store.get(SETTINGS_KEYS.API_URL, 'http://localhost:3000');
+                  const base = store.get(SETTINGS_KEYS.API_URL, API_BASE);
                   fetch(`${base}/management/tank-config`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -717,7 +720,7 @@ export default function SettingsScreen() {
                 value={apiUrl}
                 onChangeText={v => { setApiUrl(v); setUrlDirty(true); }}
                 style={{ flex: 1, backgroundColor: '#1e293b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, fontSize: 14, color: '#e2e8f0', borderWidth: 1, borderColor: urlDirty ? '#0891b2' : 'rgba(255,255,255,0.08)' }}
-                placeholder="http://localhost:3000"
+                placeholder={API_BASE}
                 placeholderTextColor="#475569"
                 autoCapitalize="none" autoCorrect={false}
               />

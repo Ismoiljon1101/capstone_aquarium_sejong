@@ -2,8 +2,6 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-// Auto-detect LAN host so a physical phone can reach the dev backend.
-// Priority: EXPO_PUBLIC_API_URL → expoConfig hostUri (Expo dev) → localhost
 function resolveBase(): string {
   if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
   const hostUri =
@@ -15,6 +13,16 @@ function resolveBase(): string {
     if (host && host !== 'localhost') return `http://${host}:3000`;
   }
   return 'http://localhost:3000';
+}
+
+export function replacePort(baseUrl: string, port: number): string {
+  try {
+    const url = new URL(baseUrl);
+    url.port = String(port);
+    return url.origin;
+  } catch {
+    return `http://localhost:${port}`;
+  }
 }
 
 export const API_BASE = resolveBase();
@@ -33,6 +41,8 @@ export function useApi() {
     getActuatorState:   () => api.get('/actuators/state'),
     getFishHealth:      () => api.get('/fish/health'),
     getFishCount:       () => api.get('/fish/count'),
+    analyzeVision:      (triggeredBy: string = 'MOBILE_REFRESH') => api.post('/vision/analyze', { triggeredBy }, { timeout: 45000 }),
+    getLatestVisionReport: () => api.get('/vision/latest-report'),
     voiceQuery:         (text: string) => api.post('/voice/query', { text }, { timeout: 60000 }),
     agentQuery:         (text: string, sessionId?: string, signal?: AbortSignal) =>
                           api.post('/voice/agent', { text, sessionId }, { timeout: 90000, signal }),
@@ -43,7 +53,6 @@ export function useApi() {
     deleteSession:      (id: string) => api.delete(`/voice/sessions/${id}`),
     listChatSessions:   () => api.get('/voice/chat-sessions'),
 
-    // ── Management ──
     getFeedSchedules:   () => api.get('/management/feed-schedules'),
     createFeedSchedule: (body: { time: string; daysMask?: number; portionSec?: number; enabled?: boolean }) =>
                           api.post('/management/feed-schedules', body),

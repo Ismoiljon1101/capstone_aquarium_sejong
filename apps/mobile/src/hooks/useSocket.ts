@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { API_BASE, replacePort } from './useApi';
 
-const WS_URL = process.env.EXPO_PUBLIC_WS_URL ?? 'http://localhost:3000';
+const WS_URL = process.env.EXPO_PUBLIC_WS_URL ?? replacePort(API_BASE, 3000);
 
 export type SensorReading = {
   sensorId?: number;
@@ -32,7 +33,7 @@ export type HealthReport = {
   phStatus: 'ok' | 'warn' | 'critical';
   tempStatus: 'ok' | 'warn' | 'critical';
   doStatus: 'ok' | 'warn' | 'critical';
-  overallScore: number;
+  overallScore?: number;
   createdAt?: string;
   timestamp?: string;
 };
