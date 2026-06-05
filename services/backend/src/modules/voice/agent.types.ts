@@ -1,6 +1,7 @@
 export type ToolName =
   | 'readSensors'
   | 'readHistory'
+  | 'readBehaviorAnalysis'
   | 'readDiagnoses'
   | 'getActuatorState'
   | 'readThresholds'

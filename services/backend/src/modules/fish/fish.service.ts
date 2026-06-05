@@ -22,8 +22,9 @@ export class FishService {
     private readonly alerts: AlertsService,
   ) {}
 
-  async saveCount(count: number, confidence: number) {
+  async saveCount(count: number, confidence: number, snapshotId: number) {
     const record = this.fishCountRepo.create({
+      snapshotId,
       count,
       confidence,
       timestamp: new Date().toISOString(),
@@ -31,22 +32,43 @@ export class FishService {
     return await this.fishCountRepo.save(record);
   }
 
-  async saveHealthReport(visualStatus: string, behaviorStatus: string, summary: string) {
+  async saveHealthReport(data: {
+    snapshotId?: number;
+    phStatus: string;
+    tempStatus: string;
+    doStatus: string;
+    visualStatus: string;
+    behaviorStatus: string;
+    behaviorLabel?: string;
+    behaviorConfidence?: number;
+    overallScore: number;
+    summary: string;
+    diseaseClass?: string;
+    mlConfidence?: number;
+    severity?: string;
+    source?: string;
+  }) {
     const report = this.healthReportRepo.create({
-      phStatus: 'ok',
-      tempStatus: 'ok',
-      doStatus: 'ok',
-      visualStatus,
-      behaviorStatus,
-      overallScore: 0.9,
-      summary,
+      snapshotId: data.snapshotId,
+      phStatus: data.phStatus,
+      tempStatus: data.tempStatus,
+      doStatus: data.doStatus,
+      visualStatus: data.visualStatus,
+      behaviorStatus: data.behaviorStatus,
+      behaviorLabel: data.behaviorLabel,
+      behaviorConfidence: data.behaviorConfidence,
+      overallScore: data.overallScore,
+      summary: data.summary,
+      diseaseClass: data.diseaseClass,
+      mlConfidence: data.mlConfidence,
+      severity: data.severity,
+      source: data.source ?? 'vision_pipeline',
       timestamp: new Date().toISOString(),
     });
     return await this.healthReportRepo.save(report);
   }
 
   async saveGrowthRecord(avgSize: number, count: number) {
-    // 1. Get previous record to calculate delta
     const lastRecord = await this.fishGrowthRepo.findOne({
       where: {},
       order: { createdAt: 'DESC' },
@@ -54,7 +76,6 @@ export class FishService {
 
     const delta = lastRecord ? avgSize - lastRecord.avgSizeEstimate : 0;
 
-    // 2. Create new record
     const growth = this.fishGrowthRepo.create({
       date: new Date().toISOString().split('T')[0],
       avgSizeEstimate: avgSize,
@@ -74,7 +95,7 @@ export class FishService {
   }): Promise<HealthReport> {
     const isHealthy = data.diseaseClass.toLowerCase() === 'healthy';
     const report = this.healthReportRepo.create({
-      visualStatus: isHealthy ? 'ok' : 'abnormal',
+      visualStatus: isHealthy ? 'ok' : 'warn',
       behaviorStatus: 'ok',
       overallScore: data.confidence,
       summary: data.summary ?? `ML detected: ${data.diseaseClass} (${(data.confidence * 100).toFixed(1)}% confidence)`,
@@ -124,7 +145,16 @@ export class FishService {
 
   async generateDailyReport() {
     this.logger.log('Generating daily fish health report...');
-    return await this.saveHealthReport('good', 'normal', 'Daily automated report: Fish appear healthy and active.');
+    return await this.saveHealthReport({
+      phStatus: 'ok',
+      tempStatus: 'ok',
+      doStatus: 'ok',
+      visualStatus: 'ok',
+      behaviorStatus: 'ok',
+      overallScore: 1,
+      summary: 'Daily automated report placeholder.',
+      source: 'manual',
+    });
   }
 
   async getLatestCount() {

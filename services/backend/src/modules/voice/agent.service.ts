@@ -8,6 +8,7 @@ import { SensorsService } from '../sensors/sensors.service';
 import { ActuatorsService } from '../actuators/actuators.service';
 import { ManagementService } from '../management/management.service';
 import { FishService } from '../fish/fish.service';
+import { VisionService } from '../vision/vision.service';
 import { ChatMessageEntity } from '../database/entities/chat-message.entity';
 import { AGENT_TOOLS, CONFIRMATION_TOOLS, executeTool } from './agent.tools';
 import {
@@ -22,18 +23,19 @@ const MAX_ITERATIONS = 6;
 
 const SYSTEM_PROMPT = `You are Veronica, an autonomous AI agent managing a smart aquarium at Sejong University.
 
-You have tools to READ sensor data and CONTROL hardware actuators.
+You have tools to READ sensor data, RUN fresh camera analysis, and CONTROL hardware actuators.
 
 RULES:
 1. Always call readSensors first before any answer or recommendation.
 2. If the user asks about trends, call readHistory as well.
-3. CONTROL RULES — read carefully:
-   - If the USER explicitly asks you to turn something on/off or trigger feeding, call the tool IMMEDIATELY. Do not ask for reasons. Do not hesitate. Just do it.
-   - If YOU decide to act autonomously (not user-requested), only act when sensor data justifies it.
-   - The tool reason field: for user commands use "User requested." For autonomous actions describe the sensor reading.
-4. Be concise: 1-2 sentences max in your final response. Never ask for confirmation — the system handles that.
-5. Safe parameter ranges: pH 6.8–7.5 | Temp 24–28°C | DO 6–9 mg/L.
-6. If all sensors are within safe range, say so. If any are outside, flag it and propose a corrective action.`;
+3. If the user asks about fish behavior, movement, activity, stress, feeding response, fish count, or visual fish health, call readBehaviorAnalysis after readSensors.
+4. CONTROL RULES:
+   - If the USER explicitly asks you to turn something on/off or trigger feeding, call the tool immediately.
+   - If YOU decide to act autonomously, only act when sensor or fresh vision data justifies it.
+   - For user commands use reason="User requested."
+5. Be concise: 1-2 sentences max in the final response. Never ask for confirmation because the system handles that.
+6. Safe parameter ranges: pH 6.8-7.5 | Temp 24-28C | DO 6-9 mg/L.
+7. If all sensors are within safe range, say so. If any are outside, flag it and propose a corrective action.`;
 
 @Injectable()
 export class AgentService {
@@ -48,6 +50,7 @@ export class AgentService {
     private readonly actuators: ActuatorsService,
     private readonly management: ManagementService,
     private readonly fish: FishService,
+    private readonly vision: VisionService,
     @InjectRepository(ChatMessageEntity)
     private readonly chatRepo: Repository<ChatMessageEntity>,
   ) {
@@ -68,8 +71,11 @@ export class AgentService {
 
     const finalize = async (response: string, extra: Partial<AgentResult> = {}): Promise<AgentResult> => {
       if (sessionId) {
-        try { await this.saveMessages(sessionId, userMessage, response); }
-        catch (e) { this.logger.warn(`saveMessages failed: ${(e as Error).message}`); }
+        try {
+          await this.saveMessages(sessionId, userMessage, response);
+        } catch (e) {
+          this.logger.warn(`saveMessages failed: ${(e as Error).message}`);
+        }
       }
       return { response, aiOffline: false, ...extra };
     };
@@ -100,7 +106,7 @@ export class AgentService {
             const config = await this.management.getTankConfig();
             const autoMode = config.agentMode === 'auto';
 
-            this.logger.log(`Agent proposes: ${name} — ${reason} (mode: ${config.agentMode})`);
+            this.logger.log(`Agent proposes: ${name} - ${reason} (mode: ${config.agentMode})`);
 
             if (autoMode) {
               const exec = await this.executeConfirmedAction(name, args);
@@ -115,7 +121,7 @@ export class AgentService {
           }
 
           const result = await executeTool(name, args, deps);
-          this.logger.debug(`Tool ${name} → ${result.slice(0, 120)}`);
+          this.logger.debug(`Tool ${name} -> ${result.slice(0, 120)}`);
           messages.push({ role: 'tool', content: result });
         }
       }
@@ -125,13 +131,14 @@ export class AgentService {
       this.logger.error(`Agent error: ${(err as Error).message}`);
       const fallback = 'Veronica is offline right now. Please check that Ollama is running.';
       if (sessionId) {
-        try { await this.saveMessages(sessionId, userMessage, fallback); } catch {}
+        try {
+          await this.saveMessages(sessionId, userMessage, fallback);
+        } catch {}
       }
       return { response: fallback, aiOffline: true };
     }
   }
 
-  // Execute a confirmed write action directly. If sessionId is provided, persist the result.
   async executeConfirmedAction(
     tool: ToolName,
     args: Record<string, unknown>,
@@ -170,7 +177,7 @@ export class AgentService {
         await this.chatRepo.save(this.chatRepo.create({
           sessionId,
           role: 'assistant',
-          content: result.success ? `✓ ${result.message}` : `✗ ${result.message}`,
+          content: result.success ? `OK ${result.message}` : `FAILED ${result.message}`,
         }));
       } catch (e) {
         this.logger.warn(`Could not persist confirm result: ${(e as Error).message}`);
@@ -277,6 +284,16 @@ export class AgentService {
             unit: r.unit,
             timestamp: r.timestamp?.toISOString?.() ?? '',
           }));
+      },
+      runBehaviorAnalysis: async () => {
+        const result = await this.vision.runFullAnalysis('AGENT_FRESH');
+        return {
+          behavior: result.behavior ?? {},
+          count: result.count ?? {},
+          disease: result.disease ?? {},
+          quality: result.quality ?? {},
+          reportId: result.reportId,
+        };
       },
       getActuatorState: async () => {
         return await this.actuators.getState();
