@@ -1,115 +1,89 @@
 # Project Status: Fishlinic
 
-_Last updated: 2026-05-01 · HEAD: `4399eb3` · Branch: `develop`_
+_Last updated: 2026-06-06 · Branch: `master`_  
 _Demo date: **June 30, 2026**_
 
 ## Mission
 
 Build an **integrated smart aquarium** — physical tank + Arduino sensors +
-NestJS backend + AI voice assistant + mobile app + web dashboard, with an
-autonomous AI agent that monitors and manages water quality end-to-end.
-
-**Today**: hardware is live with real sensor data, AI voice assistant is
-fully functional, mobile app is production-quality. Next milestone =
-autonomous AI agent (WOW feature) + push notifications + Supabase production.
-
-See `docs/team-ownership.md` for sprint assignments per engineer.
+NestJS backend + AI models + web dashboard, with real-time monitoring,
+disease detection, water quality prediction, and behavior analysis.
 
 ---
 
 ## ✅ Complete
 
 ### Infrastructure & Backend
-- [x] Monorepo (pnpm workspaces): `apps/`, `services/`, `firmware/`, `shared/`, `resources/`, `docs/`
+- [x] Monorepo (pnpm workspaces): `apps/`, `services/`, `firmware/`, `shared/`, `models/`, `docs/`
 - [x] Shared types (`@fishlinic/types`)
-- [x] NestJS backend (`:3000`) — modules: sensors, alerts, actuators, vision, voice, cron, gateway, fish, serial, management, database
+- [x] NestJS backend (`:3001`) — modules: sensors, alerts, actuators, vision, voice, cron, gateway, fish, serial, management, database
 - [x] TypeORM with better-sqlite3 (dev) / Postgres (prod) fallback
 - [x] WebSocket gateway — `sensor:update`, `alert:new`, `fish:count`, `health:report`, `actuator:state`
 
-### AI & Voice (Ismail)
-- [x] AI predictor (`:8001`) — FastAPI, loads trained models
-- [x] Models present at `resources/models/`:
-      `rf_quality.pkl`, `yolo_disease.pt`, `yolo_count.pt`, `convlstm_vae.pth`
-- [x] Voice assistant (Veronica) — Ollama `gemma4:e2b`, real sensor context injected per query
-- [x] Backend `vision.service.ts` calls predictor for quality / count / disease
-- [x] `aiOffline` flag — Ollama errors no longer swallowed silently; mobile shows fallback
-- [x] STT pipeline fixed: blink loop cap, callRef race condition, Chrome onerror/onend ordering
-- [ ] GPU detection, graceful missing-model fallback, per-model readiness
-- [ ] ConvLSTM-VAE anomaly route + Veronica context injection
+### AI Predictor (`:8000`) — FastAPI
+- [x] Water quality prediction — Random Forest (`models/quality/best_rf_water_quality.pkl`)
+  - Predicts Good/Average/Bad from pH, temp, DO
+  - Per-parameter warnings (pH, temp, DO thresholds)
+  - DB logging + history + alerts endpoints
+- [x] Disease detection — YOLOv11 (`models/disease/yolo_disease.pt`)
+  - Detects BD, PD, FD, HF from images and video frames
+  - Multi-detection support, alert flagging
+  - DB logging + history + alerts + stats endpoints
+- [x] Fish attitude detection — YOLO (`models/behavior/`)
+  - Swim angle analysis, tilt severity classification
+  - DB logging + history + alerts endpoints
+- [x] Fish behavior detection — R3D-18 (`models/behavior/best_model.pth`)
+  - Video-based behavior classification
+- [x] Fish movement tracking — YOLO + optical flow
+  - Speed, direction, zone analysis
+- [x] Fish count — YOLO (`models/disease/yolo_disease.pt`)
+- [x] Anomaly detection model present (`models/anomaly/convlstm_vae_anomaly.pth`)
 
-### Hardware (Sarvar — complete)
-- [x] Single unified Arduino: pH (A0), DO (A1), CO2 (A2), Temp DS18B20 (pin 2), Feeder Servo (pin 9), RTC DS1307
-- [x] Serial bridge (`:3001`) — JSON parser, two-way Arduino ↔ NestJS protocol
-- [x] Real sensor data live — `SIMULATE_SENSORS=false`
-- [x] Feeder multi-cycle non-blocking servo loop fixed
-- [x] Firmware documented (`firmware/README.md`, `docs/serial-protocol.md`)
+### Models (all consolidated in `models/`)
+- [x] `models/disease/` — yolo_disease.pt, yolo11n.pt, latest.pt
+- [x] `models/behavior/` — best_model.pth, behavior_random_forest.pkl, encoders
+- [x] `models/quality/` — best_rf_water_quality.pkl
+- [x] `models/anomaly/` — convlstm_vae_anomaly.pth
 
-### Mobile (Ismail — complete)
-- [x] 4-tab nav: Dashboard, Alerts, Controls, Fish AI
-- [x] Dashboard: health score hero, 2×2 live sensor grid, quick actions, alert feed, fish intelligence
-- [x] Fish AI — full ChatGPT/Claude-style redesign:
-  - Full-screen voice overlay with animated orb (tappable to restart STT)
-  - Live transcription ghost bubble during speech
-  - Clean prose layout for AI (no hard bubbles)
-  - Mic permission detection + error banner
-- [x] Controls: actuator toggles + feed cycles + Feed Now with success/failure + haptics
-- [x] Dashboard Feed Now quick action: success/failure state, 3s auto-reset, haptics
-- [x] Settings: editable tank ranges, live service status, persistence
-- [x] History: sensor history with range selector
-- [x] Mobile pinned stable version set — expo~54 + RN 0.81.5 + react 19.1.0
-      (do not upgrade — breaks the web build with a white screen)
+### Frontend Dashboard (`:3000`) — Next.js
+- [x] All main pages: dashboard, fish-health, alerts, controls, history, settings
+- [x] Live telemetry via Socket.IO
+- [x] FishHealthPanel, LiveTelemetry, ControlPanel, AlertFeed, VeronicaChat
+- [x] AIMonitorPanel — unified water quality + disease + behavior panel
+- [x] Authentication (email/password + Google/Kakao OAuth)
 
-### Dashboard (`:3002`) — low priority
-- [x] Next.js skeleton — all main pages exist
-- [x] Feeder panel: Feed Now with success/failure, schedule CRUD, hardware connection status
-- [ ] Camera / growth / alerts pages still need wiring to new endpoints
+### Hardware
+- [x] Arduino UNO R3 — pH, DO, Temperature sensors + Fish Feeder + RTC
+- [x] Serial bridge (`:3002`) — JSON parser, Arduino ↔ NestJS
+- [x] Firmware documented (`firmware/arduino/`)
 
-### Tank Management
-- [x] Feed schedules (CRUD + time + day mask + portion seconds + enabled)
-- [x] Light schedule (on/off + brightness + color + overnight windows)
-- [x] Tank config (cleaning interval, last-cleaned ts, emergency thresholds, push prefs)
-- [x] Dynamic scheduler (60s tick) — fires feeds, toggles LED, checks emergency, cleaning reminder
-- [x] REST: `/management/feed-schedules`, `/management/light-schedule`, `/management/tank-config`
-- [x] Mobile ControlsScreen — manual actuators + full management UI
-
-### Documentation
-- [x] API contracts (`docs/api-contracts.md`)
-- [x] Serial protocol (`docs/serial-protocol.md`)
-- [x] Team ownership + sprint tasks (`docs/team-ownership.md`)
-- [x] Supabase setup guide (`docs/supabase-setup.md`)
+### Project Structure (cleaned 2026-06-06)
+- [x] All models consolidated in `models/` with 4 subfolders
+- [x] All AI routes updated to use new model paths
+- [x] Removed duplicate files, old training scripts archived
+- [x] Components organized into atoms/molecules/organisms
 
 ---
 
-## 🔴 WOW Feature — Autonomous AI Agent (Ismail · 5–10 days · starting now)
+## 🏗 Architecture
 
-**"Veronica takes action"** — watches the tank 24/7, detects issues, proposes interventions, executes on confirm.
-
-### What it does
-- Detects dangerous trends before they become emergencies
-- Proposes action with reasoning: *"pH dropping for 40 min — now 6.8. Increasing aeration 20 min will stabilise it. Confirm?"*
-- User taps Confirm → agent executes via existing backend APIs
-- Multi-step tasks: *"Optimise tank for overnight"* → agent plans → user confirms → executes each step
-- Root cause chains: *"DO dropped because temp spiked 2°C → pump duty too low. Confirm increase?"*
-- Morning health brief: autonomous overnight summary at 07:00
-
-### Implementation plan
-| Day | Task |
-|-----|------|
-| 1–2 | Tool schema for Ollama: `readSensors`, `readHistory`, `controlActuator`, `triggerFeed`, `addSchedule` |
-| 3–4 | Agent loop in `voice.service.ts`: LLM picks tool → calls backend → reasons → repeats or responds |
-| 5–6 | Confirm-before-act UI in Fish AI screen: proposed action card with Confirm / Cancel |
-| 7–8 | Proactive monitor: backend watcher on sensor stream → triggers agent on trend → push to mobile |
-| 9–10 | Morning health brief (cron 07:00) + multi-step execution + polish |
-
-### Architecture
 ```
-Sensor stream → trend detector → agent (Ollama tool calls) → proposed action card
-                                                                      ↓
-                                              Confirm / Cancel in mobile Fish AI screen
-                                                                      ↓
-                                              POST /actuators/control (existing API)
+Hardware (Arduino) → Serial Bridge (:3002)
+                              ↓
+                    NestJS Backend (:3001)
+                    ↙              ↘
+          FastAPI AI (:8000)    Next.js Dashboard (:3000)
+                    ↓
+              SQLite DB (fishlinic.sqlite)
 ```
 
+## 🔌 Ports
+| Service | Port |
+|---------|------|
+| Next.js Dashboard | 3000 |
+| NestJS Backend | 3001 |
+| Serial Bridge | 3002 |
+| FastAPI AI Predictor | 8000 |
 ---
 
 ## ⚠️ Remaining
@@ -152,17 +126,6 @@ Sensor stream → trend detector → agent (Ollama tool calls) → proposed acti
 **Unlocks in next 10 days:**
 - Autonomous AI agent with confirm-before-act (WOW)
 - Push notifications on emergency threshold breach
-
-## Ports (service map)
-
-| Service          | Port  |
-|------------------|-------|
-| Backend          | 3000  |
-| Serial bridge    | 3001  |
-| Dashboard        | 3002  |
-| Mobile (Expo)    | 8081  |
-| AI predictor     | 8001  |
-| Ollama (Veronica)| 11434 |
 
 ## Sprint order (toward June 30 demo)
 

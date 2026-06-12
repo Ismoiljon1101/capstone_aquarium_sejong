@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { resolve } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SerialModule } from './modules/serial/serial.module';
@@ -14,11 +15,18 @@ import { ManagementModule } from './modules/management/management.module';
 import { GatewayModule } from './modules/gateway/gateway.module';
 import { DatabaseModule } from './modules/database/database.module';
 import { PushModule } from './modules/push/push.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { LegacyController } from './modules/database/legacy.controller';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [
+        resolve(process.cwd(), '.env'),
+        resolve(process.cwd(), 'services/backend/.env'),
+      ],
+    }),
     DatabaseModule,
     PushModule,
     SerialModule,
@@ -31,6 +39,7 @@ import { LegacyController } from './modules/database/legacy.controller';
     CronModule,
     ManagementModule,
     GatewayModule,
+    AuthModule,
   ],
   controllers: [AppController, LegacyController],
   providers: [AppService],

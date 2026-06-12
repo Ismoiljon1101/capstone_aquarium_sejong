@@ -18,7 +18,7 @@ _repo_root = Path(__file__).resolve().parents[4]
 _model_dir = Path(
     os.getenv(
         "BEHAVIOR_MODEL_DIR",
-        _repo_root / "models" / "behavior_video_classifier",
+        _repo_root / "models" / "behavior",
     )
 )
 _model_path = _model_dir / "best_model.pth"

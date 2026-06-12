@@ -67,10 +67,15 @@ async function startSerial() {
 
     const ports = await SerialPort.list();
     const availablePaths = ports.map((p: any) => p.path);
+    const isWindows = process.platform === 'win32';
 
     const actualMainPath = mainPortPath && availablePaths.includes(mainPortPath)
       ? mainPortPath
-      : availablePaths.find((p: string) => p.includes('usbserial') || p.includes('usbmodem'));
+      : availablePaths.find((p: string) =>
+        p.includes('usbserial') ||
+        p.includes('usbmodem') ||
+        (isWindows && p.toUpperCase().startsWith('COM'))
+      );
 
     if (!actualMainPath) {
       console.warn('[Bridge] No serial port detected. Bridge stays live without fake sensor data.');

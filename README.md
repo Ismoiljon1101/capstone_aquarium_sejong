@@ -21,75 +21,69 @@ Full task list per person: **[`docs/team-ownership.md`](docs/team-ownership.md)*
 
 ---
 
-## Folder structure
+## Folder Structure
 
 ```
-fishlinic/
+capstone_aquarium_sejong/
 ├── apps/
-│   ├── dashboard/          Next.js web dashboard (Hamidullah)
-│   ├── mobile/             Expo SDK 54 + RN 0.81.5 app (Ismail)
-│   └── assistant/          Veronica Python voice pipeline (Firdavs)
+│   ├── dashboard/          Next.js web dashboard (:3000)
+│   ├── mobile/             Expo React Native app (:8081)
+│   └── assistant/          Veronica Python voice pipeline
 ├── services/
-│   ├── backend/            NestJS API (Ismail)
-│   │   └── src/modules/    sensors, alerts, actuators, vision, voice,
-│   │                       fish, cron, gateway, serial, management, database
-│   ├── serial-bridge/      Node.js Arduino USB ↔ backend (Sarvar)
-│   └── ai-predictor/       FastAPI: YOLO + RF + ConvLSTM-VAE (Firdavs)
+│   ├── backend/            NestJS API (:3001)
+│   ├── serial-bridge/      Arduino ↔ backend bridge (:3002)
+│   └── ai-predictor/       FastAPI AI service (:8000)
+├── models/
+│   ├── disease/            yolo_disease.pt, yolo11n.pt, latest.pt
+│   ├── behavior/           best_model.pth, behavior_random_forest.pkl
+│   ├── quality/            best_rf_water_quality.pkl
+│   └── anomaly/            convlstm_vae_anomaly.pth
 ├── firmware/
-│   ├── main/               Arduino: pH, DO2, CO2 (Sarvar)
-│   └── secondary/          Arduino: Temp + relay actuators (Sarvar)
-├── shared/types/           Shared TypeScript types (everyone imports)
-├── resources/models/       AI model files (.pt .pth .pkl)
-└── docs/                   API contracts, serial protocol, ops, setup
+│   └── arduino/            Arduino .ino files
+├── data/                   Training videos and datasets
+├── docs/                   Documentation and architecture
+├── shared/types/           Shared TypeScript types
+└── scripts/archive/        Old training scripts (reference only)
 ```
 
 ---
+## Service Ports
 
-## Service ports
-
-| Service         | Port  | Notes                                  |
-|-----------------|-------|----------------------------------------|
-| Backend (NestJS)| 3000  | REST + Socket.IO gateway               |
-| Serial bridge   | 3001  | Arduino USB; mock mode fallback        |
-| Dashboard       | 3002  | Next.js                                |
-| AI predictor    | 8001  | FastAPI                                |
-| Mobile (Expo)   | 8081  | Web + device via Metro                 |
-| Ollama          | 11434 | Veronica LLM (`qwen2.5:3b`)            |
+| Service              | Port  | Notes                        |
+|----------------------|-------|------------------------------|
+| Next.js Dashboard    | 3000  | Web UI                       |
+| NestJS Backend       | 3001  | REST + Socket.IO             |
+| Serial Bridge        | 3002  | Arduino USB bridge           |
+| FastAPI AI Predictor | 8000  | All AI model endpoints       |
+| Expo Mobile          | 8081  | React Native app             |
 
 ---
-
-## Getting started
+## Getting Started
 
 ```bash
-# 1. Clone + install (from repo root)
-git clone <repo>
+# 1. Clone + install
+git clone https://github.com/Ismoiljon1101/capstone_aquarium_sejong.git
 cd capstone_aquarium_sejong
 pnpm install
 
-# 2. Backend (NestJS) — port 3000
+# 2. NestJS Backend — port 3001
 cd services/backend
-cp .env.example .env            # fill DATABASE_URL (SQLite works out of the box)
-pnpm dev
-
-# 3. Serial bridge — port 3001 (mock mode if no Arduino)
-cd services/serial-bridge
 cp .env.example .env
-pnpm dev
+$env:PORT=3001; pnpm dev
 
-# 4. AI predictor — port 8001
+# 3. FastAPI AI Predictor — port 8000
 cd services/ai-predictor
 pip install -r requirements.txt
-uvicorn src.main:app --port 8001 --reload
+python -m uvicorn src.main:app --reload --port 8000
 
-# 5. Dashboard — port 3002
+# 4. Next.js Dashboard — port 3000
 cd apps/dashboard
 cp .env.example .env.local
-pnpm dev
-
-# 6. Mobile — port 8081
-cd apps/mobile
-npx expo start                  # press 'w' for web, or scan QR
+# Fill in NEXTAUTH_SECRET and other vars
+npm run dev
 ```
+
+---
 
 ### Running from the root (optional)
 
@@ -121,30 +115,48 @@ Serial Bridge :3001 ──POST /serial/reading──▶ NestJS Backend :3000
 ```
 
 ---
+## Sensor Thresholds
 
-## Sensor thresholds
-
-| Parameter    | Optimal      | Warning                  | Critical        |
-|--------------|--------------|--------------------------|-----------------|
-| pH           | 6.8 – 7.5    | 6.5–6.8 or 7.5–8.0       | < 6.5 or > 8.0  |
-| Temperature  | 24 – 28 °C   | 22–24 or 28–30 °C        | < 22 or > 30 °C |
-| Dissolved O₂ | 6 – 9 mg/L   | 4 – 6 mg/L               | < 4 mg/L        |
-
-Thresholds are editable via `/management/tank-config` (mobile Controls + dashboard Settings).
+| Parameter    | Optimal      | Warning            | Critical        |
+|--------------|--------------|--------------------|-----------------|
+| pH           | 6.8 – 7.5    | 6.5–6.8 / 7.5–8.0  | < 6.5 or > 8.0  |
+| Temperature  | 24 – 28 °C   | 22–24 / 28–30 °C   | < 22 or > 30 °C |
+| Dissolved O₂ | 6 – 9 mg/L   | 4 – 6 mg/L         | < 4 mg/L        |
 
 ---
 
-## AI models
+## AI Models
 
-| Model          | File                  | Purpose                          | Runs on |
-|----------------|-----------------------|----------------------------------|---------|
-| YOLOv8/v11     | `yolo_disease.pt`     | Fish disease detection           | GPU/CPU |
-| YOLOv8/v11     | `yolo_count.pt`       | Fish counting                    | GPU/CPU |
-| ConvLSTM-VAE   | `convlstm_vae.pth`    | Behavior / anomaly detection     | GPU/CPU |
-| Random Forest  | `rf_quality.pkl`      | Water quality score              | CPU     |
-| Qwen2.5:3b     | via Ollama            | Veronica LLM brain               | GPU/CPU |
+| Model         | File                          | Purpose                      |
+|---------------|-------------------------------|------------------------------|
+| YOLOv11       | `models/disease/yolo_disease.pt` | Fish disease detection    |
+| YOLOv11       | `models/disease/yolo11n.pt`   | Fish detection/attitude      |
+| R3D-18        | `models/behavior/best_model.pth` | Behavior classification   |
+| Random Forest | `models/quality/best_rf_water_quality.pkl` | Water quality  |
+| ConvLSTM-VAE  | `models/anomaly/convlstm_vae_anomaly.pth` | Anomaly detection |
 
-All under `resources/models/`. Predictor auto-detects device.
+---
+
+## API Endpoints (FastAPI :8000)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/predict/quality` | POST | Water quality prediction |
+| `/predict/disease` | POST | Disease detection (image) |
+| `/predict/disease/video` | POST | Disease detection (video) |
+| `/predict/attitude` | POST | Fish attitude analysis |
+| `/predict/behavior` | POST | Behavior classification |
+| `/predict/movement` | POST | Movement tracking |
+| `/predict/count` | POST | Fish counting |
+| `/quality/history` | GET | Water quality history |
+| `/quality/alerts` | GET | Water quality alerts |
+| `/quality/stats` | GET | Water quality stats |
+| `/disease/history` | GET | Disease detection history |
+| `/disease/alerts` | GET | Disease alerts |
+| `/disease/stats` | GET | Disease stats |
+| `/attitude/history` | GET | Attitude history |
+| `/attitude/alerts` | GET | Attitude alerts |
+| `/health` | GET | Service health check |
 
 ---
 
@@ -180,21 +192,18 @@ Full contracts: **[`docs/api-contracts.md`](docs/api-contracts.md)**.
 
 ---
 
-## Environment variables
+## Environment Variables
 
-Each service has its own `.env.example`. Copy it to `.env` and fill in.
-**Never commit a real `.env`.**
+| Service | Key Variables |
+|---------|---------------|
+| `services/backend` | `DATABASE_URL`, `AI_PREDICTOR_URL`, `PORT` |
+| `services/serial-bridge` | `SERIAL_PORT`, `BACKEND_URL`, `MOCK_MODE` |
+| `apps/dashboard` | `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `NEXT_PUBLIC_AI_URL`, `BACKEND_URL` |
 
-| Service                  | Key variables                                                    |
-|--------------------------|------------------------------------------------------------------|
-| `services/backend`       | `DATABASE_URL`, `AI_PREDICTOR_URL`, `OLLAMA_URL`, `OLLAMA_MODEL`, `SIMULATE_SENSORS` |
-| `services/serial-bridge` | `SERIAL_PORT`, `BAUD_RATE`, `BACKEND_URL`, `MOCK_MODE`           |
-| `services/ai-predictor`  | `MODEL_PATH`, `PORT`                                             |
-| `apps/dashboard`         | `NEXT_PUBLIC_SOCKET_URL`, `BACKEND_URL`, `NEXTAUTH_SECRET`       |
-| `apps/mobile`            | `API_URL`, `WS_URL`                                              |
-| `apps/assistant`         | `BACKEND_URL`, `OLLAMA_URL`, `OLLAMA_MODEL`, `WAKE_WORD`         |
+**Never commit `.env`** — only `.env.example`.
 
 ---
+
 
 ## Detailed setup guides
 
@@ -209,26 +218,11 @@ Each service has its own `.env.example`. Copy it to `.env` and fill in.
 
 ---
 
+
 ## Rules
 
-- **Never upgrade `apps/mobile/package.json` versions.** expo~54 + RN 0.81.5 +
-  react 19.1.0 is pinned. Upgrading breaks the web build. See `_versionNote`.
+- **Never upgrade `apps/mobile` versions** — expo~54 + RN 0.81.5 + react 19.1.0 is pinned.
 - **Never commit `.env`** — only `.env.example`.
-- **Shared TS types** live only in `shared/types/`. No duplication.
-- **Max 300 lines per file** (GEMINI Rule 3) — split if over.
-- **Atomic Design** in `apps/mobile/` and `apps/dashboard/`:
-  atoms → molecules → organisms → screens.
-- **Branch per task**, PR into `develop`. No direct pushes.
-- **Ports are fixed** (see table above) — don't change without updating all clients.
-
----
-
-## Who to ask
-
-| Question                          | Ask        |
-|-----------------------------------|------------|
-| Backend API / architecture        | Ismail     |
-| Database schema / migration       | Maral      |
-| Dashboard UI / mobile styling     | Hamidullah |
-| AI model / voice pipeline         | Firdavs    |
-| Arduino / serial data / wiring    | Sarvar     |
+- **Shared TS types** live only in `shared/types/`.
+- **Atomic Design** in dashboard: atoms → molecules → organisms.
+- **All models** live in `models/` — never scatter them in `docs/` or `resources/`.

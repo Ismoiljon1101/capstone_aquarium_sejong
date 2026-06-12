@@ -2,9 +2,16 @@
   "name": "fishlinic",
   "private": true,
   "scripts": {
-    "dev": "pnpm --parallel --filter \"*\" run dev",
+    "dev": "pnpm --parallel --filter \"!fishlinic-mobile\" --filter \"!veronica-assistant\" run dev",
+    "dev:all": "pnpm --parallel --filter \"*\" run dev",
+    "dev:backend": "pnpm --filter backend run dev",
+    "dev:dashboard": "pnpm --filter fishlinic run dev",
+    "dev:ai": "cd services/ai-predictor && python -m uvicorn src.main:app --reload --port 8000",
+    "dev:bridge": "pnpm --filter serial-bridge run dev",
+    "dev:mobile": "pnpm --filter fishlinic-mobile run dev",
+    "dev:assistant": "cd apps/assistant && python src/assistant.py",
     "install:all": "pnpm install",
-    "start": "pnpm --parallel --filter \"*\" run dev"
+    "start": "pnpm --parallel --filter \"!fishlinic-mobile\" --filter \"!veronica-assistant\" run dev"
   },
   "workspaces": [
     "apps/*",

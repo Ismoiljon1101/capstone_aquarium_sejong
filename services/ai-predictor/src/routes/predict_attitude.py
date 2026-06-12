@@ -1,25 +1,35 @@
 from fastapi import APIRouter
+from fastapi import HTTPException
 from pydantic import BaseModel
 import cv2
 import numpy as np
 import os
 import sqlite3
 from datetime import datetime
-from ultralytics import YOLO
 
 router = APIRouter()
 
 _repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 model_path = os.path.join(
-    os.getenv("MODEL_PATH", os.path.join(_repo_root, "docs", "Fish disease", "models")),
+    os.getenv("MODEL_PATH", os.path.join(_repo_root, "models", "behavior")),
     "yolo11n.pt"
 )
 db_path = os.path.join(_repo_root, "services", "backend", "fishlinic.sqlite")
 
-try:
-    yolo_model = YOLO(model_path)
-except Exception:
-    yolo_model = None
+yolo_model = None
+load_error = None
+
+
+def get_model():
+    global yolo_model, load_error
+    if yolo_model is not None or load_error is not None:
+        return yolo_model
+    try:
+        from ultralytics import YOLO
+        yolo_model = YOLO(model_path)
+    except Exception as exc:
+        load_error = str(exc)
+    return yolo_model
 
 # ── DB setup ──────────────────────────────────────────────────────────────────
 
@@ -82,11 +92,12 @@ def classify_tilt(angle, aspect_ratio):
         return "severe_tilt", 1.0
 
 def analyze_frame_attitude(frame, frame_index):
-    if yolo_model is None:
+    loaded_model = get_model()
+    if loaded_model is None:
         return []
 
     frame_h, frame_w = frame.shape[:2]
-    results = yolo_model(frame, verbose=False)[0]
+    results = loaded_model(frame, verbose=False)[0]
     detections = []
 
     for box in results.boxes:
@@ -142,6 +153,8 @@ class AttitudeRequest(BaseModel):
 
 @router.post("/predict/attitude")
 def predict_attitude(req: AttitudeRequest):
+    if get_model() is None:
+        raise HTTPException(status_code=503, detail=f"Attitude model unavailable: {load_error}")
     if not os.path.exists(req.videoPath):
         return {"error": f"Video not found: {req.videoPath}"}
 
