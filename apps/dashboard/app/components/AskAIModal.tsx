@@ -80,13 +80,14 @@ export function AskAIModal({ isOpen, onClose, latest }: AskAIModalProps) {
             placeholder="Ask about water quality, fish health, recommendations, or any concerns..."
             className="input w-full min-h-[100px] resize-none"
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
                 handleAsk();
               }
             }}
           />
           <p className="text-xs mt-2" style={{ color: "rgb(var(--text-muted))" }}>
-            Press Ctrl+Enter or Cmd+Enter to submit
+            Press Enter to submit, Shift+Enter for newline
           </p>
         </div>
 

@@ -3,6 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.routes import predict_disease, predict_count, predict_quality, predict_behavior, capture_camera, live_analysis
 from src.routes.predict_attitude import router as attitude_router
 from src.routes.predict_movement import router as movement_router
+
+try:
+    import torch
+    _device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"[AI Predictor] Running on device: {_device}")
+except ImportError:
+    print("[AI Predictor] torch not available — running in CPU-only mode")
+
 app = FastAPI(title="Fishlinic AI Predictor")
 app.add_middleware(
     CORSMiddleware,
@@ -18,5 +26,6 @@ app.include_router(capture_camera.router)
 app.include_router(live_analysis.router)
 app.include_router(attitude_router)
 app.include_router(movement_router)
+
 @app.get("/health")
 def health(): return { "status": "ok" }

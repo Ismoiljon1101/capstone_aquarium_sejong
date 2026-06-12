@@ -58,7 +58,24 @@ capstone_aquarium_sejong/
 | Expo Mobile          | 8081  | React Native app             |
 
 ---
-## Getting Started
+## Quick Start (Automated)
+
+You can launch or stop all components of the system at once using the provided helper scripts in the root directory:
+
+```bash
+# Start everything (kills old processes, starts all servers in background)
+./start_all.sh
+
+# View logs for any service
+tail -f logs/backend.log
+
+# Stop everything cleanly
+./stop_all.sh
+```
+
+---
+
+## Getting Started (Manual)
 
 ```bash
 # 1. Clone + install
@@ -69,6 +86,9 @@ pnpm install
 # 2. NestJS Backend — port 3001
 cd services/backend
 cp .env.example .env
+pip install -r requirements.txt   # camera capture deps (opencv-python); needs ffmpeg on PATH
+# Recommended for robust camera persistence (optional, not required):
+pip install pyobjc-framework-AVFoundation
 $env:PORT=3001; pnpm dev
 
 # 3. FastAPI AI Predictor — port 8000
@@ -117,11 +137,48 @@ Serial Bridge :3001 ──POST /serial/reading──▶ NestJS Backend :3000
 ---
 ## Sensor Thresholds
 
-| Parameter    | Optimal      | Warning            | Critical        |
-|--------------|--------------|--------------------|-----------------|
-| pH           | 6.8 – 7.5    | 6.5–6.8 / 7.5–8.0  | < 6.5 or > 8.0  |
-| Temperature  | 24 – 28 °C   | 22–24 / 28–30 °C   | < 22 or > 30 °C |
-| Dissolved O₂ | 6 – 9 mg/L   | 4 – 6 mg/L         | < 4 mg/L        |
+## Camera persistence (macOS / AVFoundation)
+
+The Live Camera selector is the single source of truth for which physical camera
+every Scan / Refresh Scan / analysis snapshot uses. The chosen camera is persisted
+by a **stable identifier**, not the AVFoundation device index — indices reshuffle
+when devices reconnect, reboot, or are plugged/unplugged, so they are treated as
+runtime-only and handed to OpenCV solely after a fresh resolution.
+
+Two persistence strategies, auto-selected at startup:
+
+| Strategy | When | Identifier | Robustness |
+|----------|------|-----------|------------|
+| **Hardware uniqueID** (preferred) | `pyobjc-framework-AVFoundation` installed | AVFoundation `uniqueID` | Survives reconnects, reboots, renames, and same-name cameras |
+| **Name-based fallback** | pyobjc not installed | `name:<device name>` | Works, but a renamed camera looks new, and two cameras sharing a name are indistinguishable |
+
+Install the optional dependency to enable hardware uniqueIDs:
+
+```bash
+pip install pyobjc-framework-AVFoundation
+```
+
+It is **not a hard dependency** — without it the system keeps working with the
+name-based fallback. On startup the serial bridge logs exactly which strategy is
+active:
+
+```
+[Camera] Using AVFoundation unique IDs for camera persistence
+# or
+[Camera] AVFoundation unique IDs unavailable; using name-based fallback
+```
+
+---
+
+## Sensor thresholds
+
+| Parameter    | Optimal      | Warning                  | Critical        |
+|--------------|--------------|--------------------------|-----------------|
+| pH           | 6.8 – 7.5    | 6.5–6.8 or 7.5–8.0       | < 6.5 or > 8.0  |
+| Temperature  | 24 – 28 °C   | 22–24 or 28–30 °C        | < 22 or > 30 °C |
+| Dissolved O₂ | 6 – 9 mg/L   | 4 – 6 mg/L               | < 4 mg/L        |
+
+Thresholds are editable via `/management/tank-config` (mobile Controls + dashboard Settings).
 
 ---
 

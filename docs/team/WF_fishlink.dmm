@@ -1,0 +1,3908 @@
+{
+	"tables": {
+		"82d0cc7f-ac0a-4ef0-a581-ea17164e4f0a": {
+			"id": "82d0cc7f-ac0a-4ef0-a581-ea17164e4f0a",
+			"visible": true,
+			"name": "camera_snapshots",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "f089cce6-bfa3-4678-b827-28ff50675ad6",
+					"name": "snapshotId",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "b868a2eb-338d-4a8d-859c-9f3ddfb5eceb",
+					"name": "imagePath",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "908bbd21-3807-4487-9457-a28797015457",
+					"name": "triggeredBy",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "f55b8299-c031-41d8-9f3e-18d4c911c9e9",
+					"name": "timestamp",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "d50b1fe2-ae35-4f5d-9201-83e96b4a51ae",
+					"name": "camera_snapshots_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "0bd1305b-5860-4c7b-9bb4-66f8cec4ac81",
+							"colid": "f089cce6-bfa3-4678-b827-28ff50675ad6"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"5ce86c2e-a183-4acd-b721-9705caffc4b9": {
+			"id": "5ce86c2e-a183-4acd-b721-9705caffc4b9",
+			"visible": true,
+			"name": "sensor_readings",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "bc1ba9e7-be7c-4a09-8a08-93e5f91fdf2a",
+					"name": "readingId",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "5d2c2b4e-dc11-4986-b4f6-c3240ceae974",
+					"name": "sensorId",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "c19a6f61-6b28-47be-96b2-79a73af1ebde",
+					"name": "type",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "8b868895-6fb4-4d9f-8a59-f060dbdb34b9",
+					"name": "value",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "d695b6ed-58e9-44b0-9ad8-5bc15068e776",
+					"name": "unit",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "291c52c8-42b7-4f9a-a308-74c6f4dc1ee4",
+					"name": "status",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "'ok'",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "86b34184-8539-46ae-8cae-7663f77be4c2",
+					"name": "timestamp",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "4c44af8c-6c23-4aa5-b2e8-60eac3a4a905",
+					"name": "sensor_readings_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "1d3c6e0c-376d-45c2-8ad1-b3177686954d",
+							"colid": "bc1ba9e7-be7c-4a09-8a08-93e5f91fdf2a"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"bcedb361-c011-4bcd-be8b-d74275d7f2d4": {
+			"id": "bcedb361-c011-4bcd-be8b-d74275d7f2d4",
+			"visible": true,
+			"name": "alerts",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "ce31d36d-cd5a-48fc-a6c5-cba0d540bfcd",
+					"name": "alertId",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "bbfbb1e7-4930-4a29-8408-580d611f2c7c",
+					"name": "sensorId",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "374e492e-2ec4-47a5-8a71-42fe0f458b7d",
+					"name": "tankId",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "823cc05a-ba6e-4695-9da5-2cc1e892eb1d",
+					"name": "type",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "b2b202b7-be0d-4fe3-b258-485a300c7d50",
+					"name": "severity",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "91101b3f-696f-4383-9f84-31bd5c681d39",
+					"name": "message",
+					"datatype": "text",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "532c6efc-753b-466e-bd30-5cd958c44fe0",
+					"name": "acknowledged",
+					"datatype": "boolean",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "false",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "4fba4557-dd2c-467a-b477-aeba70a82960",
+					"name": "createdAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "8219d687-58cc-4bba-873f-f1aa31e4fe5e",
+					"name": "alerts_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "49e1327e-e4fc-4c62-94b7-f1e32530c3fa",
+							"colid": "ce31d36d-cd5a-48fc-a6c5-cba0d540bfcd"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"3c8e03e9-4c1f-4c60-bc47-0e3b67fbd287": {
+			"id": "3c8e03e9-4c1f-4c60-bc47-0e3b67fbd287",
+			"visible": true,
+			"name": "tank_config",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "2cb75399-b09d-481c-a71b-f7a462a679f7",
+					"name": "id",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "1",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "a3686894-c9c2-4165-9201-2315e848ef11",
+					"name": "cleaningIntervalDays",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "14",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "2ecf2084-2269-4145-9b18-6d468d72ac46",
+					"name": "lastCleanedAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "89a80ffd-9b1b-44a7-9e41-8da6ca37700d",
+					"name": "emergencyTempMax",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "30.0",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "59692a86-5e00-4738-b6b4-f7fa84f2d0e7",
+					"name": "emergencyTempMin",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "20.0",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "f828bd7a-32cc-45bb-a866-36231d37f367",
+					"name": "emergencyDoMin",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "4.0",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "fc396285-0110-410c-84ca-549194a9d40b",
+					"name": "emergencyPhMin",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "6.0",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "f8ff0ee5-c425-48fe-a6f5-f57734041bf8",
+					"name": "emergencyPhMax",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "8.5",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "90d7da02-8c43-4ce2-9893-b59464c6eead",
+					"name": "pushToken",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "52e60755-8f21-4c26-a19d-ca9b843b76b2",
+					"name": "pushEnabled",
+					"datatype": "boolean",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "true",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "8b963fd6-b077-412f-8e6f-19c373aec627",
+					"name": "agentMode",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "'confirm'",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "b81535f2-d6fd-4f07-a1f4-a90012ce90ac",
+					"name": "agentMonitorEnabled",
+					"datatype": "boolean",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "true",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "4a9fb23e-831a-4a62-a146-4180ebbf9cd1",
+					"name": "updatedAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "64b57629-590b-4dd7-ac6d-fa98ddc64ca5",
+					"name": "tank_config_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "a3aad4b7-435d-40a2-86a9-51e23986224b",
+							"colid": "2cb75399-b09d-481c-a71b-f7a462a679f7"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"7259b60c-393c-422e-ad7b-4feeabccce22": {
+			"id": "7259b60c-393c-422e-ad7b-4feeabccce22",
+			"visible": true,
+			"name": "feed_schedules",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "5565fdbf-051e-415b-aeb9-e56817bf3c44",
+					"name": "id",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "68e780fe-44ec-4370-b091-512591d61743",
+					"name": "time",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "6ca34f9a-08ca-4eac-85f9-52ed95773b54",
+					"name": "daysMask",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "127",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "a46d9ca1-bd27-4490-b0ae-fb0c6b06c510",
+					"name": "portionSec",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "3",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "b4ee745d-d127-4527-a51b-caaabc3a5e4b",
+					"name": "enabled",
+					"datatype": "boolean",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "true",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "1bd21ddb-47cd-4b86-a4de-eb4f5cbf981e",
+					"name": "lastFiredAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "fbc559cc-b693-497a-8387-ad9f0ecd630b",
+					"name": "createdAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "1671ded7-a965-419c-a4f9-67737eb2448e",
+					"name": "feed_schedules_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "8c79ee42-7ac5-4210-b757-d284b1f37bae",
+							"colid": "5565fdbf-051e-415b-aeb9-e56817bf3c44"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"ba4f253e-b1ab-447b-bb71-969536cd5ecb": {
+			"id": "ba4f253e-b1ab-447b-bb71-969536cd5ecb",
+			"visible": true,
+			"name": "light_schedules",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "9eb34e60-d46a-4ba7-9d7f-2536e264f2ca",
+					"name": "id",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "b6fd23f4-b98b-419c-947d-635581c4ce97",
+					"name": "onTime",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "'07:00'",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "55ead12a-55b2-4fd8-a721-fed27f306313",
+					"name": "offTime",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "'21:00'",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "b93a3d17-fb06-4c91-b43b-bff7da6c9fd1",
+					"name": "brightness",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "80",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "8710b3e0-87df-40ff-8684-192b71c71132",
+					"name": "color",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "'#ffffff'",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "7ffd8753-788c-4c51-b172-c50aca9128a4",
+					"name": "enabled",
+					"datatype": "boolean",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "true",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "3ada2877-7438-4295-adf2-0be662f7e270",
+					"name": "createdAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "f1965088-3d9e-4e48-a9a4-3e56ccd462c9",
+					"name": "light_schedules_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "48914b58-cf01-447f-90ad-108d5fc2230f",
+							"colid": "9eb34e60-d46a-4ba7-9d7f-2536e264f2ca"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"bf33b667-211c-4a99-94d3-c941a2f644b5": {
+			"id": "bf33b667-211c-4a99-94d3-c941a2f644b5",
+			"visible": true,
+			"name": "health_reports",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "5238c609-d40a-49e1-aeff-858d75dbc48a",
+					"name": "reportId",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "b1f7f866-86ce-447a-b2a8-04d8e9b67099",
+					"name": "snapshotId",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": true,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "9ca510f2-2630-4cac-b3ba-363a9e89a330",
+					"name": "phStatus",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "'ok'",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "c4cc1b7d-4af6-4a01-b867-7a1a5feedc12",
+					"name": "tempStatus",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "'ok'",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "374c2759-a3a0-47f7-ba78-2c433f148114",
+					"name": "doStatus",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "'ok'",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "cddaefaa-b292-4acf-b5c6-f928d94dba19",
+					"name": "visualStatus",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "'ok'",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "f76374d0-0fd5-4fd6-a5c3-df136421398e",
+					"name": "behaviorStatus",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "'ok'",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "26798e60-832a-4845-ad1e-dc99cbeb55aa",
+					"name": "behaviorLabel",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "8745d53b-4164-4b33-a414-00e438af65e2",
+					"name": "behaviorConfidence",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "4499c978-daeb-4ea3-a027-27d822c08c28",
+					"name": "overallScore",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "1.0",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "9e93376d-676b-48bf-b0ba-90c9662b4109",
+					"name": "summary",
+					"datatype": "text",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "''",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "3d1edccf-7b73-4768-9e72-cbad41f952de",
+					"name": "diseaseClass",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "8ff4bf7a-3b65-4786-8563-c423799a9041",
+					"name": "mlConfidence",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "538ca8f7-606a-4033-ac7b-bdbfee401f9f",
+					"name": "severity",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "73ba7e57-b3fe-4512-9ff2-0bb786e60829",
+					"name": "fishId",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "53200d7d-d8c1-47ab-b8ea-2e8f9f811a6f",
+					"name": "movementSummary",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "d982393c-83cb-426e-9538-752fee49a3ff",
+					"name": "attitudeSummary",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "5f769a5b-a58e-407c-92b7-300aec371f9c",
+					"name": "source",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "'manual'",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "fcd0c15d-be7d-4c47-b105-0e96692285a5",
+					"name": "timestamp",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "a25b1f5e-ef9d-45ca-8e36-0755cc51dafb",
+					"name": "health_reports_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "838dde2c-04b4-4fb6-9e23-129f924e858e",
+							"colid": "5238c609-d40a-49e1-aeff-858d75dbc48a"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"1a40a59f-f543-43ef-81c1-e84fd94a842a": {
+			"id": "1a40a59f-f543-43ef-81c1-e84fd94a842a",
+			"visible": true,
+			"name": "fish_counts",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "53618a80-e522-4a89-9b31-9a5e91c40de4",
+					"name": "countId",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "c9b8cc24-d65d-48b5-bc32-a96fa5fe17cc",
+					"name": "snapshotId",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": true,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "7c6ab6be-c9db-45d8-b952-64b6dcc79568",
+					"name": "count",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "e8757cf8-da2b-4ae7-97c5-34dd7f08b7b5",
+					"name": "confidence",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "fd6d6f0f-0192-483e-a5e8-30943d43832f",
+					"name": "timestamp",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "c1d60e1a-0068-4f6e-91df-0910bc486b95",
+					"name": "fish_counts_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "c9e33e19-c70c-4197-b20f-70ffdfc76613",
+							"colid": "53618a80-e522-4a89-9b31-9a5e91c40de4"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"d825a6c4-00bd-4228-a45b-ebc6c1eae450": {
+			"id": "d825a6c4-00bd-4228-a45b-ebc6c1eae450",
+			"visible": true,
+			"name": "fish_growth",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "d55d3191-c495-4daf-bbca-317fe0caddb1",
+					"name": "growthId",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "cbe25e09-abed-4652-8775-6c7af887953e",
+					"name": "date",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "e652d376-b491-4246-8f12-ba07320c4821",
+					"name": "avgSizeEstimate",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "3b56652b-4ca4-4cf9-9758-13dc11a0a533",
+					"name": "count",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "949cfb14-b8fb-4e49-a313-06be73279be9",
+					"name": "deltaFromPrev",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "0",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "1e904351-2d30-4c5e-87cc-75fa2c483bd4",
+					"name": "createdAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "dfb2e188-1b92-483a-8b69-2a160fa18be1",
+					"name": "fish_growth_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "445cf119-6e73-40b7-a6d7-857f82bfc06c",
+							"colid": "d55d3191-c495-4daf-bbca-317fe0caddb1"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"6f6351d5-ddd2-45c9-9813-15620fbb6631": {
+			"id": "6f6351d5-ddd2-45c9-9813-15620fbb6631",
+			"visible": true,
+			"name": "actuator_events",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "f30430dc-c03e-4454-8d49-cc8dd4f4057f",
+					"name": "id",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "679ba194-b538-43af-86d8-cf9dedabb6f6",
+					"name": "type",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "72f2e227-0802-4e54-9813-b2aafb5cf69b",
+					"name": "state",
+					"datatype": "boolean",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "4289de67-09a4-4471-beb4-a83aa316b7ef",
+					"name": "source",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "a4e5b252-79a2-4ab0-a265-f5d00862a936",
+					"name": "reason",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "960b19d3-1418-4700-995c-78644422f832",
+					"name": "timestamp",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "71fa2aef-d532-4e26-8b06-05debe90bcb0",
+					"name": "actuator_events_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "9d6748f4-4b31-4ebd-a298-57f264894ec1",
+							"colid": "f30430dc-c03e-4454-8d49-cc8dd4f4057f"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"13726a57-7dd5-4cbb-b0bb-17aa523fc6f5": {
+			"id": "13726a57-7dd5-4cbb-b0bb-17aa523fc6f5",
+			"visible": true,
+			"name": "chat_messages",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "d404c9a5-bcb3-4bf1-96ae-3f17f19eb984",
+					"name": "id",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "e2ee7b7d-1c2e-4c44-bb08-e8e71994a582",
+					"name": "sessionId",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "86ff74b9-b884-4a5f-819f-083f310af56f",
+					"name": "role",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "a4776e0e-e07f-4179-8912-6f0b1562970f",
+					"name": "content",
+					"datatype": "text",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "ffbef7d7-8ccc-4ec2-bb01-0740b88087dc",
+					"name": "createdAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "52215d9a-07d2-45de-b7b2-788671978f43",
+					"name": "chat_messages_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "6a90d7bd-2032-4aeb-9717-0d3ef9ed9bd5",
+							"colid": "d404c9a5-bcb3-4bf1-96ae-3f17f19eb984"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"5e997589-0763-4d00-96f6-3ef6a253bd7d": {
+			"id": "5e997589-0763-4d00-96f6-3ef6a253bd7d",
+			"visible": true,
+			"name": "user_commands",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "f789f2f9-f79d-4346-9f74-7a24c85c329e",
+					"name": "commandId",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "0fe19d59-6e80-40f5-bae4-ea4733d9422f",
+					"name": "actuatorId",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "b80faf28-c371-46b7-a99c-678ec299c6ae",
+					"name": "commandType",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "aaafddf8-7cf6-4ec4-9350-7419659e8afd",
+					"name": "source",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "9dbb162a-2d6d-4161-a0e1-1cd4e4775ed1",
+					"name": "payload",
+					"datatype": "jsonb",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "f779c2df-6080-41d2-88fa-689d7f337bd1",
+					"name": "createdAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "28bca5a9-ee0b-4021-ad92-e6377de91ccd",
+					"name": "executedAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "c477bae9-5ed4-44b4-9719-62d57e5743e8",
+					"name": "user_commands_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "acf915c0-aaa5-4d9b-81fb-66dc27fc169a",
+							"colid": "f789f2f9-f79d-4346-9f74-7a24c85c329e"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"1b5d6657-eb00-495b-a0d1-d8c3bca2322a": {
+			"id": "1b5d6657-eb00-495b-a0d1-d8c3bca2322a",
+			"visible": true,
+			"name": "voice_sessions",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "62aa123d-be43-47e2-aa8b-815f4af4f5b3",
+					"name": "sessionId",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "8d8f33d1-567e-4835-a4f4-0c204b4a27ee",
+					"name": "snapshotId",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": true,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "a98ec47c-f521-496f-8337-0bee460690b4",
+					"name": "wakeWordAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "d7baea09-a998-4cb4-bf86-c97984128b42",
+					"name": "transcribedText",
+					"datatype": "text",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "c467fef2-2e87-4927-8892-613337d46de9",
+					"name": "aiResponse",
+					"datatype": "text",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "f83acf16-4fa3-4cc8-b573-8e8c43e3f6dc",
+					"name": "audioOutputPath",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "b3c28350-3d01-46dd-8ae0-e8afa1936ef1",
+					"name": "durationMs",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "ba9834b2-7c05-4c95-a883-abed751eadf2",
+					"name": "createdAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "c735f2d0-c565-4b9b-b1e1-0e745f99cf6f",
+					"name": "voice_sessions_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "9bd73fb3-7fcd-4d03-9259-d1993e1df185",
+							"colid": "62aa123d-be43-47e2-aa8b-815f4af4f5b3"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"00d2a581-975b-46c8-9933-5a981f45b6b3": {
+			"id": "00d2a581-975b-46c8-9933-5a981f45b6b3",
+			"visible": true,
+			"name": "attitude_detections",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "0c07e088-eae8-4998-af0b-bf1a8b01d815",
+					"name": "id",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "c660a22f-3b83-4f23-ba23-a51d4786af24",
+					"name": "snapshotId",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": true,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "fc16de80-aa0c-4911-bb72-f731ebce4e83",
+					"name": "frameIndex",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "dc39aba7-ae94-48c3-a3d2-d1c3ba1a2bb5",
+					"name": "region",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "1412548d-b146-4530-84fe-9fd299a5563b",
+					"name": "swimAngle",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "c408d4cb-644e-4ca0-a328-a0b37636d471",
+					"name": "aspectRatio",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "653e07f7-f0f8-4fef-b9af-5b039d38e9d4",
+					"name": "tiltSeverity",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "b0b7d76b-a5b9-4dde-bc7e-59adfe7c6484",
+					"name": "anomalyScore",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "ef47e2ea-a467-411d-8fab-8051782fa1e0",
+					"name": "bboxX",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "519e175b-6120-45c7-9ee6-c178a0ebb9fd",
+					"name": "bboxY",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "3e6a053d-5d12-4c65-b9c4-ffd8af846aa5",
+					"name": "bboxW",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "1dababeb-664a-4a5c-873e-a27ca43006cf",
+					"name": "bboxH",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "67bc1669-9a84-46aa-bada-d3a6739d7d8d",
+					"name": "createdAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "40403510-eb31-4df0-be78-ff642f6f827b",
+					"name": "attitude_detections_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "a3f80168-11ce-433c-960f-64b84cac59c8",
+							"colid": "0c07e088-eae8-4998-af0b-bf1a8b01d815"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		},
+		"5834ce3b-6b3f-4dbe-8c73-7c19e4971cea": {
+			"id": "5834ce3b-6b3f-4dbe-8c73-7c19e4971cea",
+			"visible": true,
+			"name": "movement_detections",
+			"desc": "",
+			"estimatedSize": "",
+			"cols": [
+				{
+					"id": "53b7e72d-826b-4acb-b377-f538a45df2fb",
+					"name": "id",
+					"datatype": "integer",
+					"param": "",
+					"pk": true,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "327fe649-cf26-4e2d-9981-348706fa2a71",
+					"name": "snapshotId",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": true,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "6358e14a-f580-49b9-b465-d37a3f72e187",
+					"name": "frameIndex",
+					"datatype": "integer",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "2ca541ab-09c5-4f7f-a711-9e1588745ed1",
+					"name": "region",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "d9a5509c-9582-44bf-8bca-b1c53957ebfd",
+					"name": "centroidX",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "c8f9a2bd-ab35-461c-b9f0-5b8fcd084531",
+					"name": "centroidY",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "815817aa-3f03-4f15-9e79-f9e6a4cbc4e9",
+					"name": "speedPx",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "6c2e0d4b-d85a-4730-a117-7f0f0804fe59",
+					"name": "directionDegrees",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "3301c5a1-930d-4949-97b8-af13e5939e6f",
+					"name": "driftRatio",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "95888d53-5209-4694-a5ae-b91bf6df391d",
+					"name": "movementType",
+					"datatype": "varchar",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "8ed3f554-98c1-4b6d-856a-9321b556b267",
+					"name": "anomalyScore",
+					"datatype": "double precision",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				},
+				{
+					"id": "1480934c-d2a1-43c8-a6a4-ece5733c6e0b",
+					"name": "createdAt",
+					"datatype": "timestamptz",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"defaultvalue": "now()",
+					"data": "",
+					"after": "",
+					"collation": "",
+					"pg": {
+						"generatedIdentity": "no",
+						"storage": "",
+						"compression": ""
+					},
+					"estimatedSize": ""
+				}
+			],
+			"relations": [],
+			"lines": [],
+			"keys": [
+				{
+					"id": "ebc2c193-e028-4f54-a222-bb56321f1cd5",
+					"name": "movement_detections_pkey",
+					"isPk": true,
+					"cols": [
+						{
+							"id": "f2571f3d-6896-43a7-a928-736b1370cea3",
+							"colid": "53b7e72d-826b-4acb-b377-f538a45df2fb"
+						}
+					]
+				}
+			],
+			"indexes": [],
+			"embeddable": false,
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"objectType": "table",
+			"checkConstraints": [],
+			"pg": {
+				"rowsecurity": false,
+				"schema": "",
+				"tablespace": "",
+				"inherits": "",
+				"storageParameters": "",
+				"partition": "",
+				"partitionNames": []
+			}
+		}
+	},
+	"relations": {
+		"0536ad20-9e72-47c5-b858-e2fde8449c18": {
+			"id": "0536ad20-9e72-47c5-b858-e2fde8449c18",
+			"name": "fk_health_reports_camera_snapshots",
+			"desc": "",
+			"parent": "82d0cc7f-ac0a-4ef0-a581-ea17164e4f0a",
+			"child": "bf33b667-211c-4a99-94d3-c941a2f644b5",
+			"cols": [
+				{
+					"id": "c5283a3b-1362-4c66-87ae-62e3a018b498",
+					"parentcol": "f089cce6-bfa3-4678-b827-28ff50675ad6",
+					"childcol": "b1f7f866-86ce-447a-b2a8-04d8e9b67099"
+				}
+			],
+			"parentCardinality": "1",
+			"childCardinality": "n",
+			"identifying": false,
+			"mandatory": false,
+			"parentRole": "",
+			"childRole": "",
+			"onUpdate": "",
+			"onDelete": "",
+			"generate": true,
+			"objectType": "relation",
+			"lines": []
+		},
+		"d65e40a0-565f-4285-8b40-87675f8937fe": {
+			"id": "d65e40a0-565f-4285-8b40-87675f8937fe",
+			"name": "fk_fish_counts_camera_snapshots",
+			"desc": "",
+			"parent": "82d0cc7f-ac0a-4ef0-a581-ea17164e4f0a",
+			"child": "1a40a59f-f543-43ef-81c1-e84fd94a842a",
+			"cols": [
+				{
+					"id": "ab7fd276-34bf-4caa-a989-e4102181af4a",
+					"parentcol": "f089cce6-bfa3-4678-b827-28ff50675ad6",
+					"childcol": "c9b8cc24-d65d-48b5-bc32-a96fa5fe17cc"
+				}
+			],
+			"parentCardinality": "1",
+			"childCardinality": "n",
+			"identifying": false,
+			"mandatory": false,
+			"parentRole": "",
+			"childRole": "",
+			"onUpdate": "",
+			"onDelete": "",
+			"generate": true,
+			"objectType": "relation",
+			"lines": []
+		},
+		"bc620914-5d4c-4204-8812-28293b898d43": {
+			"id": "bc620914-5d4c-4204-8812-28293b898d43",
+			"name": "fk_voice_sessions_camera_snapshots",
+			"desc": "",
+			"parent": "82d0cc7f-ac0a-4ef0-a581-ea17164e4f0a",
+			"child": "1b5d6657-eb00-495b-a0d1-d8c3bca2322a",
+			"cols": [
+				{
+					"id": "e07ecbd8-dccc-42ae-8da9-9c5c8aebd70c",
+					"parentcol": "f089cce6-bfa3-4678-b827-28ff50675ad6",
+					"childcol": "8d8f33d1-567e-4835-a4f4-0c204b4a27ee"
+				}
+			],
+			"parentCardinality": "1",
+			"childCardinality": "n",
+			"identifying": false,
+			"mandatory": false,
+			"parentRole": "",
+			"childRole": "",
+			"onUpdate": "",
+			"onDelete": "",
+			"generate": true,
+			"objectType": "relation",
+			"lines": []
+		},
+		"4b7f303e-4ebb-4c63-adb9-8f6ad40a41b7": {
+			"id": "4b7f303e-4ebb-4c63-adb9-8f6ad40a41b7",
+			"name": "fk_attitude_detections_camera_snapshots",
+			"desc": "",
+			"parent": "82d0cc7f-ac0a-4ef0-a581-ea17164e4f0a",
+			"child": "00d2a581-975b-46c8-9933-5a981f45b6b3",
+			"cols": [
+				{
+					"id": "af7cf044-7d25-4325-810d-350b12801240",
+					"parentcol": "f089cce6-bfa3-4678-b827-28ff50675ad6",
+					"childcol": "c660a22f-3b83-4f23-ba23-a51d4786af24"
+				}
+			],
+			"parentCardinality": "1",
+			"childCardinality": "n",
+			"identifying": false,
+			"mandatory": false,
+			"parentRole": "",
+			"childRole": "",
+			"onUpdate": "",
+			"onDelete": "",
+			"generate": true,
+			"objectType": "relation",
+			"lines": []
+		},
+		"70966994-84d5-43cb-9417-15ce439eae1c": {
+			"id": "70966994-84d5-43cb-9417-15ce439eae1c",
+			"name": "fk_movement_detections_camera_snapshots",
+			"desc": "",
+			"parent": "82d0cc7f-ac0a-4ef0-a581-ea17164e4f0a",
+			"child": "5834ce3b-6b3f-4dbe-8c73-7c19e4971cea",
+			"cols": [
+				{
+					"id": "0cfddb7a-94ed-4500-862d-5b1db6791c44",
+					"parentcol": "f089cce6-bfa3-4678-b827-28ff50675ad6",
+					"childcol": "327fe649-cf26-4e2d-9981-348706fa2a71"
+				}
+			],
+			"parentCardinality": "1",
+			"childCardinality": "n",
+			"identifying": false,
+			"mandatory": false,
+			"parentRole": "",
+			"childRole": "",
+			"onUpdate": "",
+			"onDelete": "",
+			"generate": true,
+			"objectType": "relation",
+			"lines": []
+		}
+	},
+	"notes": {},
+	"lines": {},
+	"model": {
+		"name": "WF_fishlink",
+		"id": "50760f75-ab68-4208-957f-a463794ee583",
+		"activeDiagram": "43da2816-5a21-494f-b38e-98fcca50a245",
+		"desc": "Fishlinic database ER model (15 entities)",
+		"path": "",
+		"type": "PG",
+		"version": 1,
+		"parentTableInFkCols": true,
+		"caseConvention": "under",
+		"replaceSpace": "_",
+		"color": "transparent",
+		"sideSelections": true,
+		"isDirty": true,
+		"storedin": {
+			"major": 13,
+			"minor": 6,
+			"extra": 2
+		},
+		"laststoredin": {
+			"major": 13,
+			"minor": 6,
+			"extra": 2
+		},
+		"writeFileParam": false,
+		"authorName": "Ismail (ismoiljon1101)",
+		"companyDetails": "",
+		"companyUrl": "",
+		"subType": "",
+		"appName": "LunaModeler",
+		"migrateDefaultValue": false,
+		"def_coltopk": true,
+		"pg": {
+			"schema": "",
+			"postgisExtensionEnabled": true,
+			"postgisSchema": "public",
+			"includePostgisCreateExtension": false
+		},
+		"sqlSettings": {
+			"wrapLines": true,
+			"wrapOffset": 80,
+			"indent": true,
+			"indentationString": "spaces",
+			"indentationSize": 2,
+			"limitItemsOnLine": true,
+			"maxListItemsOnLine": 3,
+			"statementDelimiter": ";",
+			"routineDelimiter": ";",
+			"keywordCase": "upper",
+			"identiferCase": "original",
+			"quotationExistance": "if_needed",
+			"includeSchema": "always",
+			"includeGeneratedNames": "always"
+		},
+		"nameAutoGeneration": {
+			"keys": true,
+			"indexes": true,
+			"relations": true,
+			"checkConstraints": true
+		},
+		"connectionVersion": "",
+		"synchronizationSettings": {
+			"preserveData": "use_temporary_tables",
+			"ignoreSystemDefaults": "yes",
+			"includeWarnings": "yes",
+			"includeCreationSql": "no"
+		},
+		"lastSaved": 1780725124814
+	},
+	"otherObjects": {},
+	"diagrams": {
+		"43da2816-5a21-494f-b38e-98fcca50a245": {
+			"name": "Main Diagram",
+			"description": "",
+			"id": "43da2816-5a21-494f-b38e-98fcca50a245",
+			"keysgraphics": true,
+			"linegraphics": "detailed",
+			"zoom": 1,
+			"background": "transparent",
+			"lineColor": "transparent",
+			"isOpen": true,
+			"main": true,
+			"diagramItems": {
+				"82d0cc7f-ac0a-4ef0-a581-ea17164e4f0a": {
+					"referencedItemId": "82d0cc7f-ac0a-4ef0-a581-ea17164e4f0a",
+					"x": 700,
+					"y": 40,
+					"gHeight": 94,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"bf33b667-211c-4a99-94d3-c941a2f644b5": {
+					"referencedItemId": "bf33b667-211c-4a99-94d3-c941a2f644b5",
+					"x": 1080,
+					"y": 40,
+					"gHeight": 334,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"1a40a59f-f543-43ef-81c1-e84fd94a842a": {
+					"referencedItemId": "1a40a59f-f543-43ef-81c1-e84fd94a842a",
+					"x": 1080,
+					"y": 520,
+					"gHeight": 110,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"1b5d6657-eb00-495b-a0d1-d8c3bca2322a": {
+					"referencedItemId": "1b5d6657-eb00-495b-a0d1-d8c3bca2322a",
+					"x": 1080,
+					"y": 760,
+					"gHeight": 158,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"00d2a581-975b-46c8-9933-5a981f45b6b3": {
+					"referencedItemId": "00d2a581-975b-46c8-9933-5a981f45b6b3",
+					"x": 700,
+					"y": 520,
+					"gHeight": 238,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"5834ce3b-6b3f-4dbe-8c73-7c19e4971cea": {
+					"referencedItemId": "5834ce3b-6b3f-4dbe-8c73-7c19e4971cea",
+					"x": 340,
+					"y": 520,
+					"gHeight": 222,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"5ce86c2e-a183-4acd-b721-9705caffc4b9": {
+					"referencedItemId": "5ce86c2e-a183-4acd-b721-9705caffc4b9",
+					"x": 40,
+					"y": 40,
+					"gHeight": 142,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"bcedb361-c011-4bcd-be8b-d74275d7f2d4": {
+					"referencedItemId": "bcedb361-c011-4bcd-be8b-d74275d7f2d4",
+					"x": 360,
+					"y": 40,
+					"gHeight": 158,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"3c8e03e9-4c1f-4c60-bc47-0e3b67fbd287": {
+					"referencedItemId": "3c8e03e9-4c1f-4c60-bc47-0e3b67fbd287",
+					"x": 40,
+					"y": 520,
+					"gHeight": 238,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"7259b60c-393c-422e-ad7b-4feeabccce22": {
+					"referencedItemId": "7259b60c-393c-422e-ad7b-4feeabccce22",
+					"x": 40,
+					"y": 980,
+					"gHeight": 142,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"ba4f253e-b1ab-447b-bb71-969536cd5ecb": {
+					"referencedItemId": "ba4f253e-b1ab-447b-bb71-969536cd5ecb",
+					"x": 360,
+					"y": 980,
+					"gHeight": 142,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"d825a6c4-00bd-4228-a45b-ebc6c1eae450": {
+					"referencedItemId": "d825a6c4-00bd-4228-a45b-ebc6c1eae450",
+					"x": 700,
+					"y": 980,
+					"gHeight": 126,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"6f6351d5-ddd2-45c9-9813-15620fbb6631": {
+					"referencedItemId": "6f6351d5-ddd2-45c9-9813-15620fbb6631",
+					"x": 1080,
+					"y": 980,
+					"gHeight": 126,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"13726a57-7dd5-4cbb-b0bb-17aa523fc6f5": {
+					"referencedItemId": "13726a57-7dd5-4cbb-b0bb-17aa523fc6f5",
+					"x": 1440,
+					"y": 40,
+					"gHeight": 110,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				},
+				"5e997589-0763-4d00-96f6-3ef6a253bd7d": {
+					"referencedItemId": "5e997589-0763-4d00-96f6-3ef6a253bd7d",
+					"x": 1440,
+					"y": 460,
+					"gHeight": 142,
+					"gWidth": 230,
+					"color": "#ffffff",
+					"background": "#03a9f4",
+					"resized": false,
+					"autoExpand": true,
+					"backgroundOpacity": "10",
+					"collapsed": false,
+					"borderColor": "#666666",
+					"borderStyle": "none",
+					"borderWidth": 2,
+					"assetAspectRatio": "none",
+					"assetTextPosition": "right",
+					"assetShowText": true,
+					"areaHeaderDisplayed": true,
+					"areaHeaderColor": "transparent",
+					"areaHeaderBackground": "transparent",
+					"cardBackground": "transparent"
+				}
+			},
+			"diagramLinks": {
+				"0536ad20-9e72-47c5-b858-e2fde8449c18": {
+					"referencedItemId": "0536ad20-9e72-47c5-b858-e2fde8449c18"
+				},
+				"d65e40a0-565f-4285-8b40-87675f8937fe": {
+					"referencedItemId": "d65e40a0-565f-4285-8b40-87675f8937fe"
+				},
+				"bc620914-5d4c-4204-8812-28293b898d43": {
+					"referencedItemId": "bc620914-5d4c-4204-8812-28293b898d43"
+				},
+				"4b7f303e-4ebb-4c63-adb9-8f6ad40a41b7": {
+					"referencedItemId": "4b7f303e-4ebb-4c63-adb9-8f6ad40a41b7"
+				},
+				"70966994-84d5-43cb-9417-15ce439eae1c": {
+					"referencedItemId": "70966994-84d5-43cb-9417-15ce439eae1c"
+				}
+			},
+			"scroll": {
+				"x": 0,
+				"y": 0
+			},
+			"type": "erd",
+			"showHorizontal": true,
+			"showDescriptions": true,
+			"showIndicators": true,
+			"showProgress": true,
+			"lineWidth": "2",
+			"boxSize": "0",
+			"boxSpacing": "2",
+			"boxAlign": "center",
+			"showIndicatorCaptions": true,
+			"showEstimatedSize": false,
+			"showSchemaContainer": false,
+			"showEmbeddedInParents": true,
+			"showCardinalityCaptions": true,
+			"showRelationshipNames": false,
+			"showLineCaptions": true,
+			"showDependencyCaptions": false,
+			"showColumns": true,
+			"showColumnDataTypes": true,
+			"showSampleData": false,
+			"showTableIndexes": false,
+			"showTableDescriptions": false,
+			"showRelations": true,
+			"showLines": true,
+			"showDependencies": true,
+			"backgroundImage": "na",
+			"descriptionsColor": "transparent",
+			"embeddedSpacing": "2",
+			"showMainIcon": true,
+			"showLabels": true,
+			"showCustomizations": false,
+			"showExportDimensions": false,
+			"showCompleted": true,
+			"showAnimations": false
+		}
+	},
+	"diagramsOrder": [
+		"43da2816-5a21-494f-b38e-98fcca50a245"
+	],
+	"order": [
+		"82d0cc7f-ac0a-4ef0-a581-ea17164e4f0a",
+		"5ce86c2e-a183-4acd-b721-9705caffc4b9",
+		"bcedb361-c011-4bcd-be8b-d74275d7f2d4",
+		"3c8e03e9-4c1f-4c60-bc47-0e3b67fbd287",
+		"7259b60c-393c-422e-ad7b-4feeabccce22",
+		"ba4f253e-b1ab-447b-bb71-969536cd5ecb",
+		"bf33b667-211c-4a99-94d3-c941a2f644b5",
+		"1a40a59f-f543-43ef-81c1-e84fd94a842a",
+		"d825a6c4-00bd-4228-a45b-ebc6c1eae450",
+		"6f6351d5-ddd2-45c9-9813-15620fbb6631",
+		"13726a57-7dd5-4cbb-b0bb-17aa523fc6f5",
+		"5e997589-0763-4d00-96f6-3ef6a253bd7d",
+		"1b5d6657-eb00-495b-a0d1-d8c3bca2322a",
+		"00d2a581-975b-46c8-9933-5a981f45b6b3",
+		"5834ce3b-6b3f-4dbe-8c73-7c19e4971cea"
+	],
+	"collapsedTreeItems": [],
+	"reverseStats": {}
+}

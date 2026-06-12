@@ -126,7 +126,6 @@ async def predict_quality(reading: WaterReading):
     """Predict water quality condition from pH, temperature and dissolved oxygen."""
     if model is None:
         return JSONResponse({"error": f"Quality model not loaded: {load_error}"}, status_code=503)
-
     try:
         features   = np.array([[reading.pH, reading.temp_c, reading.do_mg_l]])
         prediction = model.predict(features)

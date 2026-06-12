@@ -1,11 +1,12 @@
+node_modules/
+dist/
+.next/
+build/
+.expo/
+
 # Python
 __pycache__/
 *.pyc
-
-# ML Models
-models/*.pt
-models/*.pth
-models/*.pkl
 
 # Environment
 .env
@@ -15,17 +16,12 @@ models/*.pkl
 # Databases
 *.sqlite
 
-# Node / build outputs
-node_modules/
-.next/
-dist/
-build/
-
-# Expo
-.expo/
-
 # Logs
 *.log
+
+# OS junk
+.DS_Store
+Thumbs.db
 
 # Videos & heavy media
 videos/
@@ -35,13 +31,17 @@ Video+Code/
 *.avi
 *.mkv
 
-# Local datasets and outputs
+# ML Models
+models/*.pt
+models/*.pth
+models/*.pkl
+resources/models/*.pt
+resources/models/*.pth
+resources/models/*.pkl
+
+# Local/generated datasets & outputs
 data/
 outputs/
 
 # Archive / old experiments
 scripts/archive/
-
-# OS junk
-.DS_Store
-Thumbs.db

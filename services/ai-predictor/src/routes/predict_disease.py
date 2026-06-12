@@ -132,15 +132,30 @@ def predict_disease_image(req: ImageRequest):
     log_detections(detections)
 
     if not detections:
-        return {"status": "ok", "detections": [], "summary": "no_fish_detected"}
+        return {
+            "status": "ok",
+            "detections": [],
+            "summary": "no_fish_detected",
+            "disease": "none",
+            "confidence": 1.0,
+            "bbox": []
+        }
 
+    # Sort by confidence descending to pick the best detection for top-level keys (Firdavs' format support)
+    sorted_dets = sorted(detections, key=lambda d: d["confidence"], reverse=True)
+    best = sorted_dets[0]
     alerts = [d for d in detections if d["is_alert"]]
+
     return {
         "status":     "ok",
         "detections": detections,
         "total":      len(detections),
         "alerts":     len(alerts),
         "summary":    "alert" if alerts else "healthy",
+        # Keep Firdavs' backend expectation keys at top-level
+        "disease":    best["disease"],
+        "confidence": best["confidence"],
+        "bbox":       [best["bbox_x1"], best["bbox_y1"], best["bbox_x2"], best["bbox_y2"]]
     }
 
 

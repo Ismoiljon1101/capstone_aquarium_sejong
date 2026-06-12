@@ -17,17 +17,23 @@
     },
     {
       "name": "Dashboard (Next.js)",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "fishlinic", "run", "dev"],
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Users\\ismoi\\OneDrive\\Desktop\\Capstore_aquaquarium\\apps\\dashboard && pnpm dev"
+      ],
       "port": 3002,
-      "autoPort": true
+      "autoPort": false
     },
     {
       "name": "Expo Mobile",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["expo", "start", "--web", "--clear"],
-      "cwd": "${workspaceFolder}/apps/mobile",
-      "port": 8081
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Users\\ismoi\\OneDrive\\Desktop\\Capstore_aquaquarium\\apps\\mobile && npx expo start --web --clear"
+      ],
+      "port": 8081,
+      "autoPort": false
     },
     {
       "name": "Ollama (Veronica LLM)",

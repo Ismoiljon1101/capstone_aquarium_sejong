@@ -64,6 +64,11 @@ kill_match "apps/dashboard.*next dev"
 kill_match "apps/mobile.*expo start"
 kill_match "metro"
 
+# Kill assistant process since it doesn't bind to a port
+if command -v pgrep >/dev/null 2>&1; then
+  pkill -f "src/assistant.py" >/dev/null 2>&1 || true
+fi
+
 sleep 2
 
 echo "Installing workspace dependencies..."
@@ -128,4 +133,6 @@ echo "  $EXPO_LOG"
 echo ""
 echo "Starting Expo on :8081"
 cd "$ROOT_DIR/apps/mobile"
+# Clear Metro cache to prevent path corruption issues on Windows/Mac
+rm -rf .expo node_modules/.cache 2>/dev/null || true
 EXPO_NO_DEPENDENCY_VALIDATION=1 npx expo start -c 2>&1 | tee "$EXPO_LOG"

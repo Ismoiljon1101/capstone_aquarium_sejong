@@ -31,15 +31,16 @@ export class VoiceService {
     @InjectRepository(VoiceSessionEntity)
     private readonly sessionRepo: Repository<VoiceSessionEntity>,
   ) {
-    this.predictorUrl = this.config.get('AI_PREDICTOR_URL') ?? this.config.get('PREDICTOR_URL') ?? 'http://localhost:8001';
+    this.predictorUrl =
+      this.config.get('AI_PREDICTOR_URL') ?? 'http://localhost:8000';
     this.ollamaUrl = this.config.get('OLLAMA_URL') ?? 'http://localhost:11434';
-    this.openRouterUrl = this.config.get('OPENROUTER_BASE_URL') ?? 'https://openrouter.ai/api/v1';
+    this.openRouterUrl =
+      this.config.get('OPENROUTER_BASE_URL') ?? 'https://openrouter.ai/api/v1';
     this.openRouterKey = this.config.get('OPENROUTER_API_KEY') ?? '';
     this.model =
       this.config.get('OPENROUTER_MODEL') ??
       this.config.get('OLLAMA_MODEL') ??
       'deepseek/deepseek-chat-v3.1';
-    // OpenRouter is the primary provider now; Ollama stays as a local fallback.
     this.llmProvider = this.openRouterKey ? 'openrouter' : 'ollama';
   }
 
@@ -50,13 +51,25 @@ export class VoiceService {
     this.logger.log(`Processing voice query: "${text}"`);
 
     const latestReadings = await this.sensors.getLatest();
-    const actuatorResponse = await this.actuators.getState() as { actuators?: { pump: boolean; led: boolean; feeder: boolean } };
-    const actuatorState = actuatorResponse?.actuators || { pump: false, led: false, feeder: false };
+    const actuatorResponse = (await this.actuators.getState()) as {
+      actuators?: { pump: boolean; led: boolean; feeder: boolean };
+    };
+    const actuatorState = actuatorResponse?.actuators || {
+      pump: false,
+      led: false,
+      feeder: false,
+    };
 
-    const cleanText = text.replace(/^\[Live tank[^\]]*\]\s*User:\s*/i, '').trim();
+    const cleanText = text
+      .replace(/^\[Live tank[^\]]*\]\s*User:\s*/i, '')
+      .trim();
     const sensorContext = this.buildSensorContext(latestReadings);
     const qualityResult = await this.fetchQualityScore(latestReadings);
-    const systemPrompt = this.buildSystemPrompt(sensorContext, qualityResult, actuatorState);
+    const systemPrompt = this.buildSystemPrompt(
+      sensorContext,
+      qualityResult,
+      actuatorState,
+    );
 
     try {
       const t0 = Date.now();
@@ -77,8 +90,9 @@ export class VoiceService {
 
       return { response: aiResponse, aiOffline: false };
     } catch (error) {
-      // Keep the app useful even when the upstream model is down.
-      this.logger.error(`${this.llmProvider} error: ${(error as Error).message}`);
+      this.logger.error(
+        `${this.llmProvider} error: ${(error as Error).message}`,
+      );
       return {
         response: this.sensorFallback(cleanText, latestReadings, qualityResult),
         aiOffline: true,
@@ -86,9 +100,12 @@ export class VoiceService {
     }
   }
 
-  private async fetchQualityScore(readings: any[]): Promise<{ score: number; status: string } | null> {
+  private async fetchQualityScore(
+    readings: any[],
+  ): Promise<{ score: number; status: string } | null> {
     try {
-      const get = (type: string) => readings.find(r => r.type?.toLowerCase() === type.toLowerCase());
+      const get = (type: string) =>
+        readings.find((r) => r.type?.toLowerCase() === type.toLowerCase());
       const pH = get('pH');
       const temp = get('TEMP') ?? get('temp_c');
       const do2 = get('DO2') ?? get('do_mg_l');
@@ -96,11 +113,14 @@ export class VoiceService {
       if (!pH || !temp || !do2) return null;
 
       const res = await firstValueFrom(
-        this.http.post<{ score: number; status: string }>(`${this.predictorUrl}/predict/quality`, {
-          pH: parseFloat(pH.value),
-          temp_c: parseFloat(temp.value),
-          do_mg_l: parseFloat(do2.value),
-        }),
+        this.http.post<{ score: number; status: string }>(
+          `${this.predictorUrl}/predict/quality`,
+          {
+            pH: parseFloat(pH.value),
+            temp_c: parseFloat(temp.value),
+            do_mg_l: parseFloat(do2.value),
+          },
+        ),
       );
       return res.data;
     } catch {
@@ -111,8 +131,8 @@ export class VoiceService {
   private buildSensorContext(readings: any[]): string {
     if (!readings.length) return 'No sensor data available.';
     return readings
-      .filter(r => r.type?.toLowerCase() !== 'co2')
-      .map(r => `${r.type}: ${r.value}${r.unit} (${r.status ?? 'unknown'})`)
+      .filter((r) => r.type?.toLowerCase() !== 'co2')
+      .map((r) => `${r.type}: ${r.value}${r.unit} (${r.status ?? 'unknown'})`)
       .join(', ');
   }
 
@@ -137,12 +157,16 @@ export class VoiceService {
     ].join('\n');
   }
 
-  private sensorFallback(question: string, readings: any[], quality: { score: number; status: string } | null): string {
-    const get = (type: string) => readings.find(r => r.type?.toLowerCase() === type.toLowerCase());
+  private sensorFallback(
+    question: string,
+    readings: any[],
+    quality: { score: number; status: string } | null,
+  ): string {
+    const get = (type: string) =>
+      readings.find((r) => r.type?.toLowerCase() === type.toLowerCase());
     const pH = get('pH');
     const temp = get('TEMP') ?? get('temp_c');
     const do2 = get('DO2') ?? get('do_mg_l');
-    const co2 = get('CO2');
 
     if (!readings.length) {
       return "I can't reach the sensors right now. Please check that the serial bridge is running and connected to the backend.";
@@ -169,11 +193,11 @@ export class VoiceService {
       if (quality) {
         return `The water quality model scores the tank at ${quality.score}/100 (${quality.status}). pH ${pH?.value ?? '-'}, temp ${temp?.value ?? '-'}C, O2 ${do2?.value ?? '-'} mg/L.`;
       }
-      const issues = [pH, temp, do2, co2].filter(s => s && s.status !== 'ok');
+      const issues = [pH, temp, do2].filter((s) => s && s.status !== 'ok');
       if (issues.length === 0) {
         return `All live sensors look good. pH ${pH?.value ?? '-'}, temp ${temp?.value ?? '-'}C, O2 ${do2?.value ?? '-'} mg/L.`;
       }
-      return `I see ${issues.length} issue(s): ${issues.map(s => `${s.type} is ${s.status}`).join(', ')}.`;
+      return `I see ${issues.length} issue(s): ${issues.map((s) => `${s.type} is ${s.status}`).join(', ')}.`;
     }
 
     const summary = [
@@ -181,7 +205,9 @@ export class VoiceService {
       temp ? `${temp.value}C` : null,
       do2 ? `O2 ${do2.value} mg/L` : null,
       quality ? `quality ${quality.score}/100` : null,
-    ].filter(Boolean).join(', ');
+    ]
+      .filter(Boolean)
+      .join(', ');
 
     return `Live tank data (${summary}). Veronica AI is offline right now, but the sensors are still reporting live values.`;
   }
@@ -202,18 +228,27 @@ export class VoiceService {
           },
         ),
       );
-      return res.data?.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not process that right now.';
+      return (
+        res.data?.choices?.[0]?.message?.content?.trim() ||
+        'Sorry, I could not process that right now.'
+      );
     }
 
     const res = await firstValueFrom(
-      this.http.post<{ message?: { content?: string } }>(`${this.ollamaUrl}/api/chat`, {
-        model: this.model,
-        messages,
-        stream: false,
-      }),
+      this.http.post<{ message?: { content?: string } }>(
+        `${this.ollamaUrl}/api/chat`,
+        {
+          model: this.model,
+          messages,
+          stream: false,
+        },
+      ),
     );
 
-    return res.data?.message?.content?.trim() || 'Sorry, I could not process that right now.';
+    return (
+      res.data?.message?.content?.trim() ||
+      'Sorry, I could not process that right now.'
+    );
   }
 
   private buildOpenRouterHeaders() {

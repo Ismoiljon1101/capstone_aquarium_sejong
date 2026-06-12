@@ -7,13 +7,9 @@ import time
 from wake_up_init import wakeup
 import speech_recognition as sr
 from datetime import datetime
-import winsound
+# import winsound
 def playaudio(file_path):
-    try:
-        # Simple native windows audio playback
-        winsound.PlaySound(file_path, winsound.SND_FILENAME | winsound.SND_ASYNC)
-    except:
-        pass
+    pass # winsound is Windows-only, skipping audio on Mac
 import behaviors
 import llm_manager
 from api_client import send_voice_query
@@ -89,8 +85,11 @@ if __name__ == "__main__":
     print("Pre-loading Whisper model...")
     import threading
     def preload_model():
-        from voice_inp import _load_whisper_model
-        _load_whisper_model()
+        from voice_inp import _load_whisper_model, whisper
+        if whisper:
+            _load_whisper_model()
+        else:
+            print("[Whisper] Module missing, skipping pre-load")
     model_thread = threading.Thread(target=preload_model, daemon=True)
     model_thread.start()
     

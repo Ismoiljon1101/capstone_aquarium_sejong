@@ -8,11 +8,10 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// // Force Metro to ignore the node:sea shim production which causes ENOENT on Windows
-// // This is a known issue in Expo 50/51/52 on Windows with Node 20+.
-if (config.resolver) {
+// // Force Metro to enable package exports for Node 20+ / Web compatibility ONLY on Windows
+// // Doing this on macOS forces Metro to load Node.js CJS modules for react-native, causing white screens.
+if (process.platform === 'win32' && config.resolver) {
   config.resolver.unstable_enablePackageExports = true;
-  config.resolver.unstable_conditionNames = ['browser', 'require', 'import'];
 }
 
 module.exports = config;

@@ -40,6 +40,10 @@ export const API = {
   vision: {
     analyze: `${BASE}/vision/analyze`,
     latestReport: `${BASE}/vision/latest-report`,
+    cameras: `${BASE}/vision/cameras`,
+    refreshCameras: `${BASE}/vision/cameras/refresh`,
+    setCamera: `${BASE}/vision/camera`,
+    stream: `${BASE}/vision/stream`,
   },
 
   // Voice

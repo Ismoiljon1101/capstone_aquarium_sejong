@@ -1,11 +1,20 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { seedDatabase } from './seed';
 
 @Injectable()
-export class DatabaseService {
+export class DatabaseService implements OnModuleInit {
   private readonly logger = new Logger(DatabaseService.name);
 
   constructor(private dataSource: DataSource) {}
+
+  /**
+   * Automatically run database seeding when database module starts up.
+   */
+  async onModuleInit() {
+    this.logger.log('DatabaseModule initialized. Triggering startup database seeding checks...');
+    await seedDatabase(this.dataSource);
+  }
 
   /**
    * Performs a database health check and returns connection stats.

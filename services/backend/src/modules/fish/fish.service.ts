@@ -27,7 +27,7 @@ export class FishService {
       snapshotId,
       count,
       confidence,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
     });
     return await this.fishCountRepo.save(record);
   }
@@ -63,7 +63,7 @@ export class FishService {
       mlConfidence: data.mlConfidence,
       severity: data.severity,
       source: data.source ?? 'vision_pipeline',
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
     });
     return await this.healthReportRepo.save(report);
   }
@@ -98,7 +98,9 @@ export class FishService {
       visualStatus: isHealthy ? 'ok' : 'warn',
       behaviorStatus: 'ok',
       overallScore: data.confidence,
-      summary: data.summary ?? `ML detected: ${data.diseaseClass} (${(data.confidence * 100).toFixed(1)}% confidence)`,
+      summary:
+        data.summary ??
+        `ML detected: ${data.diseaseClass} (${(data.confidence * 100).toFixed(1)}% confidence)`,
       diseaseClass: data.diseaseClass,
       mlConfidence: data.confidence,
       severity: data.severity,
@@ -113,7 +115,7 @@ export class FishService {
         sensorId: 0,
         tankId: 1,
         type: 'FISH_DISEASE',
-        severity: data.severity === 'High' ? 'critical' : 'warning' as any,
+        severity: data.severity === 'High' ? 'critical' : ('warning' as any),
         message: `Fish disease detected: ${data.diseaseClass} (${data.severity} severity, ${(data.confidence * 100).toFixed(1)}% confidence)`,
       });
     }
@@ -130,8 +132,10 @@ export class FishService {
       sensorId: data.readingId ?? 0,
       tankId: 1,
       type: 'WATER_ANOMALY',
-      severity: data.severity === 'High' ? 'critical' : 'warning' as any,
-      message: data.message ?? `Water quality anomaly: ${data.anomalyType} (${data.severity})`,
+      severity: data.severity === 'High' ? 'critical' : ('warning' as any),
+      message:
+        data.message ??
+        `Water quality anomaly: ${data.anomalyType} (${data.severity})`,
     });
   }
 
@@ -158,17 +162,19 @@ export class FishService {
   }
 
   async getLatestCount() {
-    return await this.fishCountRepo.findOne({
-      where: {},
+    const rows = await this.fishCountRepo.find({
       order: { timestamp: 'DESC' },
+      take: 1,
     });
+    return rows[0] ?? null;
   }
 
   async getLatestReport() {
-    return await this.healthReportRepo.findOne({
-      where: {},
+    const rows = await this.healthReportRepo.find({
       order: { timestamp: 'DESC' },
+      take: 1,
     });
+    return rows[0] ?? null;
   }
 
   async getHealthHistory() {

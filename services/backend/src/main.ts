@@ -9,7 +9,12 @@ async function bootstrap() {
   // CORS — allow dashboard and mobile dev origins
   const allowedOrigins = process.env.CLIENT_URL
     ? process.env.CLIENT_URL.split(',')
-    : ['http://localhost:3002', 'http://localhost:3000', 'http://localhost:8081'];
+    : [
+        'http://localhost:3002',
+        'http://localhost:3005',
+        'http://localhost:3000',
+        'http://localhost:8081',
+      ];
 
   app.enableCors({
     origin: allowedOrigins,

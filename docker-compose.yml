@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: services/backend/Dockerfile
+    container_name: fishlinic-backend
+    ports:
+      - "3000:3000"
+    env_file:
+      - services/backend/.env
+    environment:
+      - AI_PREDICTOR_URL=http://ai-predictor:8000
+      - SERIAL_BRIDGE_URL=http://host.docker.internal:3001
+      - PORT=3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  serial-bridge:
+    build:
+      context: ./services/serial-bridge
+      dockerfile: Dockerfile
+    container_name: fishlinic-serial-bridge
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    container_name: fishlinic-dashboard
+    ports:
+      - "3002:3000"
+    restart: unless-stopped
+
+  ai-predictor:
+    build:
+      context: ./services/ai-predictor
+      dockerfile: Dockerfile
+    container_name: fishlinic-ai-predictor
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

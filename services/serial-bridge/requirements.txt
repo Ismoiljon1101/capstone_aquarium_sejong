@@ -1,0 +1,20 @@
+# Python dependencies for the serial-bridge camera capture (src/capture.py).
+# The bridge itself is Node.js; these are only needed for snapshot/stream
+# capture and device enumeration on the host (macOS / AVFoundation).
+#
+# Install with:  pip install -r requirements.txt
+# ffmpeg must also be available on PATH (brew install ffmpeg) for device listing.
+
+# Required: frame capture and JPEG encoding.
+opencv-python>=4.8
+
+# Recommended (optional): exposes true AVFoundation hardware uniqueIDs so camera
+# selection persists across reconnects/reboots even if the device name changes
+# or two cameras share a name. NOT a hard dependency — without it, capture.py
+# falls back to stable name-based identifiers automatically.
+#
+#   pip install pyobjc-framework-AVFoundation
+#
+# Left commented so `pip install -r requirements.txt` stays lightweight; install
+# the line above explicitly to enable uniqueID-based persistence.
+# pyobjc-framework-AVFoundation>=10.0

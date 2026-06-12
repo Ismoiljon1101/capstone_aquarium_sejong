@@ -1,30 +1,31 @@
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import { getApiBase } from '../lib/runtime-config';
+import { useEffect } from "react";
+import { Platform } from "react-native";
+import { getApiBase } from "../lib/runtime-config";
 
+/** Push token registration — silently no-ops on Expo Go and web. */
 export function usePushToken() {
   useEffect(() => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === "web") return;
     registerToken();
   }, []);
 }
 
 async function registerToken() {
   try {
-    const { status: existing } = await Notifications.getPermissionsAsync();
-    const { status } = existing === 'granted'
-      ? { status: existing }
-      : await Notifications.requestPermissionsAsync();
+    const { default: Notifications } = await import("expo-notifications");
 
-    if (status !== 'granted') return;
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    if (existing !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== "granted") return;
+    }
 
     const token = (await Notifications.getExpoPushTokenAsync()).data;
     if (!token) return;
 
     await fetch(`${getApiBase()}/management/tank-config`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pushToken: token }),
     });
   } catch {

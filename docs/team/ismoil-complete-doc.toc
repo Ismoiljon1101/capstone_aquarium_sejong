@@ -1,0 +1,88 @@
+\contentsline {section}{\numberline {1}Executive Summary}{5}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Project Overview}{5}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Key Objectives}{5}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Scope}{5}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Team \& Ownership}{6}{subsection.1.4}%
+\contentsline {section}{\numberline {2}Introduction}{7}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Purpose}{7}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Audience}{7}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}System Overview}{7}{subsection.2.3}%
+\contentsline {section}{\numberline {3}Requirements (Software Requirements Specification)}{8}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Functional Requirements}{8}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Non-Functional Requirements}{8}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Hardware Specifications}{9}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Interfaces}{9}{subsection.3.4}%
+\contentsline {section}{\numberline {4}Architecture \& Design}{10}{section.4}%
+\contentsline {subsection}{\numberline {4.1}High-Level System Architecture}{10}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}ER Diagram (Entity-Relationship Model)}{10}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}ER Model Relationships (Detailed)}{11}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Data Flow Diagrams}{11}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Communication Layer Diagram}{12}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Hardware-Software Integration Points}{13}{subsection.4.6}%
+\contentsline {section}{\numberline {5}Implementation}{14}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Code Structure (Monorepo)}{14}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Backend Modules (NestJS -- 12 Modules)}{14}{subsection.5.2}%
+\contentsline {subsubsection}{\numberline {5.2.1}Sensors Module}{14}{subsubsection.5.2.1}%
+\contentsline {subsubsection}{\numberline {5.2.2}Alerts Module}{15}{subsubsection.5.2.2}%
+\contentsline {subsubsection}{\numberline {5.2.3}Actuators Module}{15}{subsubsection.5.2.3}%
+\contentsline {subsubsection}{\numberline {5.2.4}Vision Module}{16}{subsubsection.5.2.4}%
+\contentsline {subsubsection}{\numberline {5.2.5}Voice Module (Veronica) --- The Autonomous Agent}{16}{subsubsection.5.2.5}%
+\contentsline {subsubsection}{\numberline {5.2.6}Cron Module (7 Scheduled Jobs)}{20}{subsubsection.5.2.6}%
+\contentsline {subsubsection}{\numberline {5.2.7}Gateway Module (WebSocket)}{20}{subsubsection.5.2.7}%
+\contentsline {subsection}{\numberline {5.3}Mobile App Implementation (Expo Go)}{20}{subsection.5.3}%
+\contentsline {subsubsection}{\numberline {5.3.1}Navigation Structure}{20}{subsubsection.5.3.1}%
+\contentsline {subsubsection}{\numberline {5.3.2}WebSocket Hook}{21}{subsubsection.5.3.2}%
+\contentsline {subsubsection}{\numberline {5.3.3}Expo Go Compatibility Fixes}{21}{subsubsection.5.3.3}%
+\contentsline {subsection}{\numberline {5.4}Hardware Setup (Arduino)}{22}{subsection.5.4}%
+\contentsline {subsubsection}{\numberline {5.4.1}Sensor Wiring}{22}{subsubsection.5.4.1}%
+\contentsline {subsubsection}{\numberline {5.4.2}Serial Protocol}{22}{subsubsection.5.4.2}%
+\contentsline {subsection}{\numberline {5.5}Deployment}{23}{subsection.5.5}%
+\contentsline {subsubsection}{\numberline {5.5.1}Development (Local)}{23}{subsubsection.5.5.1}%
+\contentsline {subsubsection}{\numberline {5.5.2}Production (Docker -- Skeleton)}{23}{subsubsection.5.5.2}%
+\contentsline {section}{\numberline {6}User \& Operations Manual}{24}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Installation}{24}{subsection.6.1}%
+\contentsline {subsubsection}{\numberline {6.1.1}Prerequisites}{24}{subsubsection.6.1.1}%
+\contentsline {subsubsection}{\numberline {6.1.2}Backend Setup}{24}{subsubsection.6.1.2}%
+\contentsline {subsubsection}{\numberline {6.1.3}Mobile App Setup}{24}{subsubsection.6.1.3}%
+\contentsline {subsubsection}{\numberline {6.1.4}Hardware Setup}{24}{subsubsection.6.1.4}%
+\contentsline {subsection}{\numberline {6.2}Usage Guide}{24}{subsection.6.2}%
+\contentsline {subsubsection}{\numberline {6.2.1}Dashboard Screen (Mobile)}{24}{subsubsection.6.2.1}%
+\contentsline {subsubsection}{\numberline {6.2.2}Fish AI Screen (Veronica)}{25}{subsubsection.6.2.2}%
+\contentsline {subsubsection}{\numberline {6.2.3}Controls Screen}{27}{subsubsection.6.2.3}%
+\contentsline {subsection}{\numberline {6.3}Troubleshooting}{28}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Maintenance}{28}{subsection.6.4}%
+\contentsline {subsubsection}{\numberline {6.4.1}Daily Tasks}{28}{subsubsection.6.4.1}%
+\contentsline {subsubsection}{\numberline {6.4.2}Weekly Tasks}{28}{subsubsection.6.4.2}%
+\contentsline {subsubsection}{\numberline {6.4.3}Monthly Tasks}{28}{subsubsection.6.4.3}%
+\contentsline {section}{\numberline {7}Testing \& QA}{29}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Test Strategy}{29}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}AI Model Performance}{29}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Hardware Test Results}{30}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Known Issues}{30}{subsection.7.4}%
+\contentsline {section}{\numberline {8}API \& Technical Specifications}{31}{section.8}%
+\contentsline {subsection}{\numberline {8.1}REST Endpoints (NestJS :3000)}{31}{subsection.8.1}%
+\contentsline {subsubsection}{\numberline {8.1.1}Sensors}{31}{subsubsection.8.1.1}%
+\contentsline {subsubsection}{\numberline {8.1.2}Actuators}{31}{subsubsection.8.1.2}%
+\contentsline {subsubsection}{\numberline {8.1.3}AI Predictor (Internal)}{31}{subsubsection.8.1.3}%
+\contentsline {subsection}{\numberline {8.2}WebSocket Protocol}{32}{subsection.8.2}%
+\contentsline {subsubsection}{\numberline {8.2.1}Event Format}{32}{subsubsection.8.2.1}%
+\contentsline {subsubsection}{\numberline {8.2.2}Server $\rightarrow $ Client Events (6 Total)}{32}{subsubsection.8.2.2}%
+\contentsline {subsection}{\numberline {8.3}Hardware Interfaces}{32}{subsection.8.3}%
+\contentsline {subsubsection}{\numberline {8.3.1}Serial Protocol (Arduino $\rightarrow $ Serial Bridge)}{32}{subsubsection.8.3.1}%
+\contentsline {section}{\numberline {9}Maintenance \& Support}{34}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Monitoring}{34}{subsection.9.1}%
+\contentsline {subsubsection}{\numberline {9.1.1}Logs}{34}{subsubsection.9.1.1}%
+\contentsline {subsubsection}{\numberline {9.1.2}Health Checks}{34}{subsubsection.9.1.2}%
+\contentsline {subsection}{\numberline {9.2}Updates}{34}{subsection.9.2}%
+\contentsline {subsubsection}{\numberline {9.2.1}Backend Update}{34}{subsubsection.9.2.1}%
+\contentsline {subsubsection}{\numberline {9.2.2}Mobile App Update}{34}{subsubsection.9.2.2}%
+\contentsline {subsubsection}{\numberline {9.2.3}AI Model Update}{34}{subsubsection.9.2.3}%
+\contentsline {subsection}{\numberline {9.3}Known Issues \& Support}{35}{subsection.9.3}%
+\contentsline {subsubsection}{\numberline {9.3.1}FAQ}{35}{subsubsection.9.3.1}%
+\contentsline {subsubsection}{\numberline {9.3.2}Support Contacts}{35}{subsubsection.9.3.2}%
+\contentsline {section}{\numberline {10}Appendices}{36}{section.10}%
+\contentsline {subsection}{\numberline {10.1}Glossary}{36}{subsection.10.1}%
+\contentsline {subsection}{\numberline {10.2}Image Insertion Guide}{36}{subsection.10.2}%
+\contentsline {subsection}{\numberline {10.3}Mobile App Screenshots}{37}{subsection.10.3}%
+\contentsline {subsection}{\numberline {10.4}References}{40}{subsection.10.4}%
+\contentsline {subsection}{\numberline {10.5}Changelog}{41}{subsection.10.5}%

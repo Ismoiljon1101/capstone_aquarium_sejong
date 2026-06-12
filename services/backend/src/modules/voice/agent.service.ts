@@ -58,13 +58,13 @@ export class AgentService {
     private readonly chatRepo: Repository<ChatMessageEntity>,
   ) {
     this.ollamaUrl = this.config.get('OLLAMA_URL') ?? 'http://localhost:11434';
-    this.openRouterUrl = this.config.get('OPENROUTER_BASE_URL') ?? 'https://openrouter.ai/api/v1';
+    this.openRouterUrl =
+      this.config.get('OPENROUTER_BASE_URL') ?? 'https://openrouter.ai/api/v1';
     this.openRouterKey = this.config.get('OPENROUTER_API_KEY') ?? '';
     this.model =
       this.config.get('OPENROUTER_MODEL') ??
       this.config.get('OLLAMA_MODEL') ??
       'deepseek/deepseek-chat-v3.1';
-    // Agent and plain Veronica chat must hit the same upstream provider.
     this.llmProvider = this.openRouterKey ? 'openrouter' : 'ollama';
   }
 
@@ -79,7 +79,10 @@ export class AgentService {
     const deps = this.buildDeps();
     let iterations = 0;
 
-    const finalize = async (response: string, extra: Partial<AgentResult> = {}): Promise<AgentResult> => {
+    const finalize = async (
+      response: string,
+      extra: Partial<AgentResult> = {},
+    ): Promise<AgentResult> => {
       if (sessionId) {
         try {
           await this.saveMessages(sessionId, userMessage, response);
@@ -112,22 +115,29 @@ export class AgentService {
           const args = tc.function.arguments ?? {};
 
           if (CONFIRMATION_TOOLS.has(name)) {
-            const reason = (args.reason as string) ?? `${name} requested by agent`;
+            const reason =
+              (args.reason as string) ?? `${name} requested by agent`;
             const config = await this.management.getTankConfig();
             const autoMode = config.agentMode === 'auto';
 
-            this.logger.log(`Agent proposes: ${name} - ${reason} (mode: ${config.agentMode})`);
+            this.logger.log(
+              `Agent proposes: ${name} - ${reason} (mode: ${config.agentMode})`,
+            );
 
             if (autoMode) {
               const exec = await this.executeConfirmedAction(name, args);
-              messages.push({ role: 'tool', content: exec.message, tool_call_id: tc.id });
+              messages.push({
+                role: 'tool',
+                content: exec.message,
+                tool_call_id: tc.id,
+              });
               this.logger.log(`Auto-executed ${name}: ${exec.message}`);
               continue;
             }
-
             const pendingAction: PendingAction = { tool: name, args, reason };
-            const summary = this.summarizeProposal(pendingAction);
-            return await finalize(summary, { pendingAction });
+            return await finalize(this.summarizeProposal(pendingAction), {
+              pendingAction,
+            });
           }
 
           const result = await executeTool(name, args, deps);
@@ -135,11 +145,13 @@ export class AgentService {
           messages.push({ role: 'tool', content: result, tool_call_id: tc.id });
         }
       }
-
-      return await finalize('I reached my reasoning limit. Please try a more specific question.');
+      return await finalize(
+        'I reached my reasoning limit. Please try a more specific question.',
+      );
     } catch (err) {
       this.logger.error(`Agent error: ${(err as Error).message}`);
-      const fallback = 'Veronica is offline right now. Please check the configured AI provider.';
+      const fallback =
+        'Veronica is offline right now. Please check the configured AI provider.';
       if (sessionId) {
         try {
           await this.saveMessages(sessionId, userMessage, fallback);
@@ -154,93 +166,137 @@ export class AgentService {
     args: Record<string, unknown>,
     sessionId?: string,
   ): Promise<{ success: boolean; message: string }> {
-    let result: { success: boolean; message: string };
     try {
-      switch (tool) {
-        case 'controlPump': {
-          const state = Boolean(args.state);
-          await this.actuators.triggerActuator({ actuatorId: 2, type: 'AIR_PUMP', relayChannel: 2, state, source: 'AGENT' as any });
-          result = { success: true, message: `Pump turned ${state ? 'ON' : 'OFF'}.` };
-          break;
-        }
-        case 'controlLed': {
-          const state = Boolean(args.state);
-          await this.actuators.triggerActuator({ actuatorId: 3, type: 'LED_STRIP', relayChannel: 3, state, source: 'AGENT' as any });
-          result = { success: true, message: `LED turned ${state ? 'ON' : 'OFF'}.` };
-          break;
-        }
-        case 'triggerFeed': {
-          const cycles = Math.min(5, Math.max(1, Number(args.cycles) || 2));
-          await this.actuators.triggerActuator({ actuatorId: 1, type: 'FEEDER', relayChannel: 1, state: true, source: 'AGENT' as any });
-          result = { success: true, message: `Feeder triggered for ${cycles} cycle(s).` };
-          break;
-        }
-        default:
-          result = { success: false, message: `Unknown action: ${tool}` };
+      const state = Boolean(args.state);
+      if (tool === 'controlPump') {
+        await this.actuators.triggerActuator({
+          actuatorId: 2,
+          type: 'AIR_PUMP',
+          relayChannel: 2,
+          state,
+          source: 'AGENT' as any,
+        });
+        return this.finishAction(sessionId, {
+          success: true,
+          message: `Pump turned ${state ? 'ON' : 'OFF'}.`,
+        });
       }
+      if (tool === 'controlLed') {
+        await this.actuators.triggerActuator({
+          actuatorId: 3,
+          type: 'LED_STRIP',
+          relayChannel: 3,
+          state,
+          source: 'AGENT' as any,
+        });
+        return this.finishAction(sessionId, {
+          success: true,
+          message: `LED turned ${state ? 'ON' : 'OFF'}.`,
+        });
+      }
+      if (tool === 'triggerFeed') {
+        const cycles = Math.min(5, Math.max(1, Number(args.cycles) || 2));
+        await this.actuators.triggerActuator({
+          actuatorId: 1,
+          type: 'FEEDER',
+          relayChannel: 1,
+          state: true,
+          source: 'AGENT' as any,
+        });
+        return this.finishAction(sessionId, {
+          success: true,
+          message: `Feeder triggered for ${cycles} cycle(s).`,
+        });
+      }
+      return this.finishAction(sessionId, {
+        success: false,
+        message: `Unknown action: ${tool}`,
+      });
     } catch (err) {
-      result = { success: false, message: (err as Error).message };
+      return this.finishAction(sessionId, {
+        success: false,
+        message: (err as Error).message,
+      });
     }
+  }
 
+  private async finishAction(
+    sessionId: string | undefined,
+    result: { success: boolean; message: string },
+  ) {
     if (sessionId) {
       try {
-        await this.chatRepo.save(this.chatRepo.create({
-          sessionId,
-          role: 'assistant',
-          content: result.success ? `OK ${result.message}` : `FAILED ${result.message}`,
-        }));
+        await this.chatRepo.save(
+          this.chatRepo.create({
+            sessionId,
+            role: 'assistant',
+            content: result.success
+              ? `OK ${result.message}`
+              : `FAILED ${result.message}`,
+          }),
+        );
       } catch (e) {
-        this.logger.warn(`Could not persist confirm result: ${(e as Error).message}`);
+        this.logger.warn(
+          `Could not persist confirm result: ${(e as Error).message}`,
+        );
       }
     }
-
     return result;
   }
 
-  private summarizeProposal(proposal: PendingAction): string {
-    const actionLabel: Record<string, string> = {
-      controlPump: `turn the air pump ${proposal.args.state ? 'ON' : 'OFF'}`,
-      controlLed: `turn the LED strip ${proposal.args.state ? 'ON' : 'OFF'}`,
-      triggerFeed: `feed the fish (${proposal.args.cycles ?? 2} cycle${Number(proposal.args.cycles) === 1 ? '' : 's'})`,
+  private summarizeProposal(p: PendingAction): string {
+    const labels: Record<string, string> = {
+      controlPump: `turn the air pump ${p.args.state ? 'ON' : 'OFF'}`,
+      controlLed: `turn the LED strip ${p.args.state ? 'ON' : 'OFF'}`,
+      triggerFeed: `feed the fish (${p.args.cycles ?? 2} cycle${Number(p.args.cycles) === 1 ? '' : 's'})`,
     };
-    const label = actionLabel[proposal.tool] ?? proposal.tool;
-    return `${proposal.reason} I recommend to ${label}. Confirm?`;
+    return `${p.reason} I recommend to ${labels[p.tool] ?? p.tool}. Confirm?`;
   }
 
-  async getSessionMessages(sessionId: string) {
-    return this.chatRepo.find({
-      where: { sessionId },
+  async getSessionMessages(id: string) {
+    const rows = await this.chatRepo.find({
+      where: { sessionId: id },
       order: { createdAt: 'ASC' },
     });
+    return rows.map((r) => ({
+      ...r,
+      content:
+        r.role === 'user'
+          ? r.content.replace(/^\[Live tank:[^\]]*\]\s*User:\s*/i, '').trim()
+          : r.content,
+    }));
   }
 
-  async listChatSessions(): Promise<{ sessionId: string; preview: string; createdAt: Date; messageCount: number }[]> {
+  async listChatSessions() {
     const all = await this.chatRepo.find({ order: { createdAt: 'ASC' } });
-
-    const map = new Map<string, { createdAt: Date; count: number; preview: string }>();
-    for (const msg of all) {
-      if (!map.has(msg.sessionId)) {
-        map.set(msg.sessionId, { createdAt: msg.createdAt, count: 0, preview: '' });
-      }
-      const entry = map.get(msg.sessionId)!;
+    const map = new Map<
+      string,
+      { createdAt: Date; count: number; preview: string }
+    >();
+    for (const m of all) {
+      if (!map.has(m.sessionId))
+        map.set(m.sessionId, { createdAt: m.createdAt, count: 0, preview: '' });
+      const entry = map.get(m.sessionId)!;
       entry.count++;
-      if (msg.role === 'user' && !entry.preview) {
-        entry.preview = msg.content.slice(0, 80);
+      if (m.role === 'user' && !entry.preview) {
+        entry.preview = m.content
+          .replace(/^\[Live tank:[^\]]*\]\s*User:\s*/i, '')
+          .trim()
+          .slice(0, 80);
       }
     }
-
     return Array.from(map.entries())
-      .map(([sessionId, { createdAt, count, preview }]) => ({
+      .map(([sessionId, e]) => ({
         sessionId,
-        preview: preview || 'Empty chat',
-        createdAt,
-        messageCount: count,
+        preview: e.preview || 'Empty chat',
+        createdAt: e.createdAt,
+        messageCount: e.count,
       }))
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  async deleteSession(sessionId: string) {
-    await this.chatRepo.delete({ sessionId });
+  deleteSession(id: string) {
+    return this.chatRepo.delete({ sessionId: id });
   }
 
   private async loadHistory(sessionId: string): Promise<AgentMessage[]> {
@@ -249,17 +305,33 @@ export class AgentService {
       order: { createdAt: 'ASC' },
       take: 20,
     });
-    return rows.map(r => ({ role: r.role as AgentMessage['role'], content: r.content }));
+    return rows.map((r) => ({
+      role: r.role as AgentMessage['role'],
+      content: r.content,
+    }));
   }
 
-  private async saveMessages(sessionId: string, userText: string, assistantText: string) {
+  private async saveMessages(
+    sessionId: string,
+    userText: string,
+    assistantText: string,
+  ) {
+    const cleanUserText = userText
+      .replace(/^\[Live tank:[^\]]*\]\s*User:\s*/i, '')
+      .trim();
     await this.chatRepo.save([
-      this.chatRepo.create({ sessionId, role: 'user', content: userText }),
-      this.chatRepo.create({ sessionId, role: 'assistant', content: assistantText }),
+      this.chatRepo.create({ sessionId, role: 'user', content: cleanUserText }),
+      this.chatRepo.create({
+        sessionId,
+        role: 'assistant',
+        content: assistantText,
+      }),
     ]);
   }
 
-  private async callModel(messages: AgentMessage[]): Promise<AgentChatResponse> {
+  private async callModel(
+    messages: AgentMessage[],
+  ): Promise<AgentChatResponse> {
     if (this.llmProvider === 'openrouter') {
       const res = await firstValueFrom(
         this.http.post<{
@@ -295,7 +367,6 @@ export class AgentService {
             id: call.id,
             function: {
               name: call.function?.name ?? '',
-              // OpenRouter returns function arguments as a JSON string.
               arguments: this.parseToolArguments(call.function?.arguments),
             },
           })),
@@ -304,12 +375,15 @@ export class AgentService {
     }
 
     const res = await firstValueFrom(
-      this.http.post<{ message?: AgentChatResponse['message'] }>(`${this.ollamaUrl}/api/chat`, {
-        model: this.model,
-        messages,
-        tools: AGENT_TOOLS,
-        stream: false,
-      }),
+      this.http.post<{ message?: AgentChatResponse['message'] }>(
+        `${this.ollamaUrl}/api/chat`,
+        {
+          model: this.model,
+          messages,
+          tools: AGENT_TOOLS,
+          stream: false,
+        },
+      ),
     );
 
     return {
@@ -345,8 +419,8 @@ export class AgentService {
       getSensorReadings: async () => {
         const readings = await this.sensors.getLatest();
         return readings
-          .filter(r => r.type?.toLowerCase() !== 'co2')
-          .map(r => ({
+          .filter((r) => r.type?.toLowerCase() !== 'co2')
+          .map((r) => ({
             type: r.type,
             value: Number(r.value),
             unit: r.unit,
@@ -356,8 +430,8 @@ export class AgentService {
       getSensorHistory: async () => {
         const history = await this.sensors.getAllHistory('1h');
         return history
-          .filter(r => r.type?.toLowerCase() !== 'co2')
-          .map(r => ({
+          .filter((r) => r.type?.toLowerCase() !== 'co2')
+          .map((r) => ({
             type: r.type,
             value: Number(r.value),
             unit: r.unit,
