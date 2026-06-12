@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import type { Response } from 'express';
 import { firstValueFrom, timeout } from 'rxjs';
 import { SensorsService } from '../sensors/sensors.service';
 import { FishService } from '../fish/fish.service';
@@ -18,11 +19,24 @@ type CameraCaptureResponse = {
   frameCount?: number;
 };
 
+type CameraDevice = { index: number; name: string; uid: string };
+type SelectedCamera = CameraDevice;
+
 @Injectable()
 export class VisionService {
   private readonly logger = new Logger(VisionService.name);
   private aiUrl: string;
   private bridgeUrl: string;
+
+  /**
+   * Single source of truth for which physical camera every capture uses
+   * (live stream + all snapshots/scans). The `uid` is the stable identifier we
+   * persist/resolve against; the `index` is only the volatile AVFoundation index
+   * handed to OpenCV and must never be treated as durable. `null` means let the
+   * bridge auto-resolve the iPhone (the default camera).
+   */
+  private selectedCamera: { index: number; name: string; uid: string } | null =
+    null;
 
   constructor(
     private http: HttpService,
@@ -38,14 +52,117 @@ export class VisionService {
       this.config.get('SERIAL_BRIDGE_URL') ?? 'http://localhost:3001';
   }
 
+  /** Enumerates the host's AVFoundation cameras (index + name + stable uid). */
+  private async listDevices(): Promise<CameraDevice[]> {
+    const { data } = await firstValueFrom(
+      this.http
+        .get<{ devices?: CameraDevice[] }>(`${this.bridgeUrl}/camera/devices`)
+        .pipe(timeout(8000)),
+    );
+    return data?.devices ?? [];
+  }
+
+  /** Lists the host's AVFoundation cameras and the currently selected source. */
+  async getCameras(): Promise<{
+    devices: CameraDevice[];
+    selected: SelectedCamera | null;
+  }> {
+    try {
+      return { devices: await this.listDevices(), selected: this.selectedCamera };
+    } catch (err) {
+      this.logger.warn(`getCameras failed: ${err.message}`);
+      return { devices: [], selected: this.selectedCamera };
+    }
+  }
+
+  /**
+   * Selects the camera every capture uses, by its stable uid. Re-enumerates and
+   * resolves the uid to the current AVFoundation index. An empty uid resets to
+   * the auto-resolved default. Returns `ok: false` (and falls back to default)
+   * when the uid no longer matches any connected device.
+   */
+  async selectCamera(
+    uid?: string,
+  ): Promise<{ ok: boolean; selected: SelectedCamera | null; reason?: string }> {
+    if (!uid) {
+      this.selectedCamera = null;
+      this.logger.log('Camera source reset to auto-resolve (default)');
+      return { ok: true, selected: null };
+    }
+    let devices: CameraDevice[] = [];
+    try {
+      devices = await this.listDevices();
+    } catch (err) {
+      this.logger.warn(`selectCamera enumeration failed: ${err.message}`);
+    }
+    const match = devices.find((d) => d.uid === uid);
+    if (!match) {
+      this.selectedCamera = null;
+      this.logger.warn(
+        `Camera uid "${uid}" not found — falling back to default camera`,
+      );
+      return { ok: false, selected: null, reason: 'Camera no longer available' };
+    }
+    this.selectedCamera = { index: match.index, name: match.name, uid: match.uid };
+    this.logger.log(
+      `Camera source set to "${match.name}" (uid ${match.uid} -> AVFoundation index ${match.index})`,
+    );
+    return { ok: true, selected: this.selectedCamera };
+  }
+
+  /**
+   * Re-enumerates devices and re-resolves the saved camera's uid to a fresh
+   * index (indices drift across reconnects/reboots). Falls back to the default
+   * and clears the stale selection if the saved camera is gone.
+   */
+  async refreshCameras(): Promise<{
+    devices: CameraDevice[];
+    selected: SelectedCamera | null;
+    fellBack: boolean;
+  }> {
+    let devices: CameraDevice[] = [];
+    try {
+      devices = await this.listDevices();
+    } catch (err) {
+      this.logger.warn(`refreshCameras enumeration failed: ${err.message}`);
+      return { devices: [], selected: this.selectedCamera, fellBack: false };
+    }
+    if (!this.selectedCamera) {
+      return { devices, selected: null, fellBack: false };
+    }
+    const match = devices.find((d) => d.uid === this.selectedCamera!.uid);
+    if (!match) {
+      const lost = this.selectedCamera.name;
+      this.selectedCamera = null;
+      this.logger.warn(
+        `Saved camera "${lost}" no longer present — fell back to default`,
+      );
+      return { devices, selected: null, fellBack: true };
+    }
+    if (match.index !== this.selectedCamera.index) {
+      this.logger.log(
+        `Camera "${match.name}" index changed ${this.selectedCamera.index} -> ${match.index}; re-resolved via uid`,
+      );
+    }
+    this.selectedCamera = { index: match.index, name: match.name, uid: match.uid };
+    return { devices, selected: this.selectedCamera, fellBack: false };
+  }
+
   async requestSnapshot(
     triggeredBy: string = 'MANUAL',
   ): Promise<{ snapshot: CameraSnapshotEntity; videoPath?: string }> {
-    this.logger.log(`Requesting snapshot triggered by: ${triggeredBy}`);
+    const cam = this.selectedCamera;
+    this.logger.log(
+      `Requesting snapshot triggered by: ${triggeredBy} from camera ` +
+        (cam
+          ? `"${cam.name}" (uid ${cam.uid}, AVFoundation index ${cam.index})`
+          : 'auto-resolved (default)'),
+    );
     const { data } = await firstValueFrom(
       this.http
         .post<CameraCaptureResponse>(`${this.bridgeUrl}/camera/snapshot`, {
           triggeredBy,
+          device: cam?.index,
         })
         .pipe(timeout(AI_TIMEOUT_MS)),
     );
@@ -243,9 +360,12 @@ export class VisionService {
   }> {
     const report = await this.getLatestReport();
     const latestCount = await this.fish.getLatestCount();
-    const latestSnapshot = await this.snapshotRepo.findOne({
-      order: { snapshotId: 'DESC' },
-    });
+    const latestSnapshot = (
+      await this.snapshotRepo.find({
+        order: { snapshotId: 'DESC' },
+        take: 1,
+      })
+    )[0];
 
     let diseaseName = report?.visualStatus ?? 'unknown';
     if (diseaseName === 'HF Healthy Fish') {
@@ -269,6 +389,61 @@ export class VisionService {
         ? latestSnapshot.timestamp.toISOString()
         : new Date(0).toISOString(),
     };
+  }
+
+  /** Checks whether the serial-bridge has a live camera (iPhone via Continuity Camera) available. */
+  async getStreamStatus(): Promise<{ available: boolean; device?: string }> {
+    try {
+      const { data } = await firstValueFrom(
+        this.http
+          .get<{ devices?: { index: number; name: string }[] }>(
+            `${this.bridgeUrl}/camera/devices`,
+          )
+          .pipe(timeout(5000)),
+      );
+      const devices = data?.devices ?? [];
+      const iphone = devices.find(
+        (d) => /iphone/i.test(d.name) && !/desk view/i.test(d.name),
+      );
+      return { available: !!iphone, device: iphone?.name };
+    } catch (err) {
+      this.logger.warn(`getStreamStatus failed: ${err.message}`);
+      return { available: false };
+    }
+  }
+
+  /** Proxies the serial-bridge MJPEG camera stream to the client. */
+  async proxyStream(res: Response): Promise<void> {
+    try {
+      const device = this.selectedCamera?.index;
+      const streamUrl =
+        device !== undefined
+          ? `${this.bridgeUrl}/camera/stream?device=${device}`
+          : `${this.bridgeUrl}/camera/stream`;
+      const response = await firstValueFrom(
+        this.http.get(streamUrl, {
+          responseType: 'stream',
+        }),
+      );
+      res.writeHead(response.status, {
+        'Content-Type':
+          response.headers['content-type'] ??
+          'multipart/x-mixed-replace; boundary=frame',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      });
+      response.data.pipe(res);
+      res.req.on('close', () => {
+        response.data.destroy();
+      });
+    } catch (err) {
+      this.logger.warn(`proxyStream failed: ${err.message}`);
+      if (!res.headersSent) {
+        res.status(503).json({ error: 'Live stream unavailable' });
+      } else {
+        res.end();
+      }
+    }
   }
 
   private buildSensorStatus(

@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Bot, Send, Volume2, User, Trash2, MessageSquare, BarChart3, Zap, Heart, Lightbulb, Camera, ExternalLink } from "lucide-react";
-import Link from "next/link";
+import { Bot, Send, Volume2, User, Trash2, MessageSquare, BarChart3, Zap, Heart, Lightbulb } from "lucide-react";
 import { ProtectedPage } from "@/app/components/ProtectedPage";
 import { getToastFromUrl } from "@/app/lib/toast-server";
 import { useVoiceSession } from "@/app/hooks/useVoiceSession";
+import { VeronicaLiveVideo } from "@/app/components/VeronicaLiveVideo";
 
 const QUICK_ACTIONS = [
   { label: "Water Report", prompt: "Give me a detailed water quality report", icon: BarChart3 },
@@ -19,7 +19,6 @@ function VAssistantContent() {
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const hasCheckedToast = useRef(false);
-  const cameraUrl = process.env.NEXT_PUBLIC_CAM_URL;
 
   useEffect(() => {
     if (!hasCheckedToast.current) {
@@ -60,11 +59,7 @@ function VAssistantContent() {
               {error && <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-sm mt-3">{error}</div>}
             </div>
 
-            <div className="card-glass animate-slide-in" style={{ animationDelay: "100ms" }}>
-              <h3 className="text-lg font-semibold mb-4" style={{ color: "rgb(var(--text-primary))" }}>Live Camera</h3>
-              <Link href="/dashboard" className="btn btn-secondary btn-sm w-full"><Camera className="w-4 h-4" />View in Dashboard</Link>
-              {cameraUrl && <a href={cameraUrl} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm w-full mt-2"><ExternalLink className="w-4 h-4" />Open Direct Stream</a>}
-            </div>
+            <VeronicaLiveVideo />
 
             <div className="card-glass animate-slide-in" style={{ animationDelay: "200ms" }}>
               <h3 className="text-lg font-semibold mb-4" style={{ color: "rgb(var(--text-primary))" }}>Quick Actions</h3>

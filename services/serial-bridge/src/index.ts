@@ -234,8 +234,31 @@ async function handleCommand(command: BridgeCommand) {
   };
 }
 
+// Detect, at startup, whether real AVFoundation hardware uniqueIDs are
+// available (pyobjc installed) and log which camera-persistence strategy is
+// active. Failure to probe is non-fatal — capture still works via name-based ids.
+function logCameraPersistenceStrategy() {
+  try {
+    const out = execSync(`python3 "${captureScript}" --capabilities`, {
+      timeout: 10000,
+      encoding: "utf-8",
+    }).trim();
+    const available = Boolean(JSON.parse(out)?.avfUniqueIds);
+    console.log(
+      available
+        ? "[Camera] Using AVFoundation unique IDs for camera persistence"
+        : "[Camera] AVFoundation unique IDs unavailable; using name-based fallback",
+    );
+  } catch {
+    console.log(
+      "[Camera] AVFoundation unique IDs unavailable; using name-based fallback",
+    );
+  }
+}
+
 // Start connection loop
 startSerial();
+logCameraPersistenceStrategy();
 
 app.get("/", (_req, res) => {
   res.send("<h1>Fishlinic Serial Bridge</h1><p>Status: Running</p>");
@@ -283,19 +306,24 @@ app.post("/actuate", async (req, res) => {
   }
 });
 
-app.post("/camera/snapshot", (_req, res) => {
+app.post("/camera/snapshot", (req, res) => {
   try {
-    const deviceArg =
-      cameraDevice === undefined ? "" : ` --device ${cameraDevice}`;
+    const requested = (req.body as { device?: unknown } | undefined)?.device;
+    const device =
+      typeof requested === "number" && Number.isInteger(requested)
+        ? requested
+        : cameraDevice;
+    const deviceArg = device === undefined ? "" : ` --device ${device}`;
     const result = execSync(`python3 "${captureScript}"${deviceArg}`, {
       timeout: 10000,
       encoding: "utf-8",
     }).trim();
 
     if (!result || result.startsWith("ERROR")) {
-      res
-        .status(503)
-        .json({ error: "Camera capture failed. Is iPhone connected via USB?" });
+      const detail = result.startsWith("ERROR:")
+        ? result.slice("ERROR:".length).trim()
+        : "Camera capture failed. Is iPhone connected via USB?";
+      res.status(503).json({ error: detail });
       return;
     }
 
@@ -307,6 +335,27 @@ app.post("/camera/snapshot", (_req, res) => {
     res.status(503).json({ error: `Camera capture failed: ${message}` });
   }
 });
+
+function resolveCameraDevice(): { index: number } | { error: string } {
+  if (cameraDevice !== undefined) {
+    return { index: cameraDevice };
+  }
+  try {
+    const result = execSync(`python3 "${captureScript}" --resolve`, {
+      timeout: 10000,
+      encoding: "utf-8",
+    }).trim();
+    const parsed = JSON.parse(result);
+    if (typeof parsed.index === "number") {
+      return { index: parsed.index };
+    }
+    return {
+      error: parsed.error || "No iPhone camera detected via Continuity Camera",
+    };
+  } catch (error) {
+    return { error: "No iPhone camera detected via Continuity Camera" };
+  }
+}
 
 app.get("/camera/devices", (_req, res) => {
   try {
@@ -322,18 +371,27 @@ app.get("/camera/devices", (_req, res) => {
 });
 
 app.get("/camera/stream", (_req, res) => {
+  const override = _req.query.device;
+  const resolved =
+    override !== undefined && !Number.isNaN(Number(override))
+      ? { index: Number(override) }
+      : resolveCameraDevice();
+  if ("error" in resolved) {
+    res.status(503).json({ error: resolved.error });
+    return;
+  }
+
   res.writeHead(200, {
     "Content-Type": "multipart/x-mixed-replace; boundary=frame",
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
   });
 
-  const streamDeviceIndex = cameraDevice ?? 1;
   const child = spawn("python3", [
     "-c",
     `
 import cv2, sys, time
-cap = cv2.VideoCapture(${streamDeviceIndex}, cv2.CAP_AVFOUNDATION)
+cap = cv2.VideoCapture(${resolved.index}, cv2.CAP_AVFOUNDATION)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 while cap.isOpened():

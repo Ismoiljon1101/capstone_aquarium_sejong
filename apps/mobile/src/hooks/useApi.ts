@@ -38,6 +38,10 @@ export function useApi() {
     analyzeVision: (triggeredBy: string = "MOBILE_REFRESH") =>
       api.post("/vision/analyze", { triggeredBy }, { timeout: 45000 }),
     getLatestVisionReport: () => api.get("/vision/latest-report"),
+    getVisionStreamStatus: () => api.get("/vision/stream/status"),
+    getCameras: () => api.get("/vision/cameras"),
+    setCamera: (uid: string) => api.post("/vision/camera", { uid }),
+    refreshCameras: () => api.post("/vision/cameras/refresh", {}),
     voiceQuery: (text: string) =>
       api.post("/voice/query", { text }, { timeout: 60000 }),
     agentQuery: (text: string, sessionId?: string, signal?: AbortSignal) =>

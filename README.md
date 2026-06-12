@@ -91,6 +91,9 @@ pnpm dev
 # 3. Serial bridge — port 3001 (mock mode if no Arduino)
 cd services/serial-bridge
 cp .env.example .env
+pip install -r requirements.txt   # camera capture deps (opencv-python); needs ffmpeg on PATH
+# Recommended for robust camera persistence (optional, not required):
+pip install pyobjc-framework-AVFoundation
 pnpm dev
 
 # 4. AI predictor — port 8001
@@ -135,6 +138,39 @@ Serial Bridge :3001 ──POST /serial/reading──▶ NestJS Backend :3000
                                           ┌─────────┴─────────┐
                                           ▼                   ▼
                                   Dashboard :3002       Mobile App :8081
+```
+
+---
+
+## Camera persistence (macOS / AVFoundation)
+
+The Live Camera selector is the single source of truth for which physical camera
+every Scan / Refresh Scan / analysis snapshot uses. The chosen camera is persisted
+by a **stable identifier**, not the AVFoundation device index — indices reshuffle
+when devices reconnect, reboot, or are plugged/unplugged, so they are treated as
+runtime-only and handed to OpenCV solely after a fresh resolution.
+
+Two persistence strategies, auto-selected at startup:
+
+| Strategy | When | Identifier | Robustness |
+|----------|------|-----------|------------|
+| **Hardware uniqueID** (preferred) | `pyobjc-framework-AVFoundation` installed | AVFoundation `uniqueID` | Survives reconnects, reboots, renames, and same-name cameras |
+| **Name-based fallback** | pyobjc not installed | `name:<device name>` | Works, but a renamed camera looks new, and two cameras sharing a name are indistinguishable |
+
+Install the optional dependency to enable hardware uniqueIDs:
+
+```bash
+pip install pyobjc-framework-AVFoundation
+```
+
+It is **not a hard dependency** — without it the system keeps working with the
+name-based fallback. On startup the serial bridge logs exactly which strategy is
+active:
+
+```
+[Camera] Using AVFoundation unique IDs for camera persistence
+# or
+[Camera] AVFoundation unique IDs unavailable; using name-based fallback
 ```
 
 ---

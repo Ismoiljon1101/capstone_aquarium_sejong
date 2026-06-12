@@ -35,7 +35,7 @@ export function FishVisionCard() {
   const handleRefresh = async () => {
     setLoading(true);
     try {
-      await api.triggerVisionScan();
+      await api.analyzeVision("MOBILE_REFRESH");
       setTimeout(fetchVision, 3000);
     } catch (error) {
       console.error('Failed to trigger scan:', error);
