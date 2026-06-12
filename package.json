@@ -20,7 +20,8 @@
       "@nestjs/core",
       "esbuild",
       "sharp",
-      "unrs-resolver"
+      "unrs-resolver",
+      "@serialport/bindings-cpp"
     ],
     "overrides": {
       "@types/react": "18.2.79",

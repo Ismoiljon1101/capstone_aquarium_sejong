@@ -162,17 +162,19 @@ export class FishService {
   }
 
   async getLatestCount() {
-    return await this.fishCountRepo.findOne({
-      where: {},
+    const rows = await this.fishCountRepo.find({
       order: { timestamp: 'DESC' },
+      take: 1,
     });
+    return rows[0] ?? null;
   }
 
   async getLatestReport() {
-    return await this.healthReportRepo.findOne({
-      where: {},
+    const rows = await this.healthReportRepo.find({
       order: { timestamp: 'DESC' },
+      take: 1,
     });
+    return rows[0] ?? null;
   }
 
   async getHealthHistory() {

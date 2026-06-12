@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git stash *)",
+      "Bash(ls *)",
+      "Agent(general-purpose)",
+      "Bash(/usr/bin/git *)",
+      "Bash(pnpm install)",
+      "Bash(pnpm store *)",
+      "Bash(node *)",
+      "Bash(pnpm *)",
+      "Bash(rm *)",
+      "Bash(do)",
+      "Bash(true)",
+      "Bash(then)",
+      "Bash(kill *)",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(ulimit *)",
+      "Bash(launchctl *)",
+      "Bash(lsof)",
+      "Bash(sysctl *)",
+      "Bash(sudo *)",
+      "Bash(npx *)",
+      "Bash(./venv/bin/python *)"
+    ]
+  },
+  "$version": 4
+}
